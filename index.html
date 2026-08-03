@@ -384,7 +384,9 @@ function load(){
   return null;
 }
 function save(){ store.set(KEY, JSON.stringify(S)); }
-function today(){ return new Date().toISOString().slice(0,10); }
+function ymd(d){ const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
+function today(){ return ymd(new Date()); }
+function yesterday(){ return ymd(new Date(Date.now()-864e5)); }
 
 const app = document.getElementById('app');
 function render(){
@@ -406,8 +408,7 @@ function render(){
     S.penaltyToday = false;
     const sched = scheduleFor(S.day);
     if(sched==='rest'){
-      const y=new Date(Date.now()-864e5).toISOString().slice(0,10);
-      if(S.lastActive===y || S.streak===0) S.lastActive=S.day;
+      if(S.lastActive===yesterday() || S.streak===0) S.lastActive=S.day;
     }
     save();
   }
@@ -690,7 +691,7 @@ function logWeight(){
 }
 function bumpStreak(){
   if(S.lastActive===today()) return;
-  const y=new Date(Date.now()-864e5).toISOString().slice(0,10);
+  const y=yesterday();
   const broke = S.lastActive!=null && S.lastActive!==y && S.streak>0;
   if(broke) applyStreakPenalty();
   S.streak = (S.lastActive===y) ? S.streak+1 : 1;
