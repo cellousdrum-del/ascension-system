@@ -53,6 +53,7 @@
     mask-image:radial-gradient(circle at 50% 20%, #000 30%, transparent 85%);
   }
   #app{position:relative;z-index:1;max-width:520px;margin:0 auto}
+  #app.view-only{pointer-events:none;opacity:.85}
 
   h1,h2,h3,.sys,.rank,.lvl,.stat-val{font-family:'Orbitron',sans-serif}
 
@@ -251,6 +252,40 @@
 
 <input type="file" id="importFile" accept="application/json" style="display:none" onchange="handleImportFile(this)">
 
+<div id="viewBar" style="display:none;position:sticky;top:0;z-index:70;background:rgba(139,92,246,0.18);border-bottom:1px solid var(--violet);padding:10px 14px;text-align:center;font-family:'Orbitron';font-size:11px;letter-spacing:.06em;color:#c9b3ff"></div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.0/firebase-app.js";
+  import {
+    getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+    onAuthStateChanged, signOut
+  } from "https://www.gstatic.com/firebasejs/12.17.0/firebase-auth.js";
+  import {
+    initializeFirestore, doc, getDoc, setDoc, collection, query, where, getDocs
+  } from "https://www.gstatic.com/firebasejs/12.17.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBH_7qOpJur2pnZKfD-NTcijGhmUKCvldM",
+    authDomain: "solo-leveling-fdd0f.firebaseapp.com",
+    projectId: "solo-leveling-fdd0f",
+    storageBucket: "solo-leveling-fdd0f.firebasestorage.app",
+    messagingSenderId: "145970785175",
+    appId: "1:145970785175:web:18d0262ec37f186b1532d2"
+  };
+
+  const fbApp = initializeApp(firebaseConfig);
+  const auth = getAuth(fbApp);
+  const db = initializeFirestore(fbApp, { ignoreUndefinedProperties: true });
+
+  window.fb = {
+    auth, db,
+    createUserWithEmailAndPassword, signInWithEmailAndPassword,
+    onAuthStateChanged, signOut,
+    doc, getDoc, setDoc, collection, query, where, getDocs
+  };
+  window.dispatchEvent(new Event('fbready'));
+</script>
+
 <script>
 /* ---------- Safe storage (localStorage with in-memory fallback) ---------- */
 const store = (()=>{
@@ -263,7 +298,7 @@ const store = (()=>{
     del(k){ try{ ok ? localStorage.removeItem(k) : (delete mem[k]); }catch(e){ delete mem[k]; } }
   };
 })();
-const KEY='ascension_v1';
+const LEGACY_KEY='ascension_v1';
 
 /* ---------- Gate data (your real split) ---------- */
 const GATES = {
@@ -377,21 +412,200 @@ function scheduleFor(dateStr){
   return CYCLE[idx];
 }
 
-/* ---------- State ---------- */
-let S = load();
+/* ---------- State & cloud sync ---------- */
+let S = null;
+let currentUid = null;
+let myUsername = null;
+let myIsAdmin = false;
+let ownS = null;
+let viewOnly = null;
+let pendingImport = null;
+let pendingUsername = null;
 let historyNav = {level:'years', year:null, month:null};
-function load(){
-  const raw = store.get(KEY);
+
+function cloudKey(uid){ return 'ascension_cloud_'+uid; }
+function loadLocalCloud(uid){
+  const raw = store.get(cloudKey(uid));
   if(raw){ try{ return JSON.parse(raw); }catch(e){} }
   return null;
 }
-function save(){ store.set(KEY, JSON.stringify(S)); }
+function saveLocalCloud(){ if(currentUid) store.set(cloudKey(currentUid), JSON.stringify(S)); }
+let pushTimer;
+function pushCloud(){
+  if(!currentUid || viewOnly) return;
+  const uidSnapshot = currentUid;
+  const dataSnapshot = S;
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(()=>{
+    if(!dataSnapshot) return;
+    window.fb.setDoc(window.fb.doc(window.fb.db,'users',uidSnapshot), dataSnapshot).catch(()=>{});
+  }, 1500);
+}
+function save(){
+  if(viewOnly) return;
+  saveLocalCloud();
+  pushCloud();
+}
 function ymd(d){ const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
 function today(){ return ymd(new Date()); }
 function yesterday(){ return ymd(new Date(Date.now()-864e5)); }
 
+function deriveEmail(username){ return username.toLowerCase().trim()+'@ascension.local'; }
+function friendlyAuthError(err){
+  const code = (err && err.code) || '';
+  if(code.includes('wrong-password') || code.includes('invalid-credential')) return 'Incorrect username or password.';
+  if(code.includes('user-not-found')) return 'No account with that username.';
+  if(code.includes('email-already-in-use')) return 'That username is already taken.';
+  if(code.includes('weak-password')) return 'Password must be at least 6 characters.';
+  if(code.includes('network-request-failed')) return 'Network error - check your connection.';
+  return 'Something went wrong. Try again.';
+}
+
+async function onAuthReady(user){
+  if(user){
+    currentUid = user.uid;
+    let data = null;
+    try{
+      const snap = await window.fb.getDoc(window.fb.doc(window.fb.db,'users',currentUid));
+      if(snap.exists()) data = snap.data();
+    }catch(e){}
+    if(!data) data = loadLocalCloud(currentUid);
+    if(!data && pendingImport){
+      data = pendingImport;
+      data.username = pendingUsername;
+      if(data.isAdmin===undefined) data.isAdmin = false;
+    }
+    myUsername = (data && data.username) || pendingUsername || null;
+    myIsAdmin = !!(data && data.isAdmin);
+    pendingImport = null;
+    S = data;
+    if(S){ saveLocalCloud(); pushCloud(); }
+    render();
+  } else {
+    clearTimeout(pushTimer);
+    currentUid = null; S = null; ownS = null; viewOnly = null; myUsername = null; myIsAdmin = false;
+    renderAuthGate();
+  }
+}
+
+async function doLogin(){
+  const u = (document.getElementById('auth-user').value||'').trim().toLowerCase();
+  const p = document.getElementById('auth-pass').value||'';
+  if(!u||!p){ toast('Missing data','Enter username and password.'); return; }
+  try{
+    await window.fb.signInWithEmailAndPassword(window.fb.auth, deriveEmail(u), p);
+  }catch(err){
+    toast('Login failed', friendlyAuthError(err));
+  }
+}
+async function doSignup(){
+  const u = (document.getElementById('auth-user').value||'').trim().toLowerCase();
+  const p = document.getElementById('auth-pass').value||'';
+  if(!/^[a-z0-9_]{3,20}$/.test(u)){ toast('Invalid username','3-20 characters: lowercase letters, numbers, underscore only.'); return; }
+  if(!p || p.length<6){ toast('Weak password','Use at least 6 characters.'); return; }
+  try{
+    const q = window.fb.query(window.fb.collection(window.fb.db,'users'), window.fb.where('username','==',u));
+    const existing = await window.fb.getDocs(q);
+    if(!existing.empty){ toast('Username taken','Pick a different username.'); return; }
+  }catch(err){ toast('Error','Could not check username - check your connection.'); return; }
+  pendingImport = null;
+  const legacyRaw = store.get(LEGACY_KEY);
+  if(legacyRaw){
+    try{
+      const legacy = JSON.parse(legacyRaw);
+      if(legacy && typeof legacy.xp==='number' && confirm('Found existing progress on this device. Import it into your new account?')){
+        pendingImport = legacy;
+      }
+    }catch(e){}
+  }
+  pendingUsername = u;
+  try{
+    await window.fb.createUserWithEmailAndPassword(window.fb.auth, deriveEmail(u), p);
+  }catch(err){
+    pendingImport = null;
+    toast('Sign up failed', friendlyAuthError(err));
+  }
+}
+async function doLogout(){
+  if(!confirm('Log out?')) return;
+  try{ await window.fb.signOut(window.fb.auth); }catch(e){}
+}
+function doForgotPassword(){
+  toast('Forgot password','Ask the admin to reset it for you from the Firebase console.');
+}
+
+async function viewProfile(username){
+  const uname = (username||'').trim().toLowerCase();
+  if(!uname) return;
+  if(uname===myUsername){ toast('That is you','Already viewing your own profile.'); return; }
+  try{
+    const q = window.fb.query(window.fb.collection(window.fb.db,'users'), window.fb.where('username','==',uname));
+    const snap = await window.fb.getDocs(q);
+    if(snap.empty){ toast('Not found','No hunter with that username.'); return; }
+    ownS = S;
+    S = snap.docs[0].data();
+    viewOnly = uname;
+    render();
+  }catch(e){ toast('Error','Could not load that profile.'); }
+}
+function exitViewOnly(){
+  S = ownS; ownS = null; viewOnly = null;
+  render();
+}
+async function loadAdminList(){
+  const el = document.getElementById('adminList');
+  if(!el) return;
+  try{
+    const snap = await window.fb.getDocs(window.fb.collection(window.fb.db,'users'));
+    const rows = [];
+    snap.forEach(d=>{
+      const u = d.data();
+      const info = levelFromXp(u.xp||0);
+      rows.push({username:u.username||d.id, lvl:info.lvl, streak:u.streak||0});
+    });
+    rows.sort((a,b)=>a.username.localeCompare(b.username));
+    el.innerHTML = rows.map(r=>`
+      <div class="hist-row" onclick="viewProfile('${esc(r.username)}')">
+        <span class="hr-n">${esc(r.username)}</span><span class="hr-c">Lvl ${r.lvl} - ${r.streak} day streak</span>
+      </div>`).join('') || '<p class="note">No hunters yet.</p>';
+  }catch(e){
+    el.innerHTML = '<p class="note">Could not load roster.</p>';
+  }
+}
+function renderAuthGate(){
+  app.classList.remove('view-only');
+  const vb=document.getElementById('viewBar'); if(vb) vb.style.display='none';
+  app.innerHTML = `
+    <div style="text-align:center;margin:24px 0 10px">
+      <div class="eyebrow" style="justify-content:center">System Gate</div>
+    </div>
+    <section class="win">
+      <div style="text-align:center;margin-bottom:14px">
+        <h1 class="title-xl">Identify Yourself</h1>
+        <p style="color:var(--muted);font-size:14px;margin-top:8px">Log in or create a Hunter account to begin.</p>
+      </div>
+      <label>Username</label>
+      <input id="auth-user" placeholder="e.g. txetxe" autocapitalize="none" autocomplete="username">
+      <label>Password</label>
+      <input id="auth-pass" type="password" placeholder="********" autocomplete="current-password">
+      <button class="btn" onclick="doLogin()">Log In</button>
+      <button class="btn ghost" style="margin-top:10px" onclick="doSignup()">Create New Account</button>
+      <button class="reset" style="margin-top:14px" onclick="doForgotPassword()">Forgot password?</button>
+    </section>
+    <div class="foot">The system is watching.</div>
+  `;
+}
+
 const app = document.getElementById('app');
 function render(){
+  const vb = document.getElementById('viewBar');
+  if(viewOnly){
+    vb.style.display='block';
+    vb.innerHTML = 'VIEWING '+esc(viewOnly).toUpperCase()+'’S PROFILE (READ-ONLY) - <span style="text-decoration:underline;cursor:pointer" onclick="exitViewOnly()">Back to my profile</span>';
+  } else {
+    vb.style.display='none';
+  }
+  app.classList.toggle('view-only', !!viewOnly);
   if(!S){ renderOnboarding(); return; }
   if(!S.startDate) S.startDate = S.day || today();
   if(!S.history) S.history = {};
@@ -551,17 +765,34 @@ function render(){
     </section>
 
     <section class="win">
-      <div class="eyebrow">Backup</div>
-      <p style="font-size:12px;color:var(--muted);margin:0 0 12px">Your progress lives only on this device. Export it regularly and keep the file somewhere safe (iCloud Drive, email to yourself) - phone storage can be wiped by iOS without warning.</p>
+      <div class="eyebrow">Compare Hunters</div>
+      <div class="inline-w">
+        <input id="cmpUser" placeholder="Friend's username" autocapitalize="none">
+        <button class="btn sm" onclick="viewProfile(document.getElementById('cmpUser').value)">View</button>
+      </div>
+    </section>
+
+    ${myIsAdmin?`
+    <section class="win">
+      <div class="eyebrow">Admin Panel</div>
+      <div id="adminList"><p class="note">Loading roster...</p></div>
+    </section>
+    `:''}
+
+    <section class="win">
+      <div class="eyebrow">Account</div>
+      <p style="font-size:12px;color:var(--muted);margin:0 0 12px">Logged in as <b style="color:var(--cyan-soft)">${esc(myUsername||'')}</b>. Your progress syncs automatically to any device you log into. A local backup file is still a good extra safety net.</p>
       <div style="display:flex;gap:10px">
         <button class="btn ghost sm" style="flex:1" onclick="exportProgress()">Backup progress</button>
         <button class="btn ghost sm" style="flex:1" onclick="document.getElementById('importFile').click()">Restore backup</button>
       </div>
+      <button class="reset" style="margin-top:14px" onclick="doLogout()">Log out</button>
     </section>
 
     <div class="foot">Arise.</div>
     <button class="reset" onclick="hardReset()">Reset on awakening (erase data)</button>
   `;
+  if(myIsAdmin && !viewOnly) loadAdminList();
 
   const wIn=document.getElementById('wIn'); if(wIn) wIn.value='';
 }
@@ -746,6 +977,7 @@ function renderOnboarding(){
         <h1 class="title-xl" style="margin:8px 0">as a Player</h1>
         <p style="color:var(--muted);font-size:14px;letter-spacing:.03em;margin:8px 0 4px">
           Only you can see the System. Log your starting point and begin to ascend.</p>
+        <p style="color:var(--cyan-soft);font-size:12px;letter-spacing:.06em;margin-top:6px">Registering as <b>${esc(myUsername||'')}</b></p>
       </div>
       <label>Hunter name</label>
       <input id="o-name" placeholder="Your name" value="Txetxe">
@@ -770,13 +1002,19 @@ function startGame(){
     startDate:today(), exSets:{}, gateDoneToday:false, tzMigrated:true,
     dailyDone:{grip:false,mystery:false}, dailyClaimed:false,
     streak:0, lastActive:null, day:today(),
-    history:{}, weightLog:{}
+    history:{}, weightLog:{},
+    username: myUsername||'', isAdmin:false
   };
+  myIsAdmin = false;
   save(); render();
   toast('System online','Welcome, '+name+'. Let the ascension begin.');
 }
 function hardReset(){
-  if(confirm('Erase all progress and awaken again?')){ store.del(KEY); S=null; render(); }
+  if(viewOnly) return;
+  if(confirm('Erase all progress and awaken again?')){
+    if(currentUid) store.del(cloudKey(currentUid));
+    S=null; render();
+  }
 }
 
 function exportProgress(){
@@ -793,6 +1031,8 @@ function exportProgress(){
   toast('Backup saved','Keep this file somewhere safe - iCloud Drive, email, etc.');
 }
 function handleImportFile(input){
+  if(viewOnly){ toast('Not allowed','Exit the read-only view first.'); input.value=''; return; }
+  if(!currentUid){ toast('Log in first','Create or sign in to an account before restoring a backup.'); input.value=''; return; }
   const file = input.files && input.files[0];
   input.value = '';
   if(!file) return;
@@ -807,6 +1047,8 @@ function handleImportFile(input){
     }
     if(S && !confirm('This will overwrite your current progress with the backup file. Continue?')) return;
     parsed.tzMigrated = true;
+    parsed.username = myUsername || parsed.username || '';
+    if(parsed.isAdmin===undefined) parsed.isAdmin = myIsAdmin;
     S = parsed;
     save();
     render();
@@ -818,7 +1060,11 @@ function handleImportFile(input){
 function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function fmt(n){ return (Math.round(n*10)/10).toString(); }
 
-render();
+function startAuthListener(){
+  window.fb.onAuthStateChanged(window.fb.auth, onAuthReady);
+}
+if(window.fb){ startAuthListener(); }
+else { window.addEventListener('fbready', startAuthListener); }
 </script>
 </body>
 </html>
