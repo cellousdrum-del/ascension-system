@@ -214,6 +214,16 @@
   .lu-gains{font-size:14px;color:var(--green);letter-spacing:.05em;margin:4px 0}
   .lu-rank{margin-top:12px;font-size:13px;color:var(--gold);letter-spacing:.1em}
 
+  .tier-banner{font-size:12px;letter-spacing:.04em;color:var(--gold);border:1px dashed rgba(251,191,36,0.4);
+    border-radius:2px;padding:9px 11px;margin:2px 0 12px;background:rgba(251,191,36,0.05)}
+  .hist-row{display:flex;justify-content:space-between;align-items:center;padding:11px 4px;
+    border-bottom:1px dashed rgba(77,163,255,0.14);cursor:pointer;font-size:14px}
+  .hist-row:last-child{border-bottom:none}
+  .hist-row .hr-n{font-family:'Orbitron';font-size:13px;letter-spacing:.06em}
+  .hist-row .hr-c{font-size:12px;color:var(--muted)}
+  .hist-back{font-size:11px;color:var(--cyan-soft);letter-spacing:.1em;margin-bottom:10px;cursor:pointer;
+    text-decoration:underline;display:inline-block;text-transform:uppercase}
+
   .foot{text-align:center;font-size:11px;color:#3a4964;letter-spacing:.18em;margin-top:4px;text-transform:uppercase}
   .reset{background:none;border:none;color:#3a4964;font-size:11px;letter-spacing:.1em;text-decoration:underline;
     margin-top:10px;display:block;width:100%;text-align:center}
@@ -294,6 +304,47 @@ function levelFromXp(xp){
   return {lvl, into:rem, need:xpNeeded(lvl)};
 }
 
+/* ---------- Progressive overload tiers, keyed off the Strength stat ---------- */
+const OVERLOAD_TIERS = [
+  {min:0,  label:'Foundation', tip:'Stick to the base sets and reps shown below.'},
+  {min:20, label:'Tier I',     tip:'Add 1 extra set, or 2 extra reps, on every exercise.'},
+  {min:30, label:'Tier II',    tip:'Slow the lowering (negative) phase to 3-4 seconds on every rep.'},
+  {min:40, label:'Tier III',   tip:'Switch to single-limb variations where possible (one-arm, one-leg).'},
+  {min:50, label:'Tier IV',    tip:'Add external weight (loaded backpack / heavier dumbbell) on top of everything above.'}
+];
+function overloadTierFor(str){
+  let t = OVERLOAD_TIERS[0];
+  for(const tier of OVERLOAD_TIERS){ if(str>=tier.min) t=tier; }
+  return t;
+}
+
+/* ---------- Mystery daily quest pool ---------- */
+const MYSTERY_QUESTS = [
+  'Hold a plank for 60 seconds','Do 20 bodyweight squats before breakfast','Stretch your hamstrings for 5 minutes',
+  'Take a 10-minute walk outside','Do 15 push-ups any time today','Drink 2.5+ liters of water today',
+  'Avoid added sugar today','Hang from a bar for 30 seconds total','Foam roll or stretch your back for 5 minutes',
+  'Do 20 jumping jacks to wake up','Take a cold shower for at least 30 seconds','Sit in silence for 5 minutes',
+  'Hold a 1-minute wall sit','Do 10 arm circles each direction, each arm','Go to bed 30 minutes earlier than usual',
+  'Avoid your phone for the first 30 minutes after waking','Do 10 slow air squats focusing on form',
+  'Stretch your hip flexors for 3 minutes','Take the stairs instead of the elevator today','Do 20 calf raises',
+  'Practice deep breathing for 3 minutes','Log everything you eat today','Hold a 2-minute plank (broken up if needed)',
+  'Stretch your chest and shoulders for 5 minutes','Do 15 lunges per leg','Walk 5,000+ steps today',
+  'Write down one thing you are grateful for','Do 10 burpees','Check and correct your posture 3 times today',
+  'Do a 5-minute dynamic warm-up before any activity','Avoid sitting for more than 45 minutes at a stretch',
+  'Do 20 mountain climbers','Stretch your neck and upper traps for 3 minutes','Prepare tomorrow\'s meals or snacks in advance',
+  'Do 30 seconds of high knees','Read 5 pages of a book','Hold a 1-minute superman (lower back)',
+  'Dead hang or squeeze a ball for 1 minute total','Do 15 tricep dips off a chair','Spend 5 minutes planning tomorrow\'s training',
+  'Do 20 bicycle crunches','Stretch each quad for 3 minutes','Avoid caffeine after 4pm',
+  'Do a 1-minute set of push-up negatives','Walk barefoot on grass for a few minutes','Do 10 slow, controlled push-up negatives',
+  'Practice box breathing for 3 minutes (4-4-4-4)','Do 20 glute bridges','Reflect on one win from today\'s training',
+  'Hold a 90-second plank to end the day strong'
+];
+function mysteryQuestFor(dateStr){
+  let h=0;
+  for(let i=0;i<dateStr.length;i++){ h = (h*31 + dateStr.charCodeAt(i)) >>> 0; }
+  return MYSTERY_QUESTS[h % MYSTERY_QUESTS.length];
+}
+
 /* ---------- Fixed schedule: 6-on-1-off, starting as if day 0 already followed a Push day ---------- */
 const CYCLE = ['push','pull','legs','push','pull','legs','rest'];
 function parseSets(t){ const m=/^(\d+)\s*x/i.exec(t); return m? parseInt(m[1],10) : 1; }
@@ -306,6 +357,7 @@ function scheduleFor(dateStr){
 
 /* ---------- State ---------- */
 let S = load();
+let historyNav = {level:'years', year:null, month:null};
 function load(){
   const raw = store.get(KEY);
   if(raw){ try{ return JSON.parse(raw); }catch(e){} }
@@ -321,10 +373,11 @@ function render(){
   if(!S.history) S.history = {};
   if(!S.weightLog) S.weightLog = {};
   if(!S.exSets) S.exSets = {};
+  if(S.dailyDone && S.dailyDone.mystery===undefined) S.dailyDone.mystery = false;
   if(S.day !== today()){
     S.day = today();
     S.exSets = {};
-    S.dailyDone = {protein:false,sleep:false};
+    S.dailyDone = {protein:false,sleep:false,mystery:false};
     S.dailyClaimed = false;
     S.gateDoneToday = false;
     const sched = scheduleFor(S.day);
@@ -343,6 +396,8 @@ function render(){
   const proteinLo = Math.round(S.weight*1.6), proteinHi = Math.round(S.weight*2.2);
   const loggedToday = S.weightLog[S.day]!=null;
   const trainedDays = Object.keys(S.history).length;
+  const tier = overloadTierFor(S.stats.str);
+  const mysteryTask = mysteryQuestFor(S.day);
 
   app.innerHTML = `
     <div style="text-align:center;margin:4px 0 16px">
@@ -394,9 +449,10 @@ function render(){
           <div style="color:var(--muted);font-size:14px">This is a rest day. Enjoy your temporary freedom, Hunter.</div>
         </div>
       ` : `
-        <div style="font-family:'Orbitron';font-size:12px;letter-spacing:.1em;color:${gate.color==='red'?'#ff8080':gate.color==='violet'?'#b79cff':'var(--cyan-soft)'};margin-bottom:2px">
+        <div style="font-family:'Orbitron';font-size:12px;letter-spacing:.1em;color:${gate.color==='red'?'#ff8080':gate.color==='violet'?'#b79cff':'var(--cyan-soft)'};margin-bottom:10px">
           ${gate.icon} GATE - ${gate.name} <span style="color:var(--muted);font-size:10px">- ${gate.sub}</span>
         </div>
+        <div class="tier-banner">⚡ Strength ${tier.label} - ${tier.tip}</div>
         <ul class="ex">
           ${gate.ex.map((e,i)=>{
             const max=parseSets(e.t);
@@ -426,12 +482,16 @@ function render(){
           <span class="chk" style="${S.dailyDone.sleep?'background:rgba(77,163,255,.18);color:var(--cyan);box-shadow:0 0 12px rgba(77,163,255,.5)':''}">\u2713</span>
           <span class="t">Sleep 7-8 h<small>Muscle grows while resting, not while training</small></span>
         </div>
+        <div class="dq" onclick="toggleDaily('mystery')">
+          <span class="chk" style="${S.dailyDone.mystery?'background:rgba(77,163,255,.18);color:var(--cyan);box-shadow:0 0 12px rgba(77,163,255,.5)':''}">\u2713</span>
+          <span class="t">${mysteryTask}<small>Hunter's mystery task - changes daily</small></span>
+        </div>
       </div>
-      ${(!S.dailyDone.protein||!S.dailyDone.sleep)
+      ${(!S.dailyDone.protein||!S.dailyDone.sleep||!S.dailyDone.mystery)
         ? `<div class="penalty">\u26a0 Penalty zone active - complete the daily quest</div>`
         : `<div style="font-size:12px;color:var(--green);letter-spacing:.08em;margin-top:10px;text-transform:uppercase">\u2713 Daily quest cleared - +30 XP available</div>`}
       <button class="btn ghost" style="margin-top:12px" onclick="claimDaily()"
-        ${(S.dailyDone.protein&&S.dailyDone.sleep&&!S.dailyClaimed)?'':'disabled'}>
+        ${(S.dailyDone.protein&&S.dailyDone.sleep&&S.dailyDone.mystery&&!S.dailyClaimed)?'':'disabled'}>
         ${S.dailyClaimed?'Reward claimed \u2713':'Claim +30 XP'}
       </button>
       <div class="streak">\ud83d\udd25 Streak: ${S.streak} day${S.streak===1?'':'s'}</div>
@@ -520,23 +580,54 @@ function completeGate(){
   else { toast('Gate cleared','+100 XP - '+g.name+' complete.'); }
   setTimeout(()=>{ S._upStats=null; },1800);
 }
+const MONTH_NAMES=['January','February','March','April','May','June','July','August','September','October','November','December'];
+function historyDrill(level,year,month){
+  historyNav = {level, year:year||null, month:month||null};
+  render();
+}
 function buildHistory(){
-  const gateDates=Object.keys(S.history||{});
-  const weightDates=Object.keys(S.weightLog||{});
-  const dates=Array.from(new Set([...gateDates,...weightDates])).sort().reverse();
-  if(!dates.length) return '<p class="note">No entries yet - clear a Gate or log your weight to begin your Ascension Log.</p>';
-  return dates.map(d=>{
-    const h=S.history[d];
-    const w=S.weightLog[d];
-    const parts=[];
-    if(h) parts.push(`${GATES[h.gate].name} cleared (+${h.xp} XP)`);
-    if(w!=null) parts.push(`Weight ${fmt(w)} kg`);
-    return `<p style="margin:0 0 8px;font-size:13px"><b style="color:var(--cyan-soft)">${d}</b> - ${parts.join(' &middot; ')}</p>`;
-  }).join('');
+  const dates = Object.keys(S.history||{}).sort().reverse();
+  if(!dates.length) return '<p class="note">No entries yet - clear a Gate to begin your Ascension Log.</p>';
+
+  if(historyNav.level==='years'){
+    const years={};
+    dates.forEach(d=>{ const y=d.slice(0,4); years[y]=(years[y]||0)+1; });
+    return Object.keys(years).sort().reverse().map(y=>`
+      <div class="hist-row" onclick="historyDrill('months','${y}')">
+        <span class="hr-n">${y}</span><span class="hr-c">${years[y]} day${years[y]===1?'':'s'} trained</span>
+      </div>`).join('');
+  }
+
+  if(historyNav.level==='months'){
+    const y=historyNav.year;
+    const months={};
+    dates.filter(d=>d.slice(0,4)===y).forEach(d=>{ const m=d.slice(0,7); months[m]=(months[m]||0)+1; });
+    return `<div class="hist-back" onclick="historyDrill('years')">&larr; All years</div>` +
+      Object.keys(months).sort().reverse().map(m=>{
+        const mi=parseInt(m.slice(5,7),10)-1;
+        return `<div class="hist-row" onclick="historyDrill('days','${y}','${m}')">
+          <span class="hr-n">${MONTH_NAMES[mi]}</span><span class="hr-c">${months[m]} day${months[m]===1?'':'s'} trained</span>
+        </div>`;
+      }).join('');
+  }
+
+  if(historyNav.level==='days'){
+    const m=historyNav.month;
+    const mi=parseInt(m.slice(5,7),10)-1;
+    const dayList=dates.filter(d=>d.slice(0,7)===m);
+    return `<div class="hist-back" onclick="historyDrill('months','${historyNav.year}')">&larr; ${MONTH_NAMES[mi]} ${historyNav.year}</div>` +
+      dayList.map(d=>{
+        const h=S.history[d];
+        const w=S.weightLog?S.weightLog[d]:null;
+        let line=`${GATES[h.gate].name} cleared (+${h.xp} XP)`;
+        if(w!=null) line+=` &middot; Weight ${fmt(w)} kg`;
+        return `<p style="margin:0 0 8px;font-size:13px"><b style="color:var(--cyan-soft)">${d}</b> - ${line}</p>`;
+      }).join('');
+  }
 }
 function claimDaily(){
   if(S.dailyClaimed) return;
-  if(!(S.dailyDone.protein&&S.dailyDone.sleep)) return;
+  if(!(S.dailyDone.protein&&S.dailyDone.sleep&&S.dailyDone.mystery)) return;
   const before=levelFromXp(S.xp).lvl;
   S.xp+=30; S.dailyClaimed=true;
   S.stats.vit+=1; S._upStats={vit:1};
@@ -621,7 +712,7 @@ function startGame(){
     name, startW:w, weight:w, goalW:g,
     xp:0, stats:{str:10,vit:10,end:10,agi:10},
     startDate:today(), exSets:{}, gateDoneToday:false,
-    dailyDone:{protein:false,sleep:false}, dailyClaimed:false,
+    dailyDone:{protein:false,sleep:false,mystery:false}, dailyClaimed:false,
     streak:0, lastActive:null, day:today(),
     history:{}, weightLog:{}
   };
