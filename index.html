@@ -249,6 +249,8 @@
   </div>
 </div>
 
+<input type="file" id="importFile" accept="application/json" style="display:none" onchange="handleImportFile(this)">
+
 <script>
 /* ---------- Safe storage (localStorage with in-memory fallback) ---------- */
 const store = (()=>{
@@ -548,6 +550,15 @@ function render(){
       </details>
     </section>
 
+    <section class="win">
+      <div class="eyebrow">Backup</div>
+      <p style="font-size:12px;color:var(--muted);margin:0 0 12px">Your progress lives only on this device. Export it regularly and keep the file somewhere safe (iCloud Drive, email to yourself) - phone storage can be wiped by iOS without warning.</p>
+      <div style="display:flex;gap:10px">
+        <button class="btn ghost sm" style="flex:1" onclick="exportProgress()">Backup progress</button>
+        <button class="btn ghost sm" style="flex:1" onclick="document.getElementById('importFile').click()">Restore backup</button>
+      </div>
+    </section>
+
     <div class="foot">Arise.</div>
     <button class="reset" onclick="hardReset()">Reset on awakening (erase data)</button>
   `;
@@ -743,6 +754,7 @@ function renderOnboarding(){
         <div style="flex:1"><label>Goal (kg)</label><input id="o-g" type="number" inputmode="decimal" step="0.1" value="82"></div>
       </div>
       <button class="btn" onclick="startGame()">Accept the quest</button>
+      <button class="btn ghost" style="margin-top:10px" onclick="document.getElementById('importFile').click()">Restore from a backup file</button>
     </section>
     <div class="foot">The system is watching.</div>
   `;
@@ -765,6 +777,42 @@ function startGame(){
 }
 function hardReset(){
   if(confirm('Erase all progress and awaken again?')){ store.del(KEY); S=null; render(); }
+}
+
+function exportProgress(){
+  if(!S){ toast('Nothing to back up','Start your journey first.'); return; }
+  const blob = new Blob([JSON.stringify(S,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'ascension-backup-'+S.day+'.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('Backup saved','Keep this file somewhere safe - iCloud Drive, email, etc.');
+}
+function handleImportFile(input){
+  const file = input.files && input.files[0];
+  input.value = '';
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    let parsed;
+    try{ parsed = JSON.parse(e.target.result); }
+    catch(err){ toast('Import failed','That file is not valid JSON.'); return; }
+    if(!parsed || typeof parsed.xp!=='number' || !parsed.stats || typeof parsed.name!=='string'){
+      toast('Import failed','That file is not a valid Ascension System backup.');
+      return;
+    }
+    if(S && !confirm('This will overwrite your current progress with the backup file. Continue?')) return;
+    parsed.tzMigrated = true;
+    S = parsed;
+    save();
+    render();
+    toast('Restored','Your backup has been loaded.');
+  };
+  reader.readAsText(file);
 }
 
 function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
