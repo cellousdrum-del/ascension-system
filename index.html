@@ -399,6 +399,7 @@ function render(){
   if(S.dailyDone.mystery===undefined) S.dailyDone.mystery = false;
   if(S.dailyDone.grip===undefined) S.dailyDone.grip = false;
   if(S.penaltyToday===undefined) S.penaltyToday = false;
+  if(!S.tzMigrated){ S.tzMigrated = true; S.day = today(); save(); }
   if(S.day !== today()){
     S.day = today();
     S.exSets = {};
@@ -754,7 +755,7 @@ function startGame(){
   S={
     name, startW:w, weight:w, goalW:g,
     xp:0, stats:{str:10,vit:10,end:10,agi:10},
-    startDate:today(), exSets:{}, gateDoneToday:false,
+    startDate:today(), exSets:{}, gateDoneToday:false, tzMigrated:true,
     dailyDone:{grip:false,mystery:false}, dailyClaimed:false,
     streak:0, lastActive:null, day:today(),
     history:{}, weightLog:{}
