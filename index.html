@@ -188,8 +188,11 @@
   .guide-body .note{font-size:12px;color:var(--muted);border-left:2px solid var(--line);padding-left:10px}
 
   #toast{position:fixed;top:calc(12px + env(safe-area-inset-top));left:50%;transform:translateX(-50%) translateY(-140%);
-    z-index:60;max-width:460px;width:calc(100% - 28px);pointer-events:none;transition:transform .45s cubic-bezier(.2,.9,.2,1)}
-  #toast.show{transform:translateX(-50%) translateY(0)}
+    opacity:0;visibility:hidden;
+    z-index:60;max-width:460px;width:calc(100% - 28px);pointer-events:none;
+    transition:transform .45s cubic-bezier(.2,.9,.2,1),opacity .3s ease,visibility 0s linear .45s}
+  #toast.show{transform:translateX(-50%) translateY(0);opacity:1;visibility:visible;
+    transition:transform .45s cubic-bezier(.2,.9,.2,1),opacity .3s ease}
   .toast-win{background:rgba(9,16,33,0.95);border:1px solid var(--cyan);border-radius:2px;padding:12px 14px;
     box-shadow:0 0 26px rgba(77,163,255,0.45)}
   .toast-win .th{font-family:'Orbitron';font-size:10px;letter-spacing:.28em;color:var(--cyan);
@@ -291,6 +294,16 @@ function levelFromXp(xp){
   return {lvl, into:rem, need:xpNeeded(lvl)};
 }
 
+/* ---------- Fixed schedule: 6-on-1-off, starting as if day 0 already followed a Push day ---------- */
+const CYCLE = ['push','pull','legs','push','pull','legs','rest'];
+function parseSets(t){ const m=/^(\d+)\s*x/i.exec(t); return m? parseInt(m[1],10) : 1; }
+function daysBetween(a,b){ return Math.round((new Date(b+'T00:00:00Z') - new Date(a+'T00:00:00Z'))/86400000); }
+function scheduleFor(dateStr){
+  const offset = daysBetween(S.startDate, dateStr) + 1;
+  const idx = ((offset % 7) + 7) % 7;
+  return CYCLE[idx];
+}
+
 /* ---------- State ---------- */
 let S = load();
 function load(){
@@ -304,20 +317,32 @@ function today(){ return new Date().toISOString().slice(0,10); }
 const app = document.getElementById('app');
 function render(){
   if(!S){ renderOnboarding(); return; }
+  if(!S.startDate) S.startDate = S.day || today();
+  if(!S.history) S.history = {};
+  if(!S.weightLog) S.weightLog = {};
+  if(!S.exSets) S.exSets = {};
   if(S.day !== today()){
     S.day = today();
-    S.checked = {};
+    S.exSets = {};
     S.dailyDone = {protein:false,sleep:false};
     S.dailyClaimed = false;
     S.gateDoneToday = false;
+    const sched = scheduleFor(S.day);
+    if(sched==='rest'){
+      const y=new Date(Date.now()-864e5).toISOString().slice(0,10);
+      if(S.lastActive===y || S.streak===0) S.lastActive=S.day;
+    }
     save();
   }
   const info = levelFromXp(S.xp);
   const pct = Math.round(info.into/info.need*100);
   const rk = rankFor(info.lvl);
-  const gate = GATES[S.gate];
+  const gateId = scheduleFor(S.day);
+  const gate = GATES[gateId];
   const goalPct = Math.max(0, Math.min(100, Math.round((S.weight - S.startW)/(S.goalW - S.startW)*100)));
   const proteinLo = Math.round(S.weight*1.6), proteinHi = Math.round(S.weight*2.2);
+  const loggedToday = S.weightLog[S.day]!=null;
+  const trainedDays = Object.keys(S.history).length;
 
   app.innerHTML = `
     <div style="text-align:center;margin:4px 0 16px">
@@ -352,30 +377,42 @@ function render(){
       <div class="bar"><i style="width:${goalPct}%;background:linear-gradient(90deg,var(--green),var(--cyan))"></i></div>
       <div class="bar-meta"><span>Start ${fmt(S.startW)} kg</span><span>${goalPct}% to goal</span></div>
       <div class="inline-w" style="margin-top:12px">
-        <input id="wIn" type="number" inputmode="decimal" step="0.1" placeholder="Log today's weight">
-        <button class="btn sm" onclick="logWeight()">Log</button>
+        <input id="wIn" type="number" inputmode="decimal" step="0.1" placeholder="Log today's weight" ${loggedToday?'disabled':''}>
+        <button class="btn sm" onclick="logWeight()" ${loggedToday?'disabled':''}>${loggedToday?'Logged ✓':'Log'}</button>
       </div>
+      ${loggedToday?`<div style="font-size:11px;color:var(--muted);letter-spacing:.06em;margin-top:8px;text-transform:uppercase">Weight already logged today - come back tomorrow</div>`:''}
     </section>
 
     <section class="win">
-      <div class="eyebrow">Quest - Choose your Gate</div>
+      <div class="eyebrow">Quest - Today's Gate</div>
       <div class="gates">
-        ${gateBtn('push')}${gateBtn('pull')}${gateBtn('legs')}
+        ${gateBtn('push',gateId)}${gateBtn('pull',gateId)}${gateBtn('legs',gateId)}
       </div>
-      <div style="font-family:'Orbitron';font-size:12px;letter-spacing:.1em;color:${gate.color==='red'?'#ff8080':gate.color==='violet'?'#b79cff':'var(--cyan-soft)'};margin-bottom:2px">
-        ${gate.icon} GATE - ${gate.name} <span style="color:var(--muted);font-size:10px">- ${gate.sub}</span>
-      </div>
-      <ul class="ex">
-        ${gate.ex.map((e,i)=>`
-          <li class="${S.checked[S.gate+i]?'done':''}" onclick="toggleEx(${i})">
-            <span class="chk">\u2713</span>
+      ${gateId==='rest' ? `
+        <div style="text-align:center;padding:22px 10px 10px">
+          <div style="font-family:'Orbitron';font-size:15px;letter-spacing:.14em;color:var(--cyan-soft);margin-bottom:8px">RECOVERY PROTOCOL</div>
+          <div style="color:var(--muted);font-size:14px">This is a rest day. Enjoy your temporary freedom, Hunter.</div>
+        </div>
+      ` : `
+        <div style="font-family:'Orbitron';font-size:12px;letter-spacing:.1em;color:${gate.color==='red'?'#ff8080':gate.color==='violet'?'#b79cff':'var(--cyan-soft)'};margin-bottom:2px">
+          ${gate.icon} GATE - ${gate.name} <span style="color:var(--muted);font-size:10px">- ${gate.sub}</span>
+        </div>
+        <ul class="ex">
+          ${gate.ex.map((e,i)=>{
+            const max=parseSets(e.t);
+            const cnt=S.exSets[i]||0;
+            const done=cnt>=max;
+            return `
+          <li class="${done?'done':''}" onclick="toggleEx(${i})">
+            <span class="chk">${done?'\u2713':(cnt>0?cnt:'')}</span>
             <span class="ex-nm">${e.n}<small>${e.d}</small></span>
-            <span class="ex-tg">${e.t}</span>
-          </li>`).join('')}
-      </ul>
-      <button class="btn" id="completeBtn" ${S.gateDoneToday?'disabled':''} onclick="completeGate()">
-        ${S.gateDoneToday?'Gate cleared today \u2713':'Clear the Gate'}
-      </button>
+            <span class="ex-tg">${cnt}/${max} sets - ${e.t}</span>
+          </li>`;}).join('')}
+        </ul>
+        <button class="btn" id="completeBtn" ${S.gateDoneToday?'disabled':''} onclick="completeGate()">
+          ${S.gateDoneToday?'Gate cleared today \u2713':'Clear the Gate'}
+        </button>
+      `}
     </section>
 
     <section class="win">
@@ -398,6 +435,18 @@ function render(){
         ${S.dailyClaimed?'Reward claimed \u2713':'Claim +30 XP'}
       </button>
       <div class="streak">\ud83d\udd25 Streak: ${S.streak} day${S.streak===1?'':'s'}</div>
+    </section>
+
+    <section class="win">
+      <div class="eyebrow">Ascension Log</div>
+      <div class="stats">
+        <div class="stat"><span class="k">Days Trained</span><span class="stat-val">${trainedDays}</span></div>
+        <div class="stat"><span class="k">Current Streak</span><span class="stat-val">${S.streak}</span></div>
+      </div>
+      <details class="guide" style="margin-top:14px">
+        <summary>View full history</summary>
+        <div class="guide-body">${buildHistory()}</div>
+      </details>
     </section>
 
     <section class="win">
@@ -425,27 +474,37 @@ function statBox(label,val,key){
   const up = S._upStats && S._upStats[key];
   return `<div class="stat ${up?'up':''}"><span class="k">${label}</span><span class="stat-val">${val}</span></div>`;
 }
-function gateBtn(id){
+function gateBtn(id,activeId){
   const g=GATES[id];
-  return `<div class="gate" data-color="${g.color}" data-active="${S.gate===id?1:0}" onclick="pickGate('${id}')">
+  return `<div class="gate" data-color="${g.color}" data-active="${activeId===id?1:0}">
     <div class="g-ic">${g.icon}</div><div class="g-nm">${g.name}</div><div class="g-sub">${g.sub.split(' - ')[0]}</div></div>`;
 }
 
-function pickGate(id){ S.gate=id; save(); render(); }
-function toggleEx(i){ const k=S.gate+i; S.checked[k]=!S.checked[k]; save(); render(); }
+function toggleEx(i){
+  const gateId=scheduleFor(S.day);
+  const g=GATES[gateId];
+  if(!g) return;
+  const max=parseSets(g.ex[i].t);
+  const cur=S.exSets[i]||0;
+  S.exSets[i] = (cur+1)>max ? 0 : cur+1;
+  save(); render();
+}
 function toggleDaily(k){ S.dailyDone[k]=!S.dailyDone[k]; save(); render(); }
 
 function allChecked(){
-  const g=GATES[S.gate];
-  return g.ex.every((e,i)=>S.checked[S.gate+i]);
+  const gateId=scheduleFor(S.day);
+  const g=GATES[gateId];
+  if(!g) return false;
+  return g.ex.every((e,i)=>(S.exSets[i]||0)>=parseSets(e.t));
 }
 function completeGate(){
-  if(S.gateDoneToday) return;
+  const gateId=scheduleFor(S.day);
+  const g=GATES[gateId];
+  if(!g || S.gateDoneToday) return;
   if(!allChecked()){
-    toast('Quest incomplete','Check every exercise to clear the Gate.');
+    toast('Quest incomplete','Complete every set to clear the Gate.');
     return;
   }
-  const g=GATES[S.gate];
   const before=levelFromXp(S.xp).lvl;
   const gained={};
   for(const k in g.gains){ S.stats[k]+=g.gains[k]; gained[k]=g.gains[k]; }
@@ -453,12 +512,27 @@ function completeGate(){
   S.xp += 100;
   bumpStreak();
   S.gateDoneToday=true;
+  S.history[S.day] = {gate:gateId, xp:100};
   save();
   const after=levelFromXp(S.xp).lvl;
   render();
   if(after>before){ showLevelUp(after,g.gains); }
   else { toast('Gate cleared','+100 XP - '+g.name+' complete.'); }
   setTimeout(()=>{ S._upStats=null; },1800);
+}
+function buildHistory(){
+  const gateDates=Object.keys(S.history||{});
+  const weightDates=Object.keys(S.weightLog||{});
+  const dates=Array.from(new Set([...gateDates,...weightDates])).sort().reverse();
+  if(!dates.length) return '<p class="note">No entries yet - clear a Gate or log your weight to begin your Ascension Log.</p>';
+  return dates.map(d=>{
+    const h=S.history[d];
+    const w=S.weightLog[d];
+    const parts=[];
+    if(h) parts.push(`${GATES[h.gate].name} cleared (+${h.xp} XP)`);
+    if(w!=null) parts.push(`Weight ${fmt(w)} kg`);
+    return `<p style="margin:0 0 8px;font-size:13px"><b style="color:var(--cyan-soft)">${d}</b> - ${parts.join(' &middot; ')}</p>`;
+  }).join('');
 }
 function claimDaily(){
   if(S.dailyClaimed) return;
@@ -475,9 +549,11 @@ function claimDaily(){
   setTimeout(()=>{ S._upStats=null; },1800);
 }
 function logWeight(){
+  if(S.weightLog[S.day]!=null){ toast('Already logged','You already logged your weight today.'); return; }
   const v=parseFloat(document.getElementById('wIn').value);
   if(isNaN(v)||v<30||v>250){ toast('Invalid entry','Enter a valid weight in kg.'); return; }
   const prev=S.weight; S.weight=v;
+  S.weightLog[S.day]=v;
   const goingUp = S.goalW>=S.startW;
   const progressed = goingUp ? v>prev : v<prev;
   save();
@@ -544,9 +620,10 @@ function startGame(){
   S={
     name, startW:w, weight:w, goalW:g,
     xp:0, stats:{str:10,vit:10,end:10,agi:10},
-    gate:'push', checked:{}, gateDoneToday:false,
+    startDate:today(), exSets:{}, gateDoneToday:false,
     dailyDone:{protein:false,sleep:false}, dailyClaimed:false,
-    streak:0, lastActive:null, day:today()
+    streak:0, lastActive:null, day:today(),
+    history:{}, weightLog:{}
   };
   save(); render();
   toast('System online','Welcome, '+name+'. Let the ascension begin.');
