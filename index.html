@@ -392,12 +392,13 @@ function render(){
   if(!S.history) S.history = {};
   if(!S.weightLog) S.weightLog = {};
   if(!S.exSets) S.exSets = {};
-  if(!S.dailyDone) S.dailyDone = {mystery:false};
+  if(!S.dailyDone) S.dailyDone = {grip:false,mystery:false};
   if(S.dailyDone.mystery===undefined) S.dailyDone.mystery = false;
+  if(S.dailyDone.grip===undefined) S.dailyDone.grip = false;
   if(S.day !== today()){
     S.day = today();
     S.exSets = {};
-    S.dailyDone = {mystery:false};
+    S.dailyDone = {grip:false,mystery:false};
     S.dailyClaimed = false;
     S.gateDoneToday = false;
     const sched = scheduleFor(S.day);
@@ -496,16 +497,20 @@ function render(){
     <section class="win">
       <div class="eyebrow">Hunter's Daily Quest</div>
       <div class="daily">
+        <div class="dq" onclick="toggleDaily('grip')">
+          <span class="chk" style="${S.dailyDone.grip?'background:rgba(77,163,255,.18);color:var(--cyan);box-shadow:0 0 12px rgba(77,163,255,.5)':''}">\u2713</span>
+          <span class="t">40 reps of grip strengthener<small>Forearm and grip work - every day</small></span>
+        </div>
         <div class="dq" onclick="toggleDaily('mystery')">
           <span class="chk" style="${S.dailyDone.mystery?'background:rgba(77,163,255,.18);color:var(--cyan);box-shadow:0 0 12px rgba(77,163,255,.5)':''}">\u2713</span>
           <span class="t">${mysteryTask}<small>Hunter's mystery task - changes daily</small></span>
         </div>
       </div>
-      ${!S.dailyDone.mystery
+      ${!(S.dailyDone.grip&&S.dailyDone.mystery)
         ? `<div class="penalty">\u26a0 Penalty zone active - complete the daily quest</div>`
         : `<div style="font-size:12px;color:var(--green);letter-spacing:.08em;margin-top:10px;text-transform:uppercase">\u2713 Daily quest cleared - +30 XP available</div>`}
       <button class="btn ghost" style="margin-top:12px" onclick="claimDaily()"
-        ${(S.dailyDone.mystery&&!S.dailyClaimed)?'':'disabled'}>
+        ${(S.dailyDone.grip&&S.dailyDone.mystery&&!S.dailyClaimed)?'':'disabled'}>
         ${S.dailyClaimed?'Reward claimed \u2713':'Claim +30 XP'}
       </button>
       <div class="streak">\ud83d\udd25 Streak: ${S.streak} day${S.streak===1?'':'s'}</div>
@@ -641,7 +646,7 @@ function buildHistory(){
 }
 function claimDaily(){
   if(S.dailyClaimed) return;
-  if(!S.dailyDone.mystery) return;
+  if(!(S.dailyDone.grip&&S.dailyDone.mystery)) return;
   const before=levelFromXp(S.xp).lvl;
   S.xp+=30; S.dailyClaimed=true;
   S.stats.vit+=1; S._upStats={vit:1};
@@ -726,7 +731,7 @@ function startGame(){
     name, startW:w, weight:w, goalW:g,
     xp:0, stats:{str:10,vit:10,end:10,agi:10},
     startDate:today(), exSets:{}, gateDoneToday:false,
-    dailyDone:{mystery:false}, dailyClaimed:false,
+    dailyDone:{grip:false,mystery:false}, dailyClaimed:false,
     streak:0, lastActive:null, day:today(),
     history:{}, weightLog:{}
   };
