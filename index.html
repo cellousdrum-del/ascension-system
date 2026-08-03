@@ -115,6 +115,7 @@
   .stat .k{font-size:11px;letter-spacing:.16em;color:var(--muted);text-transform:uppercase}
   .stat .stat-val{font-size:18px;color:#fff;text-shadow:0 0 10px rgba(77,163,255,0.4)}
   .stat.up .stat-val{color:var(--green);text-shadow:0 0 12px rgba(52,211,153,0.7)}
+  .stat.down .stat-val{color:var(--red);text-shadow:0 0 12px rgba(239,68,68,0.7)}
 
   .weight-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px}
   .weight-now{font-family:'Orbitron';font-size:28px;font-weight:700;color:#fff}
@@ -395,12 +396,14 @@ function render(){
   if(!S.dailyDone) S.dailyDone = {grip:false,mystery:false};
   if(S.dailyDone.mystery===undefined) S.dailyDone.mystery = false;
   if(S.dailyDone.grip===undefined) S.dailyDone.grip = false;
+  if(S.penaltyToday===undefined) S.penaltyToday = false;
   if(S.day !== today()){
     S.day = today();
     S.exSets = {};
     S.dailyDone = {grip:false,mystery:false};
     S.dailyClaimed = false;
     S.gateDoneToday = false;
+    S.penaltyToday = false;
     const sched = scheduleFor(S.day);
     if(sched==='rest'){
       const y=new Date(Date.now()-864e5).toISOString().slice(0,10);
@@ -444,6 +447,7 @@ function render(){
         ${statBox('Endurance',S.stats.end,'end')}
         ${statBox('Agility',S.stats.agi,'agi')}
       </div>
+      ${S.penaltyToday?`<div class="penalty" style="margin-top:10px">⚠ PENALTY ZONE ACTIVE - stats suppressed until tomorrow (streak broken)</div>`:''}
     </section>
 
     <section class="win">
@@ -551,7 +555,9 @@ function render(){
 
 function statBox(label,val,key){
   const up = S._upStats && S._upStats[key];
-  return `<div class="stat ${up?'up':''}"><span class="k">${label}</span><span class="stat-val">${val}</span></div>`;
+  const displayVal = (S.penaltyToday && !up) ? Math.max(1, val-2) : val;
+  const cls = up ? 'up' : (S.penaltyToday ? 'down' : '');
+  return `<div class="stat ${cls}"><span class="k">${label}</span><span class="stat-val">${displayVal}</span></div>`;
 }
 function gateBtn(id,activeId){
   const g=GATES[id];
@@ -595,8 +601,12 @@ function completeGate(){
   save();
   const after=levelFromXp(S.xp).lvl;
   render();
+  const penaltyXp=S._lastPenaltyXp; S._lastPenaltyXp=null;
   if(after>before){ showLevelUp(after,g.gains); }
   else { toast('Gate cleared','+100 XP - '+g.name+' complete.'); }
+  if(penaltyXp){
+    setTimeout(()=>{ toast('Streak broken','-'+penaltyXp+' XP penalty. Stats suppressed today.'); }, after>before?400:3000);
+  }
   setTimeout(()=>{ S._upStats=null; },1800);
 }
 const MONTH_NAMES=['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -654,8 +664,12 @@ function claimDaily(){
   save();
   const after=levelFromXp(S.xp).lvl;
   render();
+  const penaltyXp=S._lastPenaltyXp; S._lastPenaltyXp=null;
   if(after>before) showLevelUp(after,{vit:1});
   else toast('Discipline','+30 XP - hunter daily quest.');
+  if(penaltyXp){
+    setTimeout(()=>{ toast('Streak broken','-'+penaltyXp+' XP penalty. Stats suppressed today.'); }, after>before?400:3000);
+  }
   setTimeout(()=>{ S._upStats=null; },1800);
 }
 function logWeight(){
@@ -677,8 +691,17 @@ function logWeight(){
 function bumpStreak(){
   if(S.lastActive===today()) return;
   const y=new Date(Date.now()-864e5).toISOString().slice(0,10);
+  const broke = S.lastActive!=null && S.lastActive!==y && S.streak>0;
+  if(broke) applyStreakPenalty();
   S.streak = (S.lastActive===y) ? S.streak+1 : 1;
   S.lastActive=today();
+}
+function applyStreakPenalty(){
+  const info = levelFromXp(S.xp);
+  const xpLoss = Math.min(50, info.into);
+  S.xp -= xpLoss;
+  S.penaltyToday = true;
+  S._lastPenaltyXp = xpLoss;
 }
 
 let toastT;
