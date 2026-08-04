@@ -682,6 +682,22 @@ function render(){
         <button class="btn sm" onclick="logWeight()" ${loggedToday?'disabled':''}>${loggedToday?'Logged ✓':'Log'}</button>
       </div>
       ${loggedToday?`<div style="font-size:11px;color:var(--muted);letter-spacing:.06em;margin-top:8px;text-transform:uppercase">Weight already logged today - come back tomorrow</div>`:''}
+      <details class="guide" style="margin-top:12px">
+        <summary>View weight trend</summary>
+        <div class="guide-body">${buildWeightChart()}</div>
+      </details>
+      <details class="guide" style="margin-top:10px">
+        <summary>Edit name / weights</summary>
+        <div class="guide-body">
+          <label>Hunter name</label>
+          <input id="editName" value="${esc(S.name)}">
+          <div style="display:flex;gap:10px">
+            <div style="flex:1"><label>Starting weight (kg)</label><input id="editStartW" type="number" inputmode="decimal" step="0.1" value="${S.startW}"></div>
+            <div style="flex:1"><label>Goal weight (kg)</label><input id="editGoalW" type="number" inputmode="decimal" step="0.1" value="${S.goalW}"></div>
+          </div>
+          <button class="btn ghost sm" style="margin-top:12px" onclick="saveProfileEdit()">Save changes</button>
+        </div>
+      </details>
     </section>
 
     <section class="win">
@@ -991,6 +1007,44 @@ function claimDaily(){
     setTimeout(()=>{ toast('Streak broken','-'+penaltyXp+' XP penalty. Stats suppressed today.'); }, after>before?400:3000);
   }
   setTimeout(()=>{ S._upStats=null; },1800);
+}
+function buildWeightChart(){
+  const entries = Object.entries(S.weightLog||{}).sort((a,b)=>a[0]<b[0]?-1:1);
+  if(entries.length<2) return '<p class="note">Log your weight on at least 2 different days to see your trend.</p>';
+  const W=300,H=110,padX=10,padY=14;
+  const weights = entries.map(e=>e[1]);
+  let minW=Math.min(...weights), maxW=Math.max(...weights);
+  const rangePad=(maxW-minW)*0.15 || 1;
+  minW-=rangePad; maxW+=rangePad;
+  const n=entries.length;
+  const x = i => padX + (n===1?0:(i/(n-1))*(W-2*padX));
+  const y = w => padY + (1-(w-minW)/(maxW-minW))*(H-2*padY);
+  const points = entries.map((e,i)=>`${x(i).toFixed(1)},${y(e[1]).toFixed(1)}`).join(' ');
+  const dots = entries.map((e,i)=>`<circle cx="${x(i).toFixed(1)}" cy="${y(e[1]).toFixed(1)}" r="3" fill="#4da3ff" stroke="#05070f" stroke-width="1" style="cursor:pointer" onclick="toast('${e[0]}','${fmt(e[1])} kg')"><title>${e[0]}: ${fmt(e[1])} kg</title></circle>`).join('');
+  const first=entries[0][1], last=entries[n-1][1], delta=last-first;
+  const goingUp = S.goalW>=S.startW;
+  const good = goingUp ? delta>=0 : delta<=0;
+  const deltaTxt=(delta>=0?'+':'')+fmt(delta)+' kg since '+entries[0][0];
+  return `
+    <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block">
+      <polyline points="${points}" fill="none" stroke="#4da3ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      ${dots}
+    </svg>
+    <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.06em">
+      <span>${entries[0][0]}</span><span>${entries[n-1][0]}</span>
+    </div>
+    <div style="font-size:12px;color:${good?'var(--green)':'var(--red)'};margin-top:6px;text-align:center;letter-spacing:.04em">${deltaTxt}</div>
+  `;
+}
+function saveProfileEdit(){
+  if(viewOnly) return;
+  const name=(document.getElementById('editName').value||S.name).trim();
+  const sw=parseFloat(document.getElementById('editStartW').value);
+  const gw=parseFloat(document.getElementById('editGoalW').value);
+  if(isNaN(sw)||isNaN(gw)){ toast('Invalid entry','Enter valid numbers for both weights.'); return; }
+  S.name=name||S.name; S.startW=sw; S.goalW=gw;
+  save(); render();
+  toast('Updated','Profile and goal updated.');
 }
 function logWeight(){
   if(S.weightLog[S.day]!=null){ toast('Already logged','You already logged your weight today.'); return; }
