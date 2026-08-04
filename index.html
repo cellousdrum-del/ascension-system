@@ -402,12 +402,12 @@ function mysteryQuestFor(dateStr){
   return MYSTERY_QUESTS[h % MYSTERY_QUESTS.length];
 }
 
-/* ---------- Fixed schedule: 6-on-1-off, starting as if day 0 already followed a Push day ---------- */
+/* ---------- Fixed schedule: 6-on-1-off, day 0 (startDate) is always Push ---------- */
 const CYCLE = ['push','pull','legs','push','pull','legs','rest'];
 function parseSets(t){ const m=/^(\d+)\s*x/i.exec(t); return m? parseInt(m[1],10) : 1; }
 function daysBetween(a,b){ return Math.round((new Date(b+'T00:00:00Z') - new Date(a+'T00:00:00Z'))/86400000); }
 function scheduleFor(dateStr){
-  const offset = daysBetween(S.startDate, dateStr) + 1;
+  const offset = daysBetween(S.startDate, dateStr);
   const idx = ((offset % 7) + 7) % 7;
   return CYCLE[idx];
 }
