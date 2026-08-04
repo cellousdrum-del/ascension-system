@@ -752,7 +752,7 @@ function render(){
       <details class="guide" style="margin-top:10px">
         <summary>Log a past workout</summary>
         <div class="guide-body">
-          <p class="note" style="margin-bottom:10px">For record-keeping only - adds an entry to your history log but does not award XP or stats.</p>
+          <p class="note" style="margin-bottom:10px">Adds an entry to your history log. XP is only awarded if you check the box below - use that for a day you genuinely trained but forgot to log live.</p>
           <label>Date</label>
           <input id="pastDate" type="date" max="${today()}">
           <label>Gate</label>
@@ -761,6 +761,12 @@ function render(){
             <option value="pull">Pull</option>
             <option value="legs">Legs</option>
           </select>
+          <div style="display:flex;align-items:center;gap:8px;margin:14px 0 6px;cursor:pointer" onclick="document.getElementById('pastAwardXp').click()">
+            <input type="checkbox" id="pastAwardXp" style="width:auto;margin:0">
+            <span style="font-size:13px;color:var(--ink)">Award XP for this day (Gate +100, Daily Quest +30)</span>
+          </div>
+          <label>Weight logged that day (optional, kg) - adds +20 XP</label>
+          <input id="pastWeight" type="number" inputmode="decimal" step="0.1" placeholder="Leave blank to skip">
           <button class="btn ghost sm" style="margin-top:12px" onclick="logPastWorkout()">Add to history</button>
         </div>
       </details>
@@ -918,18 +924,54 @@ function logPastWorkout(){
   if(viewOnly) return;
   const d = document.getElementById('pastDate').value;
   const g = document.getElementById('pastGate').value;
+  const awardXp = document.getElementById('pastAwardXp').checked;
+  const wRaw = document.getElementById('pastWeight').value;
   if(!d){ toast('Missing date','Pick a date first.'); return; }
   if(d > today()){ toast('Invalid date','Cannot log a future date.'); return; }
-  if(S.history[d] && !confirm('This date already has an entry. Overwrite it?')) return;
-  S.history[d] = {gate:g, xp:0, manual:true};
+  const existing = S.history[d];
+  if(existing && !confirm('This date already has an entry. Overwrite it?')) return;
+  const alreadyAwarded = !!(existing && existing.xpAwarded);
+  const willAward = awardXp && !alreadyAwarded;
+
+  const beforeLvl = levelFromXp(S.xp).lvl;
+  let xpGain = 0;
+  const gains = {};
+  if(willAward){
+    const gate = GATES[g];
+    for(const k in gate.gains){ S.stats[k]=(S.stats[k]||0)+gate.gains[k]; gains[k]=(gains[k]||0)+gate.gains[k]; }
+    S.stats.vit=(S.stats.vit||0)+1; gains.vit=(gains.vit||0)+1;
+    xpGain += 130;
+  }
+  const w = parseFloat(wRaw);
+  const weightOk = !isNaN(w) && w>=30 && w<=250;
+  if(willAward && weightOk){
+    S.weightLog[d] = w;
+    S.stats.vit=(S.stats.vit||0)+1; gains.vit=(gains.vit||0)+1;
+    xpGain += 20;
+  }
+  S.xp += xpGain;
+  S.history[d] = {gate:g, xp:xpGain, manual:true, xpAwarded:willAward};
+
   let streakUpdated = false;
   if(S.lastActive==null || d===nextDay(S.lastActive)){
     S.streak = (S.lastActive==null) ? 1 : S.streak+1;
     S.lastActive = d;
     streakUpdated = true;
   }
-  save(); render();
-  toast('Logged',GATES[g].name+' added to your history for '+d+(streakUpdated?' - streak updated':'')+'.');
+  if(willAward) S._upStats = gains;
+  save();
+  const afterLvl = levelFromXp(S.xp).lvl;
+  render();
+  if(afterLvl>beforeLvl){
+    showLevelUp(afterLvl, gains);
+  } else {
+    let msg = GATES[g].name+' added to your history for '+d+'.';
+    if(willAward) msg = '+'+xpGain+' XP - '+msg;
+    else if(awardXp && alreadyAwarded) msg += ' XP was already awarded for this date previously.';
+    if(streakUpdated) msg += ' Streak updated.';
+    toast('Logged', msg);
+  }
+  if(willAward) setTimeout(()=>{ S._upStats=null; },1800);
 }
 function claimDaily(){
   if(S.dailyClaimed) return;
