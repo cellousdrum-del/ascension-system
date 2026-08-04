@@ -585,7 +585,7 @@ function renderAuthGate(){
         <p style="color:var(--muted);font-size:14px;margin-top:8px">Log in or create a Hunter account to begin.</p>
       </div>
       <label>Username</label>
-      <input id="auth-user" placeholder="e.g. txetxe" autocapitalize="none" autocomplete="username">
+      <input id="auth-user" placeholder="e.g. shadow_hunter" autocapitalize="none" autocomplete="username">
       <label>Password</label>
       <input id="auth-pass" type="password" placeholder="********" autocomplete="current-password">
       <button class="btn" onclick="doLogin()">Log In</button>
@@ -748,6 +748,21 @@ function render(){
         <summary>View full history</summary>
         <div class="guide-body">${buildHistory()}</div>
       </details>
+      <details class="guide" style="margin-top:10px">
+        <summary>Log a past workout</summary>
+        <div class="guide-body">
+          <p class="note" style="margin-bottom:10px">For record-keeping only - adds an entry to your history log but does not award XP or stats.</p>
+          <label>Date</label>
+          <input id="pastDate" type="date" max="${today()}">
+          <label>Gate</label>
+          <select id="pastGate">
+            <option value="push">Push</option>
+            <option value="pull">Pull</option>
+            <option value="legs">Legs</option>
+          </select>
+          <button class="btn ghost sm" style="margin-top:12px" onclick="logPastWorkout()">Add to history</button>
+        </div>
+      </details>
     </section>
 
     <section class="win">
@@ -892,11 +907,22 @@ function buildHistory(){
       dayList.map(d=>{
         const h=S.history[d];
         const w=S.weightLog?S.weightLog[d]:null;
-        let line=`${GATES[h.gate].name} cleared (+${h.xp} XP)`;
+        let line=`${GATES[h.gate].name} ${h.manual?'(logged manually)':'cleared (+'+h.xp+' XP)'}`;
         if(w!=null) line+=` &middot; Weight ${fmt(w)} kg`;
         return `<p style="margin:0 0 8px;font-size:13px"><b style="color:var(--cyan-soft)">${d}</b> - ${line}</p>`;
       }).join('');
   }
+}
+function logPastWorkout(){
+  if(viewOnly) return;
+  const d = document.getElementById('pastDate').value;
+  const g = document.getElementById('pastGate').value;
+  if(!d){ toast('Missing date','Pick a date first.'); return; }
+  if(d > today()){ toast('Invalid date','Cannot log a future date.'); return; }
+  if(S.history[d] && !confirm('This date already has an entry. Overwrite it?')) return;
+  S.history[d] = {gate:g, xp:0, manual:true};
+  save(); render();
+  toast('Logged',GATES[g].name+' added to your history for '+d+'.');
 }
 function claimDaily(){
   if(S.dailyClaimed) return;
