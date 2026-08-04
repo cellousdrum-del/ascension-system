@@ -449,6 +449,7 @@ function save(){
 function ymd(d){ const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
 function today(){ return ymd(new Date()); }
 function yesterday(){ return ymd(new Date(Date.now()-864e5)); }
+function nextDay(dateStr){ return ymd(new Date(new Date(dateStr+'T00:00:00Z').getTime()+864e5)); }
 
 function deriveEmail(username){ return username.toLowerCase().trim()+'@ascension.local'; }
 function friendlyAuthError(err){
@@ -921,8 +922,14 @@ function logPastWorkout(){
   if(d > today()){ toast('Invalid date','Cannot log a future date.'); return; }
   if(S.history[d] && !confirm('This date already has an entry. Overwrite it?')) return;
   S.history[d] = {gate:g, xp:0, manual:true};
+  let streakUpdated = false;
+  if(S.lastActive==null || d===nextDay(S.lastActive)){
+    S.streak = (S.lastActive==null) ? 1 : S.streak+1;
+    S.lastActive = d;
+    streakUpdated = true;
+  }
   save(); render();
-  toast('Logged',GATES[g].name+' added to your history for '+d+'.');
+  toast('Logged',GATES[g].name+' added to your history for '+d+(streakUpdated?' - streak updated':'')+'.');
 }
 function claimDaily(){
   if(S.dailyClaimed) return;
