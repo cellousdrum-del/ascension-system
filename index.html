@@ -761,10 +761,10 @@ function render(){
             <option value="pull">Pull</option>
             <option value="legs">Legs</option>
           </select>
-          <div style="display:flex;align-items:center;gap:8px;margin:14px 0 6px;cursor:pointer" onclick="document.getElementById('pastAwardXp').click()">
+          <label style="display:flex;align-items:center;gap:8px;margin:14px 0 6px;cursor:pointer;text-transform:none;letter-spacing:normal;color:var(--ink);font-size:13px;font-weight:400">
             <input type="checkbox" id="pastAwardXp" style="width:auto;margin:0">
-            <span style="font-size:13px;color:var(--ink)">Award XP for this day (Gate +100, Daily Quest +30)</span>
-          </div>
+            Award XP for this day (Gate +100, Daily Quest +30)
+          </label>
           <label>Weight logged that day (optional, kg) - adds +20 XP</label>
           <input id="pastWeight" type="number" inputmode="decimal" step="0.1" placeholder="Leave blank to skip">
           <button class="btn ghost sm" style="margin-top:12px" onclick="logPastWorkout()">Add to history</button>
