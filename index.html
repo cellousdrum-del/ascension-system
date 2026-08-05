@@ -228,11 +228,14 @@
     text-decoration:underline;display:inline-block;text-transform:uppercase}
 
   .tabbar{display:flex;gap:4px;margin:0 0 14px;overflow-x:auto;-webkit-overflow-scrolling:touch}
-  .tab-btn{flex:1;min-width:0;text-align:center;font-family:'Orbitron';font-size:9px;letter-spacing:.02em;
+  .tab-btn{position:relative;flex:1;min-width:0;text-align:center;font-family:'Orbitron';font-size:9px;letter-spacing:.02em;
     text-transform:uppercase;color:var(--muted);background:rgba(11,20,40,0.5);border:1px solid rgba(77,163,255,0.25);
     border-radius:2px;padding:9px 2px;cursor:pointer;user-select:none;transition:.15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .tab-btn[data-active="1"]{color:var(--cyan-soft);border-color:var(--cyan);background:rgba(77,163,255,0.12);
     box-shadow:0 0 14px rgba(77,163,255,0.18)}
+  .tab-dot{position:absolute;top:3px;right:3px;width:6px;height:6px;border-radius:50%;background:var(--red);
+    box-shadow:0 0 6px var(--red),0 0 2px var(--red);animation:dotpulse 1.6s ease-in-out infinite}
+  @keyframes dotpulse{0%,100%{opacity:1}50%{opacity:.45}}
 
   .foot{text-align:center;font-size:11px;color:#3a4964;letter-spacing:.18em;margin-top:4px;text-transform:uppercase}
   .reset{background:none;border:none;color:#3a4964;font-size:11px;letter-spacing:.1em;text-decoration:underline;
@@ -438,6 +441,9 @@ let currentTab = 'home';
 let preViewTab = null;
 let chatMessages = [];
 let chatUnsub = null;
+let unreadUnsub = null;
+let hasUnreadChat = false;
+let lastSeenChatId = null;
 
 function cloudKey(uid){ return 'ascension_cloud_'+uid; }
 function loadLocalCloud(uid){
@@ -503,10 +509,12 @@ async function onAuthReady(user){
     pendingImport = null;
     S = data;
     if(S){ saveLocalCloud(); pushCloud(); }
+    startUnreadWatcher();
     render();
   } else {
     clearTimeout(pushTimer);
     stopChatListener();
+    stopUnreadWatcher();
     currentUid = null; S = null; ownS = null; viewOnly = null; myUsername = null; myIsAdmin = false;
     currentTab = 'home';
     renderAuthGate();
@@ -619,13 +627,14 @@ async function toggleBan(uid, username, currentlyBanned){
 function switchTab(tab){
   if(tab==='admin' && !myIsAdmin) return;
   currentTab = tab;
+  if(tab==='social') hasUnreadChat = false;
   render();
 }
 function renderTabNav(){
   const tabs = [['home','Home'],['progress','Progress'],['social','Social'],['account','Account']];
   if(myIsAdmin) tabs.push(['admin','Admin']);
-  return `<div class="tabbar">${tabs.map(([id,label])=>
-    `<div class="tab-btn" data-active="${currentTab===id?1:0}" onclick="switchTab('${id}')">${label}</div>`
+  return `<div class="tabbar" id="tabbarSlot">${tabs.map(([id,label])=>
+    `<div class="tab-btn" data-active="${currentTab===id?1:0}" onclick="switchTab('${id}')">${label}${(id==='social'&&hasUnreadChat)?'<span class="tab-dot"></span>':''}</div>`
   ).join('')}</div>`;
 }
 
@@ -637,6 +646,7 @@ function startChatListener(){
     snap.forEach(d=>msgs.push(Object.assign({id:d.id}, d.data())));
     chatMessages = msgs.reverse();
     renderChatMessages();
+    if(chatMessages.length) markChatSeen(chatMessages[chatMessages.length-1].id);
   }, ()=>{
     const el = document.getElementById('chatList');
     if(el) el.innerHTML = '<p class="note">Could not load chat - check your connection.</p>';
@@ -644,6 +654,33 @@ function startChatListener(){
 }
 function stopChatListener(){
   if(chatUnsub){ chatUnsub(); chatUnsub=null; }
+}
+function lastSeenKey(uid){ return 'ascension_lastseen_'+uid; }
+function markChatSeen(id){
+  lastSeenChatId = id;
+  if(currentUid) store.set(lastSeenKey(currentUid), id);
+  if(hasUnreadChat){ hasUnreadChat = false; renderTabBar(); }
+}
+function startUnreadWatcher(){
+  if(unreadUnsub || !currentUid) return;
+  lastSeenChatId = store.get(lastSeenKey(currentUid));
+  const q = window.fb.query(window.fb.collection(window.fb.db,'messages'), window.fb.orderBy('timestamp','desc'), window.fb.limit(1));
+  unreadUnsub = window.fb.onSnapshot(q, (snap)=>{
+    if(snap.empty) return;
+    const latest = snap.docs[0];
+    const data = latest.data();
+    if(currentTab==='social' && !viewOnly){ markChatSeen(latest.id); return; }
+    if(data.uid===currentUid){ lastSeenChatId = latest.id; if(currentUid) store.set(lastSeenKey(currentUid), latest.id); return; }
+    if(latest.id!==lastSeenChatId){ hasUnreadChat = true; renderTabBar(); }
+  }, ()=>{});
+}
+function stopUnreadWatcher(){
+  if(unreadUnsub){ unreadUnsub(); unreadUnsub=null; }
+  hasUnreadChat = false; lastSeenChatId = null;
+}
+function renderTabBar(){
+  const el = document.getElementById('tabbarSlot');
+  if(el) el.outerHTML = renderTabNav();
 }
 function formatChatTime(ts){
   if(!ts || !ts.toDate) return '...';
