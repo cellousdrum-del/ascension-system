@@ -884,10 +884,10 @@ function closeDm(){
 function startDmListener(){
   if(dmUnsub || !dmWith || !currentUid) return;
   const id = dmThreadId(currentUid, dmWith.uid);
-  const q = window.fb.query(window.fb.collection(window.fb.db,'dmMessages'), window.fb.where('dmId','==',id));
+  const q = window.fb.query(window.fb.collection(window.fb.db,'dmMessages'), window.fb.where('participants','array-contains',currentUid));
   dmUnsub = window.fb.onSnapshot(q, (snap)=>{
     const msgs = [];
-    snap.forEach(d=>msgs.push(Object.assign({id:d.id}, d.data())));
+    snap.forEach(d=>{ const v=d.data(); if(v.dmId===id) msgs.push(Object.assign({id:d.id}, v)); });
     msgs.sort((a,b)=>{
       const ta = a.timestamp && a.timestamp.toMillis ? a.timestamp.toMillis() : 0;
       const tb = b.timestamp && b.timestamp.toMillis ? b.timestamp.toMillis() : 0;
