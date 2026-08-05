@@ -227,10 +227,10 @@
   .hist-back{font-size:11px;color:var(--cyan-soft);letter-spacing:.1em;margin-bottom:10px;cursor:pointer;
     text-decoration:underline;display:inline-block;text-transform:uppercase}
 
-  .tabbar{display:flex;gap:6px;margin:0 0 14px;overflow-x:auto;-webkit-overflow-scrolling:touch}
-  .tab-btn{flex:1;min-width:64px;text-align:center;font-family:'Orbitron';font-size:10px;letter-spacing:.08em;
+  .tabbar{display:flex;gap:4px;margin:0 0 14px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .tab-btn{flex:1;min-width:0;text-align:center;font-family:'Orbitron';font-size:9px;letter-spacing:.02em;
     text-transform:uppercase;color:var(--muted);background:rgba(11,20,40,0.5);border:1px solid rgba(77,163,255,0.25);
-    border-radius:2px;padding:10px 6px;cursor:pointer;user-select:none;transition:.15s}
+    border-radius:2px;padding:9px 2px;cursor:pointer;user-select:none;transition:.15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .tab-btn[data-active="1"]{color:var(--cyan-soft);border-color:var(--cyan);background:rgba(77,163,255,0.12);
     box-shadow:0 0 14px rgba(77,163,255,0.18)}
 
@@ -796,7 +796,7 @@ function render(){
         ${statBox('Endurance',S.stats.end,'end')}
         ${statBox('Agility',S.stats.agi,'agi')}
       </div>
-      ${S.penaltyToday?`<div class="penalty" style="margin-top:10px">âš  PENALTY ZONE ACTIVE - stats suppressed until tomorrow (streak broken)</div>`:''}
+      ${S.penaltyToday?`<div class="penalty" style="margin-top:10px">⚠ PENALTY ZONE ACTIVE - stats suppressed until tomorrow (streak broken)</div>`:''}
     </section>
 
     <section class="win">
@@ -809,7 +809,7 @@ function render(){
       <div class="bar-meta"><span>Start ${fmt(S.startW)} kg</span><span>${goalPct}% to goal</span></div>
       <div class="inline-w" style="margin-top:12px">
         <input id="wIn" type="number" inputmode="decimal" step="0.1" placeholder="Log today's weight" ${loggedToday?'disabled':''}>
-        <button class="btn sm" onclick="logWeight()" ${loggedToday?'disabled':''}>${loggedToday?'Logged âœ“':'Log (+20 XP)'}</button>
+        <button class="btn sm" onclick="logWeight()" ${loggedToday?'disabled':''}>${loggedToday?'Logged ✓':'Log (+20 XP)'}</button>
       </div>
       ${loggedToday?`<div style="font-size:11px;color:var(--muted);letter-spacing:.06em;margin-top:8px;text-transform:uppercase">Weight already logged today - come back tomorrow</div>`:''}
     </section>
@@ -831,7 +831,7 @@ function render(){
         <div style="font-family:'Orbitron';font-size:12px;letter-spacing:.1em;color:${gate.color==='red'?'#ff8080':gate.color==='violet'?'#b79cff':'var(--cyan-soft)'};margin-bottom:10px">
           ${gate.icon} GATE - ${gate.name} <span style="color:var(--muted);font-size:10px">- ${gate.sub}</span>
         </div>
-        <div class="tier-banner">âš¡ Strength ${tier.label} - ${tier.tip}</div>
+        <div class="tier-banner">⚡ Strength ${tier.label} - ${tier.tip}</div>
         <ul class="ex">
           ${gate.ex.map((e,i)=>{
             const max=parseSets(e.t);
@@ -839,13 +839,13 @@ function render(){
             const done=cnt>=max;
             return `
           <li class="${done?'done':''}" onclick="toggleEx(${i})">
-            <span class="chk">${done?'âœ“':(cnt>0?cnt:'')}</span>
+            <span class="chk">${done?'✓':(cnt>0?cnt:'')}</span>
             <span class="ex-nm">${e.n}<small>${e.d}</small></span>
             <span class="ex-tg">${cnt}/${max} sets - ${e.t}</span>
           </li>`;}).join('')}
         </ul>
         <button class="btn" id="completeBtn" ${S.gateDoneToday?'disabled':''} onclick="completeGate()">
-          ${S.gateDoneToday?'Gate cleared today âœ“':'Clear the Gate (+100 XP)'}
+          ${S.gateDoneToday?'Gate cleared today ✓':'Clear the Gate (+100 XP)'}
         </button>
       `}
     </section>
@@ -854,22 +854,22 @@ function render(){
       <div class="eyebrow">Hunter's Daily Quest</div>
       <div class="daily">
         <div class="dq" onclick="toggleDaily('grip')">
-          <span class="chk" style="${S.dailyDone.grip?'background:rgba(77,163,255,.18);color:var(--cyan);box-shadow:0 0 12px rgba(77,163,255,.5)':''}">âœ“</span>
+          <span class="chk" style="${S.dailyDone.grip?'background:rgba(77,163,255,.18);color:var(--cyan);box-shadow:0 0 12px rgba(77,163,255,.5)':''}">${S.dailyDone.grip?'✓':''}</span>
           <span class="t">40 reps of grip strengthener<small>Forearm and grip work - every day</small></span>
         </div>
         <div class="dq" onclick="toggleDaily('mystery')">
-          <span class="chk" style="${S.dailyDone.mystery?'background:rgba(77,163,255,.18);color:var(--cyan);box-shadow:0 0 12px rgba(77,163,255,.5)':''}">âœ“</span>
+          <span class="chk" style="${S.dailyDone.mystery?'background:rgba(77,163,255,.18);color:var(--cyan);box-shadow:0 0 12px rgba(77,163,255,.5)':''}">${S.dailyDone.mystery?'✓':''}</span>
           <span class="t">${mysteryTask}<small>Hunter's mystery task - changes daily</small></span>
         </div>
       </div>
       ${!(S.dailyDone.grip&&S.dailyDone.mystery)
-        ? `<div class="penalty">âš  Penalty zone active - complete the daily quest</div>`
-        : `<div style="font-size:12px;color:var(--green);letter-spacing:.08em;margin-top:10px;text-transform:uppercase">âœ“ Daily quest cleared - +30 XP available</div>`}
+        ? `<div class="penalty">⚠ Penalty zone active - complete the daily quest</div>`
+        : `<div style="font-size:12px;color:var(--green);letter-spacing:.08em;margin-top:10px;text-transform:uppercase">✓ Daily quest cleared - +30 XP available</div>`}
       <button class="btn ghost" style="margin-top:12px" onclick="claimDaily()"
         ${(S.dailyDone.grip&&S.dailyDone.mystery&&!S.dailyClaimed)?'':'disabled'}>
-        ${S.dailyClaimed?'Reward claimed âœ“':'Claim +30 XP'}
+        ${S.dailyClaimed?'Reward claimed ✓':'Claim +30 XP'}
       </button>
-      <div class="streak">ðŸ”¥ Streak: ${S.streak} day${S.streak===1?'':'s'}</div>
+      <div class="streak">🔥 Streak: ${S.streak} day${S.streak===1?'':'s'}</div>
     </section>
     ` : ''}
 
