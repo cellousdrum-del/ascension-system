@@ -411,15 +411,16 @@ function mysteryQuestFor(dateStr){
   return MYSTERY_QUESTS[h % MYSTERY_QUESTS.length];
 }
 
-/* ---------- Fixed schedule: 6-on-1-off, day 0 (startDate) is always Push ---------- */
+/* ---------- Fixed schedule: 6-on-1-off. The gate only advances when cleared (or on a Rest day) - it waits for you otherwise. ---------- */
 const CYCLE = ['push','pull','legs','push','pull','legs','rest'];
 function parseSets(t){ const m=/^(\d+)\s*x/i.exec(t); return m? parseInt(m[1],10) : 1; }
 function daysBetween(a,b){ return Math.round((new Date(b+'T00:00:00Z') - new Date(a+'T00:00:00Z'))/86400000); }
-function scheduleFor(dateStr){
+function legacyScheduleFor(dateStr){
   const offset = daysBetween(S.startDate, dateStr);
   const idx = ((offset % 7) + 7) % 7;
   return CYCLE[idx];
 }
+function todaysGate(){ return CYCLE[S.cycleIndex]; }
 
 /* ---------- State & cloud sync ---------- */
 let S = null;
@@ -714,7 +715,7 @@ function render(){
   const vb = document.getElementById('viewBar');
   if(viewOnly){
     vb.style.display='block';
-    vb.innerHTML = 'VIEWING '+esc(viewOnly).toUpperCase()+'â€™S PROFILE (READ-ONLY) - <span style="text-decoration:underline;cursor:pointer" onclick="exitViewOnly()">Back to my profile</span>';
+    vb.innerHTML = 'VIEWING '+esc(viewOnly).toUpperCase()+"'S PROFILE (READ-ONLY) - <span style=\"text-decoration:underline;cursor:pointer\" onclick=\"exitViewOnly()\">Back to my profile</span>";
   } else {
     vb.style.display='none';
   }
@@ -729,24 +730,39 @@ function render(){
   if(S.dailyDone.grip===undefined) S.dailyDone.grip = false;
   if(S.penaltyToday===undefined) S.penaltyToday = false;
   if(!S.tzMigrated){ S.tzMigrated = true; S.day = today(); save(); }
+  if(S.cycleIndex===undefined){
+    const seedIdx = CYCLE.indexOf(legacyScheduleFor(S.day||today()));
+    S.cycleIndex = seedIdx>=0 ? seedIdx : 0;
+  }
   if(S.day !== today()){
+    const dayActive = S.gateDoneToday || S.dailyClaimed;
+    const gateCleared = S.gateDoneToday;
+    const wasRestDay = todaysGate()==='rest';
+
+    if(gateCleared || wasRestDay){
+      S.cycleIndex = (S.cycleIndex + 1) % CYCLE.length;
+    }
+
+    S.penaltyToday = false;
+    if(!dayActive && !wasRestDay && S.streak>0){
+      applyStreakPenalty();
+      S.streak = 0;
+    } else if(wasRestDay && !dayActive){
+      if(S.lastActive===yesterday() || S.streak===0) S.lastActive=S.day;
+    }
+
     S.day = today();
     S.exSets = {};
     S.dailyDone = {grip:false,mystery:false};
     S.dailyClaimed = false;
     S.gateDoneToday = false;
-    S.penaltyToday = false;
-    const sched = scheduleFor(S.day);
-    if(sched==='rest'){
-      if(S.lastActive===yesterday() || S.streak===0) S.lastActive=S.day;
-    }
     save();
   }
   const info = levelFromXp(S.xp);
   const pct = info.maxed ? 100 : Math.round(info.into/info.need*100);
   const rk = rankFor(info.lvl);
   const title = titleFor(info.lvl);
-  const gateId = scheduleFor(S.day);
+  const gateId = todaysGate();
   const gate = GATES[gateId];
   const goalPct = Math.max(0, Math.min(100, Math.round((S.weight - S.startW)/(S.goalW - S.startW)*100)));
   const proteinLo = Math.round(S.weight*1.6), proteinHi = Math.round(S.weight*2.2);
@@ -911,9 +927,10 @@ function render(){
         <summary>How XP Works</summary>
         <div class="guide-body">
           <p><b>Clear the Gate</b> (+100 XP): finish every set of your assigned Push/Pull/Legs workout. Also grants stat gains matching the gate (e.g. Push: Strength +1, Endurance +1). Once per day.</p>
+          <p><b>The Gate waits for you.</b> If you don't clear today's assigned Gate, it does not move on - tomorrow (and every day after) still shows the same one, until you actually clear it or it's a scheduled Rest day. Rest days always pass on their own, no action needed.</p>
           <p><b>Daily Quest</b> (+30 XP): check off both the grip-strengthener task and the mystery task. Grants Vitality +1. Once per day.</p>
           <p><b>Log your weight</b> (+20 XP): only awarded if it moved the right direction for your goal (up if bulking, down if cutting) - it always logs either way, but XP only comes with real progress. Grants Vitality +1.</p>
-          <p><b>Streak:</b> clearing the Gate or claiming the Daily Quest keeps it alive - you only need one of the two per day. Rest days take care of themselves automatically. Breaking the streak costs up to <b>-50 XP</b> and suppresses your stats for the rest of that day.</p>
+          <p><b>Streak:</b> clearing the Gate or claiming the Daily Quest keeps it alive - you only need one of the two per day. If a day ends with neither done, the streak breaks immediately (before you get a chance to do anything new) and costs up to <b>-50 XP</b> plus a same-day stat penalty - though it never takes XP you don't have. Skipping several days in a row still only costs one penalty, not one per day.</p>
           <p class="note">Leveling gets a little harder each level, capping at level 100 after roughly 2 years of consistent training.</p>
         </div>
       </details>
@@ -996,7 +1013,7 @@ function gateBtn(id,activeId){
 }
 
 function toggleEx(i){
-  const gateId=scheduleFor(S.day);
+  const gateId=todaysGate();
   const g=GATES[gateId];
   if(!g) return;
   const max=parseSets(g.ex[i].t);
@@ -1007,13 +1024,13 @@ function toggleEx(i){
 function toggleDaily(k){ S.dailyDone[k]=!S.dailyDone[k]; save(); render(); }
 
 function allChecked(){
-  const gateId=scheduleFor(S.day);
+  const gateId=todaysGate();
   const g=GATES[gateId];
   if(!g) return false;
   return g.ex.every((e,i)=>(S.exSets[i]||0)>=parseSets(e.t));
 }
 function completeGate(){
-  const gateId=scheduleFor(S.day);
+  const gateId=todaysGate();
   const g=GATES[gateId];
   if(!g || S.gateDoneToday) return;
   if(!allChecked()){
@@ -1220,6 +1237,7 @@ function bumpStreak(){
 function applyStreakPenalty(){
   const info = levelFromXp(S.xp);
   const xpLoss = Math.min(50, info.into);
+  if(xpLoss<=0) return; // nothing to take from a 0-XP account - skip silently, no fake penalty banner
   S.xp -= xpLoss;
   S.penaltyToday = true;
   S._lastPenaltyXp = xpLoss;
@@ -1276,7 +1294,7 @@ function startGame(){
   S={
     name, startW:w, weight:w, goalW:g,
     xp:0, stats:{str:10,vit:10,end:10,agi:10},
-    startDate:today(), exSets:{}, gateDoneToday:false, tzMigrated:true,
+    startDate:today(), cycleIndex:0, exSets:{}, gateDoneToday:false, tzMigrated:true,
     dailyDone:{grip:false,mystery:false}, dailyClaimed:false,
     streak:0, lastActive:null, day:today(),
     history:{}, weightLog:{},
