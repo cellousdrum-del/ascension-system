@@ -445,6 +445,17 @@ let unreadUnsub = null;
 let hasUnreadChat = false;
 let lastSeenChatId = null;
 
+let dmWith = null;
+let dmMsgs = [];
+let dmUnsub = null;
+let friendsList = [];
+let incomingRequests = [];
+let friendUids = new Set();
+let outgoingPendingUids = new Set();
+let incomingPendingUids = new Set();
+let reqWatchUnsub = null;
+let hasUnreadRequest = false;
+
 function cloudKey(uid){ return 'ascension_cloud_'+uid; }
 function loadLocalCloud(uid){
   const raw = store.get(cloudKey(uid));
@@ -510,12 +521,18 @@ async function onAuthReady(user){
     S = data;
     if(S){ saveLocalCloud(); pushCloud(); }
     startUnreadWatcher();
+    startRequestWatcher();
     render();
   } else {
     clearTimeout(pushTimer);
     stopChatListener();
+    stopDmListener();
     stopUnreadWatcher();
-    currentUid = null; S = null; ownS = null; viewOnly = null; myUsername = null; myIsAdmin = false;
+    stopRequestWatcher();
+    currentUid = null; S = null; ownS = null; myUsername = null; myIsAdmin = false;
+    dmWith = null; dmMsgs = []; friendsList = []; incomingRequests = [];
+    friendUids = new Set(); outgoingPendingUids = new Set(); incomingPendingUids = new Set();
+    viewOnly = null;
     currentTab = 'home';
     renderAuthGate();
   }
@@ -624,6 +641,113 @@ async function toggleBan(uid, username, currentlyBanned){
   }catch(e){ toast('Error','Could not update ban status.'); }
 }
 
+function friendReqId(fromUid, toUid){ return fromUid+'_'+toUid; }
+async function sendFriendRequest(uid, username){
+  if(!currentUid || uid===currentUid) return;
+  try{
+    await window.fb.setDoc(window.fb.doc(window.fb.db,'friendRequests', friendReqId(currentUid, uid)), {
+      fromUid: currentUid, fromUsername: myUsername, toUid: uid, toUsername: username,
+      status: 'pending', createdAt: window.fb.serverTimestamp()
+    });
+    toast('Request sent', 'Waiting for '+username+' to accept.');
+    loadFriendsData();
+  }catch(e){ toast('Error','Could not send friend request.'); }
+}
+async function acceptFriendRequest(reqId){
+  try{
+    await window.fb.setDoc(window.fb.doc(window.fb.db,'friendRequests', reqId), {status:'accepted'}, {merge:true});
+    toast('Friend added','You are now friends.');
+    loadFriendsData();
+  }catch(e){ toast('Error','Could not accept request.'); }
+}
+async function declineFriendRequest(reqId){
+  try{
+    await window.fb.deleteDoc(window.fb.doc(window.fb.db,'friendRequests', reqId));
+    loadFriendsData();
+  }catch(e){ toast('Error','Could not decline request.'); }
+}
+async function removeFriend(reqId, uid, username){
+  if(!confirm('Remove '+username+' as a friend?')) return;
+  try{
+    await window.fb.deleteDoc(window.fb.doc(window.fb.db,'friendRequests', reqId));
+    if(dmWith && dmWith.uid===uid) closeDm();
+    toast('Removed', username+' is no longer a friend.');
+    loadFriendsData();
+  }catch(e){ toast('Error','Could not remove friend.'); }
+}
+async function loadFriendsData(){
+  if(!currentUid) return;
+  try{
+    const col = window.fb.collection(window.fb.db,'friendRequests');
+    const [outQ, inQ, accFromQ, accToQ] = await Promise.all([
+      window.fb.getDocs(window.fb.query(col, window.fb.where('fromUid','==',currentUid), window.fb.where('status','==','pending'))),
+      window.fb.getDocs(window.fb.query(col, window.fb.where('toUid','==',currentUid), window.fb.where('status','==','pending'))),
+      window.fb.getDocs(window.fb.query(col, window.fb.where('fromUid','==',currentUid), window.fb.where('status','==','accepted'))),
+      window.fb.getDocs(window.fb.query(col, window.fb.where('toUid','==',currentUid), window.fb.where('status','==','accepted')))
+    ]);
+    outgoingPendingUids = new Set();
+    outQ.forEach(d=>outgoingPendingUids.add(d.data().toUid));
+    incomingPendingUids = new Set();
+    incomingRequests = [];
+    inQ.forEach(d=>{ const v=d.data(); incomingPendingUids.add(v.fromUid); incomingRequests.push({reqId:d.id, uid:v.fromUid, username:v.fromUsername}); });
+    const accepted = [];
+    accFromQ.forEach(d=>{ const v=d.data(); accepted.push({reqId:d.id, uid:v.toUid, username:v.toUsername}); });
+    accToQ.forEach(d=>{ const v=d.data(); accepted.push({reqId:d.id, uid:v.fromUid, username:v.fromUsername}); });
+    friendUids = new Set(accepted.map(f=>f.uid));
+    const stats = await Promise.all(accepted.map(async f=>{
+      try{
+        const snap = await window.fb.getDoc(window.fb.doc(window.fb.db,'users',f.uid));
+        if(snap.exists()){
+          const u = snap.data();
+          return Object.assign({}, f, { trainedDays: Object.keys(u.history||{}).length, streak: u.streak||0 });
+        }
+      }catch(e){}
+      return Object.assign({}, f, { trainedDays: 0, streak: 0 });
+    }));
+    stats.sort((a,b)=>a.username.localeCompare(b.username));
+    friendsList = stats;
+    const el = document.getElementById('friendsSlot');
+    if(el) el.innerHTML = buildFriendsSectionsHtml();
+    renderChatMessages();
+  }catch(e){
+    const el = document.getElementById('friendsSlot');
+    if(el) el.innerHTML = '<p class="note">Could not load friends.</p>';
+  }
+}
+function buildFriendsSectionsHtml(){
+  let html = '';
+  if(incomingRequests.length){
+    html += `
+    <section class="win">
+      <div class="eyebrow">Friend Requests</div>
+      ${incomingRequests.map(r=>`
+        <div class="hist-row" style="cursor:default">
+          <span class="hr-n">${esc(r.username)}</span>
+          <span style="display:flex;gap:8px;flex:0 0 auto">
+            <button class="btn ghost sm" style="margin:0;padding:6px 10px" onclick="acceptFriendRequest('${r.reqId}')">Accept</button>
+            <button class="btn ghost sm" style="margin:0;padding:6px 10px" onclick="declineFriendRequest('${r.reqId}')">Decline</button>
+          </span>
+        </div>`).join('')}
+    </section>`;
+  }
+  html += `
+    <section class="win">
+      <div class="eyebrow">Friends</div>
+      ${friendsList.length ? friendsList.map(f=>`
+        <div class="hist-row" style="cursor:default">
+          <span onclick="openDm('${f.uid}','${esc(f.username)}')" style="cursor:pointer;display:flex;flex:1;justify-content:space-between;align-items:center;gap:8px">
+            <span class="hr-n">${esc(f.username)}</span>
+            <span class="hr-c">${f.trainedDays}d trained - ${f.streak}d streak</span>
+          </span>
+          <span style="display:flex;gap:8px;flex:0 0 auto;margin-left:10px">
+            <button class="btn ghost sm" style="margin:0;padding:6px 10px" onclick="openDm('${f.uid}','${esc(f.username)}')">Message</button>
+            <button class="btn ghost sm" style="margin:0;padding:6px 10px" onclick="removeFriend('${f.reqId}','${f.uid}','${esc(f.username)}')">Remove</button>
+          </span>
+        </div>`).join('') : '<p class="note">No friends yet - add someone from the chat below.</p>'}
+    </section>`;
+  return html;
+}
+
 function switchTab(tab){
   if(tab==='admin' && !myIsAdmin) return;
   currentTab = tab;
@@ -634,7 +758,7 @@ function renderTabNav(){
   const tabs = [['home','Home'],['progress','Progress'],['social','Social'],['account','Account']];
   if(myIsAdmin) tabs.push(['admin','Admin']);
   return `<div class="tabbar" id="tabbarSlot">${tabs.map(([id,label])=>
-    `<div class="tab-btn" data-active="${currentTab===id?1:0}" onclick="switchTab('${id}')">${label}${(id==='social'&&hasUnreadChat)?'<span class="tab-dot"></span>':''}</div>`
+    `<div class="tab-btn" data-active="${currentTab===id?1:0}" onclick="switchTab('${id}')">${label}${(id==='social'&&(hasUnreadChat||hasUnreadRequest))?'<span class="tab-dot"></span>':''}</div>`
   ).join('')}</div>`;
 }
 
@@ -669,10 +793,22 @@ function startUnreadWatcher(){
     if(snap.empty) return;
     const latest = snap.docs[0];
     const data = latest.data();
-    if(currentTab==='social' && !viewOnly){ markChatSeen(latest.id); return; }
+    if(currentTab==='social' && !viewOnly && !dmWith){ markChatSeen(latest.id); return; }
     if(data.uid===currentUid){ lastSeenChatId = latest.id; if(currentUid) store.set(lastSeenKey(currentUid), latest.id); return; }
     if(latest.id!==lastSeenChatId){ hasUnreadChat = true; renderTabBar(); }
   }, ()=>{});
+}
+function startRequestWatcher(){
+  if(reqWatchUnsub || !currentUid) return;
+  const q = window.fb.query(window.fb.collection(window.fb.db,'friendRequests'), window.fb.where('toUid','==',currentUid), window.fb.where('status','==','pending'));
+  reqWatchUnsub = window.fb.onSnapshot(q, (snap)=>{
+    hasUnreadRequest = !snap.empty;
+    renderTabBar();
+  }, ()=>{});
+}
+function stopRequestWatcher(){
+  if(reqWatchUnsub){ reqWatchUnsub(); reqWatchUnsub=null; }
+  hasUnreadRequest = false;
 }
 function stopUnreadWatcher(){
   if(unreadUnsub){ unreadUnsub(); unreadUnsub=null; }
@@ -700,10 +836,20 @@ function renderChatMessages(){
         <div style="font-size:11px;color:var(--cyan-soft);letter-spacing:.05em;font-family:'Orbitron'">${esc(m.username)} <span style="color:var(--muted);font-weight:400;font-family:'Rajdhani'">${formatChatTime(m.timestamp)}</span></div>
         <div style="font-size:14px;color:var(--ink);margin-top:2px">${esc(m.text)}</div>
       </div>
-      ${myIsAdmin?`<span onclick="deleteMessage('${m.id}')" style="cursor:pointer;color:var(--red);font-size:11px;letter-spacing:.05em;flex:0 0 auto">DELETE</span>`:''}
+      <span style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:0 0 auto">
+        ${friendActionHtml(m)}
+        ${myIsAdmin?`<span onclick="deleteMessage('${m.id}')" style="cursor:pointer;color:var(--red);font-size:11px;letter-spacing:.05em">DELETE</span>`:''}
+      </span>
     </div>
   `).join('');
   el.scrollTop = el.scrollHeight;
+}
+function friendActionHtml(m){
+  if(!currentUid || m.uid===currentUid) return '';
+  if(friendUids.has(m.uid)) return '';
+  if(outgoingPendingUids.has(m.uid)) return '<span class="note" style="font-size:10px">Requested</span>';
+  if(incomingPendingUids.has(m.uid)) return '<span class="note" style="font-size:10px">Respond above</span>';
+  return `<span onclick="sendFriendRequest('${m.uid}','${esc(m.username)}')" style="cursor:pointer;color:var(--cyan-soft);font-size:11px;letter-spacing:.05em">+ FRIEND</span>`;
 }
 async function deleteMessage(id){
   if(!confirm('Delete this message?')) return;
@@ -720,6 +866,69 @@ async function sendChatMessage(){
   input.value='';
   try{
     await window.fb.addDoc(window.fb.collection(window.fb.db,'messages'), {
+      uid: currentUid, username: myUsername, text, timestamp: window.fb.serverTimestamp()
+    });
+  }catch(e){ toast('Send failed','Could not send your message. Check your connection.'); }
+}
+
+function dmThreadId(a,b){ return [a,b].sort().join('_'); }
+function openDm(uid, username){
+  dmWith = {uid, username};
+  render();
+}
+function closeDm(){
+  dmWith = null;
+  dmMsgs = [];
+  render();
+}
+function startDmListener(){
+  if(dmUnsub || !dmWith || !currentUid) return;
+  const id = dmThreadId(currentUid, dmWith.uid);
+  const q = window.fb.query(window.fb.collection(window.fb.db,'dmMessages'), window.fb.where('dmId','==',id));
+  dmUnsub = window.fb.onSnapshot(q, (snap)=>{
+    const msgs = [];
+    snap.forEach(d=>msgs.push(Object.assign({id:d.id}, d.data())));
+    msgs.sort((a,b)=>{
+      const ta = a.timestamp && a.timestamp.toMillis ? a.timestamp.toMillis() : 0;
+      const tb = b.timestamp && b.timestamp.toMillis ? b.timestamp.toMillis() : 0;
+      return ta - tb;
+    });
+    dmMsgs = msgs;
+    renderDmMessages();
+  }, ()=>{
+    const el = document.getElementById('dmList');
+    if(el) el.innerHTML = '<p class="note">Could not load messages - check your connection.</p>';
+  });
+}
+function stopDmListener(){
+  if(dmUnsub){ dmUnsub(); dmUnsub=null; }
+}
+function renderDmMessages(){
+  const el = document.getElementById('dmList');
+  if(!el) return;
+  if(!dmMsgs.length){
+    el.innerHTML = '<p class="note">No messages yet - say hello.</p>';
+    return;
+  }
+  el.innerHTML = dmMsgs.map(m=>`
+    <div style="margin:0 0 12px">
+      <div style="font-size:11px;color:var(--cyan-soft);letter-spacing:.05em;font-family:'Orbitron'">${esc(m.username)} <span style="color:var(--muted);font-weight:400;font-family:'Rajdhani'">${formatChatTime(m.timestamp)}</span></div>
+      <div style="font-size:14px;color:var(--ink);margin-top:2px">${esc(m.text)}</div>
+    </div>
+  `).join('');
+  el.scrollTop = el.scrollHeight;
+}
+async function sendDmMessage(){
+  if(viewOnly || !dmWith || !currentUid) return;
+  const input = document.getElementById('dmInput');
+  const text = (input.value||'').trim();
+  if(!text) return;
+  if(text.length>500){ toast('Too long','Keep messages under 500 characters.'); return; }
+  input.value='';
+  try{
+    await window.fb.addDoc(window.fb.collection(window.fb.db,'dmMessages'), {
+      dmId: dmThreadId(currentUid, dmWith.uid),
+      participants: [currentUid, dmWith.uid],
       uid: currentUid, username: myUsername, text, timestamp: window.fb.serverTimestamp()
     });
   }catch(e){ toast('Send failed','Could not send your message. Check your connection.'); }
@@ -991,7 +1200,20 @@ function render(){
     </section>
     ` : ''}
 
-    ${currentTab==='social' ? `
+    ${currentTab==='social' ? (dmWith ? `
+    <section class="win">
+      <div class="hist-back" onclick="closeDm()">&larr; Friends</div>
+      <div class="eyebrow">${esc(dmWith.username)}</div>
+      <div id="dmList" style="max-height:360px;overflow-y:auto;margin-bottom:12px">
+        <p class="note">Loading messages...</p>
+      </div>
+      <div class="inline-w">
+        <input id="dmInput" placeholder="Message..." onkeydown="if(event.key==='Enter'){sendDmMessage();}">
+        <button class="btn sm" onclick="sendDmMessage()">Send</button>
+      </div>
+    </section>
+    ` : `
+    <div id="friendsSlot">${buildFriendsSectionsHtml()}</div>
     <section class="win">
       <div class="eyebrow">Hunter Chat</div>
       <div id="chatList" style="max-height:360px;overflow-y:auto;margin-bottom:12px">
@@ -1002,7 +1224,7 @@ function render(){
         <button class="btn sm" onclick="sendChatMessage()">Send</button>
       </div>
     </section>
-    ` : ''}
+    `) : ''}
 
     ${currentTab==='account' ? `
     <section class="win">
@@ -1035,7 +1257,10 @@ function render(){
     <button class="reset" onclick="hardReset()">Reset on awakening (erase data)</button>
   `;
   if(myIsAdmin && currentTab==='admin' && !viewOnly) loadAdminList();
-  if(currentTab==='social' && !viewOnly && S) startChatListener(); else stopChatListener();
+  const onSocialHome = currentTab==='social' && !viewOnly && S && !dmWith;
+  const onDm = currentTab==='social' && !viewOnly && S && dmWith;
+  if(onSocialHome){ startChatListener(); loadFriendsData(); } else stopChatListener();
+  if(onDm) startDmListener(); else stopDmListener();
 
   const wIn=document.getElementById('wIn'); if(wIn) wIn.value='';
 }
