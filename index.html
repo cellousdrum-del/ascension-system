@@ -227,6 +227,11 @@
   .hist-back{font-size:11px;color:var(--cyan-soft);letter-spacing:.1em;margin-bottom:10px;cursor:pointer;
     text-decoration:underline;display:inline-block;text-transform:uppercase}
 
+  .msg-scroll{-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:var(--cyan) rgba(11,20,40,0.3)}
+  .msg-scroll::-webkit-scrollbar{width:6px}
+  .msg-scroll::-webkit-scrollbar-track{background:rgba(11,20,40,0.3);border-radius:3px}
+  .msg-scroll::-webkit-scrollbar-thumb{background:var(--cyan);border-radius:3px}
+
   .tabbar{display:flex;gap:4px;margin:0 0 14px;overflow-x:auto;-webkit-overflow-scrolling:touch}
   .tab-btn{position:relative;flex:1;min-width:0;text-align:center;font-family:'Orbitron';font-size:9px;letter-spacing:.02em;
     text-transform:uppercase;color:var(--muted);background:rgba(11,20,40,0.5);border:1px solid rgba(77,163,255,0.25);
@@ -1204,7 +1209,7 @@ function render(){
     <section class="win">
       <div class="hist-back" onclick="closeDm()">&larr; Friends</div>
       <div class="eyebrow">${esc(dmWith.username)}</div>
-      <div id="dmList" style="max-height:360px;overflow-y:auto;margin-bottom:12px">
+      <div id="dmList" class="msg-scroll" style="max-height:360px;overflow-y:auto;margin-bottom:12px">
         <p class="note">Loading messages...</p>
       </div>
       <div class="inline-w">
@@ -1216,7 +1221,7 @@ function render(){
     <div id="friendsSlot">${buildFriendsSectionsHtml()}</div>
     <section class="win">
       <div class="eyebrow">Hunter Chat</div>
-      <div id="chatList" style="max-height:360px;overflow-y:auto;margin-bottom:12px">
+      <div id="chatList" class="msg-scroll" style="max-height:360px;overflow-y:auto;margin-bottom:12px">
         <p class="note">Loading messages...</p>
       </div>
       <div class="inline-w">
