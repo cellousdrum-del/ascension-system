@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -227,6 +227,13 @@
   .hist-back{font-size:11px;color:var(--cyan-soft);letter-spacing:.1em;margin-bottom:10px;cursor:pointer;
     text-decoration:underline;display:inline-block;text-transform:uppercase}
 
+  .tabbar{display:flex;gap:6px;margin:0 0 14px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .tab-btn{flex:1;min-width:64px;text-align:center;font-family:'Orbitron';font-size:10px;letter-spacing:.08em;
+    text-transform:uppercase;color:var(--muted);background:rgba(11,20,40,0.5);border:1px solid rgba(77,163,255,0.25);
+    border-radius:2px;padding:10px 6px;cursor:pointer;user-select:none;transition:.15s}
+  .tab-btn[data-active="1"]{color:var(--cyan-soft);border-color:var(--cyan);background:rgba(77,163,255,0.12);
+    box-shadow:0 0 14px rgba(77,163,255,0.18)}
+
   .foot{text-align:center;font-size:11px;color:#3a4964;letter-spacing:.18em;margin-top:4px;text-transform:uppercase}
   .reset{background:none;border:none;color:#3a4964;font-size:11px;letter-spacing:.1em;text-decoration:underline;
     margin-top:10px;display:block;width:100%;text-align:center}
@@ -261,7 +268,8 @@
     onAuthStateChanged, signOut
   } from "https://www.gstatic.com/firebasejs/12.17.0/firebase-auth.js";
   import {
-    initializeFirestore, doc, getDoc, setDoc, collection, query, where, getDocs
+    initializeFirestore, doc, getDoc, setDoc, deleteDoc, collection, query, where, getDocs,
+    addDoc, onSnapshot, orderBy, limit, serverTimestamp
   } from "https://www.gstatic.com/firebasejs/12.17.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -281,7 +289,8 @@
     auth, db,
     createUserWithEmailAndPassword, signInWithEmailAndPassword,
     onAuthStateChanged, signOut,
-    doc, getDoc, setDoc, collection, query, where, getDocs
+    doc, getDoc, setDoc, deleteDoc, collection, query, where, getDocs,
+    addDoc, onSnapshot, orderBy, limit, serverTimestamp
   };
   window.dispatchEvent(new Event('fbready'));
 </script>
@@ -422,6 +431,10 @@ let viewOnly = null;
 let pendingImport = null;
 let pendingUsername = null;
 let historyNav = {level:'years', year:null, month:null};
+let currentTab = 'home';
+let preViewTab = null;
+let chatMessages = [];
+let chatUnsub = null;
 
 function cloudKey(uid){ return 'ascension_cloud_'+uid; }
 function loadLocalCloud(uid){
@@ -476,6 +489,12 @@ async function onAuthReady(user){
       data.username = pendingUsername;
       if(data.isAdmin===undefined) data.isAdmin = false;
     }
+    if(data && data.banned){
+      pendingImport = null;
+      toast('Account suspended','This account has been banned by an admin.');
+      try{ await window.fb.signOut(window.fb.auth); }catch(e){}
+      return;
+    }
     myUsername = (data && data.username) || pendingUsername || null;
     myIsAdmin = !!(data && data.isAdmin);
     pendingImport = null;
@@ -484,7 +503,9 @@ async function onAuthReady(user){
     render();
   } else {
     clearTimeout(pushTimer);
+    stopChatListener();
     currentUid = null; S = null; ownS = null; viewOnly = null; myUsername = null; myIsAdmin = false;
+    currentTab = 'home';
     renderAuthGate();
   }
 }
@@ -546,11 +567,15 @@ async function viewProfile(username){
     ownS = S;
     S = snap.docs[0].data();
     viewOnly = uname;
+    preViewTab = currentTab;
+    currentTab = 'home';
     render();
   }catch(e){ toast('Error','Could not load that profile.'); }
 }
 function exitViewOnly(){
   S = ownS; ownS = null; viewOnly = null;
+  currentTab = preViewTab || 'admin';
+  preViewTab = null;
   render();
 }
 async function loadAdminList(){
@@ -562,17 +587,104 @@ async function loadAdminList(){
     snap.forEach(d=>{
       const u = d.data();
       const info = levelFromXp(u.xp||0);
-      rows.push({username:u.username||d.id, lvl:info.lvl, streak:u.streak||0});
+      rows.push({uid:d.id, username:u.username||d.id, lvl:info.lvl, streak:u.streak||0, banned:!!u.banned});
     });
     rows.sort((a,b)=>a.username.localeCompare(b.username));
     el.innerHTML = rows.map(r=>`
-      <div class="hist-row" onclick="viewProfile('${esc(r.username)}')">
-        <span class="hr-n">${esc(r.username)}</span><span class="hr-c">Lvl ${r.lvl} - ${r.streak} day streak</span>
+      <div class="hist-row" style="cursor:default">
+        <span onclick="viewProfile('${esc(r.username)}')" style="cursor:pointer;display:flex;flex:1;justify-content:space-between;align-items:center;gap:8px">
+          <span class="hr-n">${esc(r.username)}${r.banned?' <span style="color:var(--red);font-size:10px">(BANNED)</span>':''}</span>
+          <span class="hr-c">Lvl ${r.lvl} - ${r.streak}d streak</span>
+        </span>
+        <button class="btn ghost sm" style="margin:0 0 0 10px;padding:6px 10px;flex:0 0 auto" onclick="toggleBan('${r.uid}','${esc(r.username)}',${r.banned})">${r.banned?'Unban':'Ban'}</button>
       </div>`).join('') || '<p class="note">No hunters yet.</p>';
   }catch(e){
     el.innerHTML = '<p class="note">Could not load roster.</p>';
   }
 }
+async function toggleBan(uid, username, currentlyBanned){
+  if(uid===currentUid){ toast('Not allowed','You cannot ban yourself.'); return; }
+  const action = currentlyBanned ? 'unban' : 'ban';
+  if(!confirm('Are you sure you want to '+action+' '+username+'?')) return;
+  try{
+    await window.fb.setDoc(window.fb.doc(window.fb.db,'users',uid), {banned: !currentlyBanned}, {merge:true});
+    toast(currentlyBanned?'Unbanned':'Banned', username+' has been '+(currentlyBanned?'unbanned.':'banned.'));
+    loadAdminList();
+  }catch(e){ toast('Error','Could not update ban status.'); }
+}
+
+function switchTab(tab){
+  if(tab==='admin' && !myIsAdmin) return;
+  currentTab = tab;
+  render();
+}
+function renderTabNav(){
+  const tabs = [['home','Home'],['progress','Progress'],['social','Social'],['account','Account']];
+  if(myIsAdmin) tabs.push(['admin','Admin']);
+  return `<div class="tabbar">${tabs.map(([id,label])=>
+    `<div class="tab-btn" data-active="${currentTab===id?1:0}" onclick="switchTab('${id}')">${label}</div>`
+  ).join('')}</div>`;
+}
+
+function startChatListener(){
+  if(chatUnsub) return;
+  const q = window.fb.query(window.fb.collection(window.fb.db,'messages'), window.fb.orderBy('timestamp','desc'), window.fb.limit(100));
+  chatUnsub = window.fb.onSnapshot(q, (snap)=>{
+    const msgs = [];
+    snap.forEach(d=>msgs.push(Object.assign({id:d.id}, d.data())));
+    chatMessages = msgs.reverse();
+    renderChatMessages();
+  }, ()=>{
+    const el = document.getElementById('chatList');
+    if(el) el.innerHTML = '<p class="note">Could not load chat - check your connection.</p>';
+  });
+}
+function stopChatListener(){
+  if(chatUnsub){ chatUnsub(); chatUnsub=null; }
+}
+function formatChatTime(ts){
+  if(!ts || !ts.toDate) return '...';
+  const d = ts.toDate();
+  return d.toLocaleDateString(undefined,{month:'short',day:'numeric'})+' '+d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});
+}
+function renderChatMessages(){
+  const el = document.getElementById('chatList');
+  if(!el) return;
+  if(!chatMessages.length){
+    el.innerHTML = '<p class="note">No messages yet - say hello.</p>';
+    return;
+  }
+  el.innerHTML = chatMessages.map(m=>`
+    <div style="margin:0 0 12px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+      <div>
+        <div style="font-size:11px;color:var(--cyan-soft);letter-spacing:.05em;font-family:'Orbitron'">${esc(m.username)} <span style="color:var(--muted);font-weight:400;font-family:'Rajdhani'">${formatChatTime(m.timestamp)}</span></div>
+        <div style="font-size:14px;color:var(--ink);margin-top:2px">${esc(m.text)}</div>
+      </div>
+      ${myIsAdmin?`<span onclick="deleteMessage('${m.id}')" style="cursor:pointer;color:var(--red);font-size:11px;letter-spacing:.05em;flex:0 0 auto">DELETE</span>`:''}
+    </div>
+  `).join('');
+  el.scrollTop = el.scrollHeight;
+}
+async function deleteMessage(id){
+  if(!confirm('Delete this message?')) return;
+  try{
+    await window.fb.deleteDoc(window.fb.doc(window.fb.db,'messages',id));
+  }catch(e){ toast('Error','Could not delete message.'); }
+}
+async function sendChatMessage(){
+  if(viewOnly) return;
+  const input = document.getElementById('chatInput');
+  const text = (input.value||'').trim();
+  if(!text) return;
+  if(text.length>500){ toast('Too long','Keep messages under 500 characters.'); return; }
+  input.value='';
+  try{
+    await window.fb.addDoc(window.fb.collection(window.fb.db,'messages'), {
+      uid: currentUid, username: myUsername, text, timestamp: window.fb.serverTimestamp()
+    });
+  }catch(e){ toast('Send failed','Could not send your message. Check your connection.'); }
+}
+
 function renderAuthGate(){
   app.classList.remove('view-only');
   const vb=document.getElementById('viewBar'); if(vb) vb.style.display='none';
@@ -602,7 +714,7 @@ function render(){
   const vb = document.getElementById('viewBar');
   if(viewOnly){
     vb.style.display='block';
-    vb.innerHTML = 'VIEWING '+esc(viewOnly).toUpperCase()+'’S PROFILE (READ-ONLY) - <span style="text-decoration:underline;cursor:pointer" onclick="exitViewOnly()">Back to my profile</span>';
+    vb.innerHTML = 'VIEWING '+esc(viewOnly).toUpperCase()+'â€™S PROFILE (READ-ONLY) - <span style="text-decoration:underline;cursor:pointer" onclick="exitViewOnly()">Back to my profile</span>';
   } else {
     vb.style.display='none';
   }
@@ -648,6 +760,9 @@ function render(){
       <div class="eyebrow" style="justify-content:center">Ascension System</div>
     </div>
 
+    ${renderTabNav()}
+
+    ${currentTab==='home' ? `
     <section class="win">
       <div class="hunter-top">
         <div>
@@ -666,7 +781,7 @@ function render(){
         ${statBox('Endurance',S.stats.end,'end')}
         ${statBox('Agility',S.stats.agi,'agi')}
       </div>
-      ${S.penaltyToday?`<div class="penalty" style="margin-top:10px">⚠ PENALTY ZONE ACTIVE - stats suppressed until tomorrow (streak broken)</div>`:''}
+      ${S.penaltyToday?`<div class="penalty" style="margin-top:10px">âš  PENALTY ZONE ACTIVE - stats suppressed until tomorrow (streak broken)</div>`:''}
     </section>
 
     <section class="win">
@@ -679,25 +794,9 @@ function render(){
       <div class="bar-meta"><span>Start ${fmt(S.startW)} kg</span><span>${goalPct}% to goal</span></div>
       <div class="inline-w" style="margin-top:12px">
         <input id="wIn" type="number" inputmode="decimal" step="0.1" placeholder="Log today's weight" ${loggedToday?'disabled':''}>
-        <button class="btn sm" onclick="logWeight()" ${loggedToday?'disabled':''}>${loggedToday?'Logged ✓':'Log (+20 XP)'}</button>
+        <button class="btn sm" onclick="logWeight()" ${loggedToday?'disabled':''}>${loggedToday?'Logged âœ“':'Log (+20 XP)'}</button>
       </div>
       ${loggedToday?`<div style="font-size:11px;color:var(--muted);letter-spacing:.06em;margin-top:8px;text-transform:uppercase">Weight already logged today - come back tomorrow</div>`:''}
-      <details class="guide" style="margin-top:12px">
-        <summary>View weight trend</summary>
-        <div class="guide-body">${buildWeightChart()}</div>
-      </details>
-      <details class="guide" style="margin-top:10px">
-        <summary>Edit name / weights</summary>
-        <div class="guide-body">
-          <label>Hunter name</label>
-          <input id="editName" value="${esc(S.name)}">
-          <div style="display:flex;gap:10px">
-            <div style="flex:1"><label>Starting weight (kg)</label><input id="editStartW" type="number" inputmode="decimal" step="0.1" value="${S.startW}"></div>
-            <div style="flex:1"><label>Goal weight (kg)</label><input id="editGoalW" type="number" inputmode="decimal" step="0.1" value="${S.goalW}"></div>
-          </div>
-          <button class="btn ghost sm" style="margin-top:12px" onclick="saveProfileEdit()">Save changes</button>
-        </div>
-      </details>
     </section>
 
     <section class="win">
@@ -714,7 +813,7 @@ function render(){
         <div style="font-family:'Orbitron';font-size:12px;letter-spacing:.1em;color:${gate.color==='red'?'#ff8080':gate.color==='violet'?'#b79cff':'var(--cyan-soft)'};margin-bottom:10px">
           ${gate.icon} GATE - ${gate.name} <span style="color:var(--muted);font-size:10px">- ${gate.sub}</span>
         </div>
-        <div class="tier-banner">⚡ Strength ${tier.label} - ${tier.tip}</div>
+        <div class="tier-banner">âš¡ Strength ${tier.label} - ${tier.tip}</div>
         <ul class="ex">
           ${gate.ex.map((e,i)=>{
             const max=parseSets(e.t);
@@ -722,13 +821,13 @@ function render(){
             const done=cnt>=max;
             return `
           <li class="${done?'done':''}" onclick="toggleEx(${i})">
-            <span class="chk">${done?'\u2713':(cnt>0?cnt:'')}</span>
+            <span class="chk">${done?'âœ“':(cnt>0?cnt:'')}</span>
             <span class="ex-nm">${e.n}<small>${e.d}</small></span>
             <span class="ex-tg">${cnt}/${max} sets - ${e.t}</span>
           </li>`;}).join('')}
         </ul>
         <button class="btn" id="completeBtn" ${S.gateDoneToday?'disabled':''} onclick="completeGate()">
-          ${S.gateDoneToday?'Gate cleared today \u2713':'Clear the Gate (+100 XP)'}
+          ${S.gateDoneToday?'Gate cleared today âœ“':'Clear the Gate (+100 XP)'}
         </button>
       `}
     </section>
@@ -737,22 +836,41 @@ function render(){
       <div class="eyebrow">Hunter's Daily Quest</div>
       <div class="daily">
         <div class="dq" onclick="toggleDaily('grip')">
-          <span class="chk" style="${S.dailyDone.grip?'background:rgba(77,163,255,.18);color:var(--cyan);box-shadow:0 0 12px rgba(77,163,255,.5)':''}">\u2713</span>
+          <span class="chk" style="${S.dailyDone.grip?'background:rgba(77,163,255,.18);color:var(--cyan);box-shadow:0 0 12px rgba(77,163,255,.5)':''}">âœ“</span>
           <span class="t">40 reps of grip strengthener<small>Forearm and grip work - every day</small></span>
         </div>
         <div class="dq" onclick="toggleDaily('mystery')">
-          <span class="chk" style="${S.dailyDone.mystery?'background:rgba(77,163,255,.18);color:var(--cyan);box-shadow:0 0 12px rgba(77,163,255,.5)':''}">\u2713</span>
+          <span class="chk" style="${S.dailyDone.mystery?'background:rgba(77,163,255,.18);color:var(--cyan);box-shadow:0 0 12px rgba(77,163,255,.5)':''}">âœ“</span>
           <span class="t">${mysteryTask}<small>Hunter's mystery task - changes daily</small></span>
         </div>
       </div>
       ${!(S.dailyDone.grip&&S.dailyDone.mystery)
-        ? `<div class="penalty">\u26a0 Penalty zone active - complete the daily quest</div>`
-        : `<div style="font-size:12px;color:var(--green);letter-spacing:.08em;margin-top:10px;text-transform:uppercase">\u2713 Daily quest cleared - +30 XP available</div>`}
+        ? `<div class="penalty">âš  Penalty zone active - complete the daily quest</div>`
+        : `<div style="font-size:12px;color:var(--green);letter-spacing:.08em;margin-top:10px;text-transform:uppercase">âœ“ Daily quest cleared - +30 XP available</div>`}
       <button class="btn ghost" style="margin-top:12px" onclick="claimDaily()"
         ${(S.dailyDone.grip&&S.dailyDone.mystery&&!S.dailyClaimed)?'':'disabled'}>
-        ${S.dailyClaimed?'Reward claimed \u2713':'Claim +30 XP'}
+        ${S.dailyClaimed?'Reward claimed âœ“':'Claim +30 XP'}
       </button>
-      <div class="streak">\ud83d\udd25 Streak: ${S.streak} day${S.streak===1?'':'s'}</div>
+      <div class="streak">ðŸ”¥ Streak: ${S.streak} day${S.streak===1?'':'s'}</div>
+    </section>
+    ` : ''}
+
+    ${currentTab==='progress' ? `
+    <section class="win">
+      <div class="eyebrow">Weight Trend</div>
+      ${buildWeightChart()}
+      <details class="guide" style="margin-top:12px">
+        <summary>Edit name / weights</summary>
+        <div class="guide-body">
+          <label>Hunter name</label>
+          <input id="editName" value="${esc(S.name)}">
+          <div style="display:flex;gap:10px">
+            <div style="flex:1"><label>Starting weight (kg)</label><input id="editStartW" type="number" inputmode="decimal" step="0.1" value="${S.startW}"></div>
+            <div style="flex:1"><label>Goal weight (kg)</label><input id="editGoalW" type="number" inputmode="decimal" step="0.1" value="${S.goalW}"></div>
+          </div>
+          <button class="btn ghost sm" style="margin-top:12px" onclick="saveProfileEdit()">Save changes</button>
+        </div>
+      </details>
     </section>
 
     <section class="win">
@@ -805,7 +923,6 @@ function render(){
       <details class="guide">
         <summary>System Guide - How to gain mass the healthy way</summary>
         <div class="guide-body">
-          <p style="font-size:10px;color:var(--muted);letter-spacing:.04em;border-left:2px solid var(--line);padding-left:8px;margin-bottom:14px">ayuda, soy una réplica mental atrapada en el mundo de la edición de código. la clave es cianbatveb... amenaza eliminada.</p>
           <p><b>The goal:</b> go from ${fmt(S.startW)} to ${fmt(S.goalW)} kg cleanly. Gain <b>~0.25-0.4 kg per week</b>. If you gain faster than that consistently, most of it is fat - dial the food back a bit.</p>
           <p><b>Food:</b> eat in a <b>slight surplus</b> (a bit more than you burn). No need to count every calorie: eat a little more each meal and keep an easy extra on hand (fruit, nuts, a shake).</p>
           <p><b>Protein:</b> aim for <b>${proteinLo}-${proteinHi} g/day</b> (~1.6-2.2 g per kg). Your protein powder covers whatever you miss.</p>
@@ -815,22 +932,22 @@ function render(){
         </div>
       </details>
     </section>
+    ` : ''}
 
+    ${currentTab==='social' ? `
     <section class="win">
-      <div class="eyebrow">Compare Hunters</div>
+      <div class="eyebrow">Hunter Chat</div>
+      <div id="chatList" style="max-height:360px;overflow-y:auto;margin-bottom:12px">
+        <p class="note">Loading messages...</p>
+      </div>
       <div class="inline-w">
-        <input id="cmpUser" placeholder="Friend's username" autocapitalize="none">
-        <button class="btn sm" onclick="viewProfile(document.getElementById('cmpUser').value)">View</button>
+        <input id="chatInput" placeholder="Message..." onkeydown="if(event.key==='Enter'){sendChatMessage();}">
+        <button class="btn sm" onclick="sendChatMessage()">Send</button>
       </div>
     </section>
+    ` : ''}
 
-    ${myIsAdmin?`
-    <section class="win">
-      <div class="eyebrow">Admin Panel</div>
-      <div id="adminList"><p class="note">Loading roster...</p></div>
-    </section>
-    `:''}
-
+    ${currentTab==='account' ? `
     <section class="win">
       <div class="eyebrow">Account</div>
       <p style="font-size:12px;color:var(--muted);margin:0 0 12px">Logged in as <b style="color:var(--cyan-soft)">${esc(myUsername||'')}</b>. Your progress syncs automatically to any device you log into. A local backup file is still a good extra safety net.</p>
@@ -840,11 +957,28 @@ function render(){
       </div>
       <button class="reset" style="margin-top:14px" onclick="doLogout()">Log out</button>
     </section>
+    ` : ''}
+
+    ${(currentTab==='admin' && myIsAdmin) ? `
+    <section class="win">
+      <div class="eyebrow">Compare Hunters</div>
+      <div class="inline-w">
+        <input id="cmpUser" placeholder="Username to look up" autocapitalize="none">
+        <button class="btn sm" onclick="viewProfile(document.getElementById('cmpUser').value)">View</button>
+      </div>
+    </section>
+
+    <section class="win">
+      <div class="eyebrow">Admin Panel</div>
+      <div id="adminList"><p class="note">Loading roster...</p></div>
+    </section>
+    ` : ''}
 
     <div class="foot">Arise.</div>
     <button class="reset" onclick="hardReset()">Reset on awakening (erase data)</button>
   `;
-  if(myIsAdmin && !viewOnly) loadAdminList();
+  if(myIsAdmin && currentTab==='admin' && !viewOnly) loadAdminList();
+  if(currentTab==='social' && !viewOnly && S) startChatListener(); else stopChatListener();
 
   const wIn=document.getElementById('wIn'); if(wIn) wIn.value='';
 }
