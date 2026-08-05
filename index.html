@@ -433,6 +433,7 @@ let viewOnly = null;
 let pendingImport = null;
 let pendingUsername = null;
 let historyNav = {level:'years', year:null, month:null};
+let historyOpen = false;
 let currentTab = 'home';
 let preViewTab = null;
 let chatMessages = [];
@@ -897,7 +898,7 @@ function render(){
         <div class="stat"><span class="k">Days Trained</span><span class="stat-val">${trainedDays}</span></div>
         <div class="stat"><span class="k">Current Streak</span><span class="stat-val">${S.streak}</span></div>
       </div>
-      <details class="guide" style="margin-top:14px">
+      <details class="guide" style="margin-top:14px"${historyOpen?' open':''}>
         <summary>View full history</summary>
         <div class="guide-body">${buildHistory()}</div>
       </details>
@@ -1074,6 +1075,7 @@ function completeRestDay(){
 const MONTH_NAMES=['January','February','March','April','May','June','July','August','September','October','November','December'];
 function historyDrill(level,year,month){
   historyNav = {level, year:year||null, month:month||null};
+  historyOpen = true;
   render();
 }
 function buildHistory(){
