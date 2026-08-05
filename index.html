@@ -648,7 +648,7 @@ function stopChatListener(){
 function formatChatTime(ts){
   if(!ts || !ts.toDate) return '...';
   const d = ts.toDate();
-  return d.toLocaleDateString(undefined,{month:'short',day:'numeric'})+' '+d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});
+  return d.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})+' '+d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});
 }
 function renderChatMessages(){
   const el = document.getElementById('chatList');
