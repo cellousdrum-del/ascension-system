@@ -737,18 +737,16 @@ function render(){
   if(S.day !== today()){
     const dayActive = S.gateDoneToday || S.dailyClaimed;
     const gateCleared = S.gateDoneToday;
-    const wasRestDay = todaysGate()==='rest';
 
-    if(gateCleared || wasRestDay){
+    if(gateCleared){
       S.cycleIndex = (S.cycleIndex + 1) % CYCLE.length;
     }
+    // else: stays frozen exactly where it is - Rest included, nothing advances it automatically
 
     S.penaltyToday = false;
-    if(!dayActive && !wasRestDay && S.streak>0){
+    if(!dayActive && S.streak>0){
       applyStreakPenalty();
       S.streak = 0;
-    } else if(wasRestDay && !dayActive){
-      if(S.lastActive===yesterday() || S.streak===0) S.lastActive=S.day;
     }
 
     S.day = today();
@@ -825,6 +823,9 @@ function render(){
           <div style="font-family:'Orbitron';font-size:15px;letter-spacing:.14em;color:var(--cyan-soft);margin-bottom:8px">RECOVERY PROTOCOL</div>
           <div style="color:var(--muted);font-size:14px">This is a rest day. Enjoy your temporary freedom, Hunter.</div>
         </div>
+        <button class="btn" ${S.gateDoneToday?'disabled':''} onclick="completeRestDay()">
+          ${S.gateDoneToday?'Rest day confirmed ✓':'Confirm Rest Day'}
+        </button>
       ` : `
         <div style="font-family:'Orbitron';font-size:12px;letter-spacing:.1em;color:${gate.color==='red'?'#ff8080':gate.color==='violet'?'#b79cff':'var(--cyan-soft)'};margin-bottom:10px">
           ${gate.icon} GATE - ${gate.name} <span style="color:var(--muted);font-size:10px">- ${gate.sub}</span>
@@ -1055,6 +1056,19 @@ function completeGate(){
     setTimeout(()=>{ toast('Streak broken','-'+penaltyXp+' XP penalty. Stats suppressed today.'); }, after>before?400:3000);
   }
   setTimeout(()=>{ S._upStats=null; },1800);
+}
+function completeRestDay(){
+  if(viewOnly) return;
+  if(todaysGate()!=='rest' || S.gateDoneToday) return;
+  S.gateDoneToday = true;
+  bumpStreak();
+  save();
+  render();
+  const penaltyXp=S._lastPenaltyXp; S._lastPenaltyXp=null;
+  toast('Rest confirmed','Recovery day logged. The Gate opens again tomorrow.');
+  if(penaltyXp){
+    setTimeout(()=>{ toast('Streak broken','-'+penaltyXp+' XP penalty. Stats suppressed today.'); }, 3000);
+  }
 }
 const MONTH_NAMES=['January','February','March','April','May','June','July','August','September','October','November','December'];
 function historyDrill(level,year,month){
