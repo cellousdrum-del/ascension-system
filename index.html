@@ -1107,7 +1107,6 @@ function render(){
   const proteinLo = Math.round(S.weight*1.6), proteinHi = Math.round(S.weight*2.2);
   const loggedToday = S.weightLog[S.day]!=null;
   const trainedDays = Object.keys(S.history).length;
-  const gateTierIdx = gateTierIndex(info.lvl);
   const gateIsTrial = isTrialToday(S.day, gateId, info.lvl);
   const gateExercises = gateId==='rest' ? null : effectiveGateExercises(S.day, gateId, info.lvl);
   const gateExercisesDone = gateExercises!=null && gateExercises.every((e,i)=>(S.exSets[i]||0)>=parseSets(e.t));
@@ -1177,7 +1176,7 @@ function render(){
         <div style="font-family:'Orbitron';font-size:12px;letter-spacing:.1em;color:${gate.color==='red'?'#ff8080':gate.color==='violet'?'#b79cff':'var(--cyan-soft)'};margin-bottom:10px">
           ${gate.icon} GATE - ${gate.name} - RANK ${rk.r} <span style="color:var(--muted);font-size:10px">- ${gate.sub}</span>
         </div>
-        <div class="tier-banner">${gateIsTrial?`⚡ TRIAL GATE - preview of Tier ${gateTierIdx+2}/3, clear it for a +20 XP bonus`:`⚡ Tier ${gateTierIdx+1}/3`}</div>
+        ${gateIsTrial?`<div class="tier-banner">⚡ TRIAL GATE - a harder challenge today, clear it for a +20 XP bonus</div>`:''}
         <ul class="ex">
           ${gateExercises.map((e,i)=>{
             const max=parseSets(e.t);
