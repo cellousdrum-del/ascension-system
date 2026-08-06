@@ -1218,7 +1218,7 @@ function render(){
     </section>
 
     <section class="win">
-      <div class="eyebrow">Mobility</div>
+      <div class="eyebrow">Flexibility</div>
       <div class="daily">
         <div class="dq ${S.mobilityDone?'done':''}" onclick="toggleMobility()">
           <span class="chk" style="${S.mobilityDone?'background:rgba(77,163,255,.18);color:var(--cyan);box-shadow:0 0 12px rgba(77,163,255,.5)':''}">${S.mobilityDone?'✓':''}</span>
@@ -1290,7 +1290,7 @@ function render(){
           <p><b>Clear the Gate</b> (+100 XP): finish every set of your assigned Push/Pull/Legs workout. Also grants +1 to the gate's stat - Push: Endurance, Pull: Agility, Legs: Strength. Once per day.</p>
           <p><b>The Gate waits for you.</b> If you don't clear today's assigned Gate (or confirm a scheduled Rest day), it does not move on - tomorrow (and every day after) still shows the same one, until you actually clear it or confirm it. Nothing advances automatically, including Rest days.</p>
           <p><b>Daily Quest</b> (+30 XP): check off both the grip-strengthener task and the mystery task. Grants Vitality +1. Once per day.</p>
-          <p><b>Mobility</b> (+20 XP): complete today's stretch routine. Pure XP, no stat attached, available every day including Rest days - and doesn't count toward your streak.</p>
+          <p><b>Flexibility</b> (+20 XP): complete today's stretch routine. Pure XP, no stat attached, available every day including Rest days - and doesn't count toward your streak.</p>
           <p><b>Log your weight</b> (+10 XP): only awarded if it moved the right direction for your goal (up if bulking, down if cutting) - it always logs either way, but XP only comes with real progress.</p>
           <p><b>Streak:</b> clearing the Gate or claiming the Daily Quest keeps it alive - you only need one of the two per day. If a day ends with neither done, the streak breaks immediately (before you get a chance to do anything new) and costs up to <b>-50 XP</b> plus a same-day stat penalty - though it never takes XP you don't have. Skipping several days in a row still only costs one penalty, not one per day.</p>
           <p><b>The Gate always catches up with you.</b> Leaning on the Daily Quest alone only carries the streak for 3 days in a row - on the 4th, a monster appears and that day's Gate becomes mandatory: the Daily Quest alone will no longer save the streak. Clearing the Gate (or confirming Rest) any time resets this clock.</p>
@@ -1578,7 +1578,7 @@ function claimMobility(){
   const after=levelFromXp(S.xp).lvl;
   render();
   if(after>before) showLevelUp(after,{});
-  else toast('Mobility','+20 XP - flexibility work done.');
+  else toast('Flexibility','+20 XP - flexibility work done.');
 }
 function buildWeightChart(){
   const entries = Object.entries(S.weightLog||{}).sort((a,b)=>a[0]<b[0]?-1:1);
