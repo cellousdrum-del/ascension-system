@@ -239,11 +239,10 @@
   .avatar-eye.right{right:10px}
   .avatar-shadow-copy .avatar-head,.avatar-shadow-copy .avatar-body{background:rgba(5,7,15,0.85)}
   .avatar-eye.shadow-eye{opacity:.8}
-  .avatar-hair{position:absolute;top:-7px;left:50%;transform:translateX(-50%);width:48px;height:28px;
-    border-radius:50% 50% 18% 18% / 70% 70% 20% 20%;background:linear-gradient(180deg,#0a0e1a,#050710);z-index:1}
-  .avatar-cape{position:absolute;top:32px;left:50%;transform:translateX(-50%);width:66px;height:108px;
-    background:linear-gradient(180deg,rgba(10,14,26,0.95),rgba(5,7,15,0.85));
-    clip-path:polygon(30% 0%, 70% 0%, 100% 100%, 0% 100%)}
+  .avatar-circle{position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:150px;height:28px;
+    border-radius:50%;border:2px solid currentColor;z-index:0;animation:circle-pulse 2.4s ease-in-out infinite}
+  .avatar-circle::before{content:"";position:absolute;inset:6px;border-radius:50%;border:1px dashed currentColor;opacity:.6}
+  @keyframes circle-pulse{0%,100%{opacity:.55}50%{opacity:1}}
   .levelup{max-width:360px;width:100%;text-align:center;border:1px solid var(--cyan);border-radius:3px;
     background:rgba(9,16,33,0.9);padding:28px 22px;box-shadow:0 0 40px rgba(77,163,255,0.5);
     animation:pop .4s cubic-bezier(.2,1.2,.3,1)}
@@ -1404,6 +1403,7 @@ function render(){
     <section class="win">
       <div class="eyebrow">Avatar</div>
       <div class="avatar-stage">
+        <div class="avatar-circle" style="color:${RANK_COLORS[rk.r]};box-shadow:0 0 20px rgba(${RANK_RGB[rk.r]},0.5)"></div>
         ${Array.from({length: SHADOW_COUNT[rk.r]||0}).map((_,i,arr)=>{
           const n = arr.length;
           const rawOffset = (i - (n-1)/2) * 40;
@@ -1420,9 +1420,7 @@ function render(){
           </div>`;
         }).join('')}
         <div class="avatar-figure" style="position:relative;z-index:2">
-          <div class="avatar-cape" style="box-shadow:0 0 20px rgba(${RANK_RGB[rk.r]},0.3)"></div>
           <div class="avatar-head" style="box-shadow:0 0 18px ${RANK_COLORS[rk.r]}, 0 0 ${10+Math.min(S.streak,60)}px ${RANK_COLORS[rk.r]}">
-            <div class="avatar-hair"></div>
             <span class="avatar-eye left"></span>
             <span class="avatar-eye right"></span>
           </div>
