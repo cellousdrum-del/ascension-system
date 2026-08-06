@@ -143,6 +143,7 @@
     display:flex;align-items:center;justify-content:center;font-size:14px;color:transparent;transition:.15s}
   li.done .chk{background:rgba(77,163,255,0.18);color:var(--cyan);box-shadow:0 0 12px rgba(77,163,255,.5)}
   li.done .ex-nm{color:var(--muted);text-decoration:line-through;text-decoration-color:rgba(124,138,165,.6)}
+  .dq.done .t{color:var(--muted);text-decoration:line-through;text-decoration-color:rgba(124,138,165,.6)}
   .ex-nm{font-size:15px;font-weight:600}
   .ex-tg{font-size:12px;color:var(--cyan-soft);letter-spacing:.04em;font-weight:600}
   .ex-nm small{display:block;font-size:11px;color:var(--muted);font-weight:400;letter-spacing:.02em}
@@ -320,7 +321,7 @@ const LEGACY_KEY='ascension_v1';
 /* ---------- Gate data (your real split) ---------- */
 const GATES = {
   push:{ name:'PUSH', sub:'Park - Calisthenics', icon:'\ud83d\udd34', color:'red',
-    gains:{str:1,end:1},
+    gain:'end',
     ex:[
       {n:'Parallel bar dips', t:'4x8-12', d:'Chest and triceps. Add weight once you own it.'},
       {n:'Push-ups (variations)', t:'4x10-15', d:'Alternate standard, decline and diamond.'},
@@ -330,7 +331,7 @@ const GATES = {
       {n:'Hanging leg raises', t:'3x10-12', d:'Core.'}
     ]},
   pull:{ name:'PULL', sub:'Dumbbells - Home', icon:'\ud83d\udd35', color:'cyan',
-    gains:{str:1,agi:1},
+    gain:'agi',
     ex:[
       {n:'One-arm dumbbell row', t:'4x8-12', d:'Back - go heavy (up to 20 kg).'},
       {n:'Dumbbell biceps curl', t:'3x10-12', d:'Control the descent 2-3 s.'},
@@ -339,7 +340,7 @@ const GATES = {
       {n:'Shrugs', t:'3x12-15', d:'Traps.'}
     ]},
   legs:{ name:'LEGS', sub:'Dumbbells - Home', icon:'\ud83d\udfe3', color:'violet',
-    gains:{str:1,vit:1},
+    gain:'str',
     ex:[
       {n:'Goblet squat', t:'4x10-12', d:'One dumbbell at the chest. Deep and controlled.'},
       {n:'Bulgarian split squat', t:'3x8-10 /leg', d:'Dumbbells in hands. Gold with light weight.'},
@@ -418,6 +419,22 @@ function mysteryQuestFor(dateStr){
   let h=0;
   for(let i=0;i<dateStr.length;i++){ h = (h*31 + dateStr.charCodeAt(i)) >>> 0; }
   return MYSTERY_QUESTS[h % MYSTERY_QUESTS.length];
+}
+
+/* ---------- Mobility routine pool ---------- */
+const MOBILITY_ROUTINES = [
+  'Hip flexor stretch 60s/side + deep squat hold 60s',
+  'Hamstring stretch 60s/side + standing forward fold 60s',
+  'Shoulder dislocates (band or towel) x15 + doorway chest stretch 45s/side',
+  'Cat-cow x12 + thoracic spine rotations x10/side',
+  'Ankle circles x10/side + calf wall stretch 45s/side',
+  '90/90 hip switches x10/side + pigeon stretch 45s/side',
+  'Neck rolls x8/side + wrist and forearm stretch 45s/side'
+];
+function mobilityRoutineFor(dateStr){
+  let h=0;
+  for(let i=0;i<dateStr.length;i++){ h = (h*37 + dateStr.charCodeAt(i)) >>> 0; }
+  return MOBILITY_ROUTINES[h % MOBILITY_ROUTINES.length];
 }
 
 /* ---------- Fixed schedule: 6-on-1-off. The gate only advances when cleared (or on a Rest day) - it waits for you otherwise. ---------- */
@@ -981,6 +998,9 @@ function render(){
   if(!S.dailyDone) S.dailyDone = {grip:false,mystery:false};
   if(S.dailyDone.mystery===undefined) S.dailyDone.mystery = false;
   if(S.dailyDone.grip===undefined) S.dailyDone.grip = false;
+  if(S.mobilityDone===undefined) S.mobilityDone = false;
+  if(S.mobilityClaimed===undefined) S.mobilityClaimed = false;
+  if(S.questOnlyStreak===undefined) S.questOnlyStreak = 0;
   if(S.penaltyToday===undefined) S.penaltyToday = false;
   if(!S.tzMigrated){ S.tzMigrated = true; S.day = today(); save(); }
   if(S.cycleIndex===undefined){
@@ -990,6 +1010,7 @@ function render(){
   if(S.day !== today()){
     const dayActive = S.gateDoneToday || S.dailyClaimed;
     const gateCleared = S.gateDoneToday;
+    const questOnly = dayActive && !gateCleared;
 
     if(gateCleared){
       S.cycleIndex = (S.cycleIndex + 1) % CYCLE.length;
@@ -997,15 +1018,24 @@ function render(){
     // else: stays frozen exactly where it is - Rest included, nothing advances it automatically
 
     S.penaltyToday = false;
-    if(!dayActive && S.streak>0){
+    let brokeStreak = !dayActive && S.streak>0;
+    if(gateCleared){ S.questOnlyStreak = 0; }
+    if(questOnly){
+      if((S.questOnlyStreak||0) >= 3 && S.streak>0) brokeStreak = true;
+      S.questOnlyStreak = (S.questOnlyStreak||0) + 1;
+    }
+    if(brokeStreak){
       applyStreakPenalty();
       S.streak = 0;
+      S.questOnlyStreak = 0;
     }
 
     S.day = today();
     S.exSets = {};
     S.dailyDone = {grip:false,mystery:false};
     S.dailyClaimed = false;
+    S.mobilityDone = false;
+    S.mobilityClaimed = false;
     S.gateDoneToday = false;
     save();
   }
@@ -1021,6 +1051,8 @@ function render(){
   const trainedDays = Object.keys(S.history).length;
   const tier = overloadTierFor(S.stats.str);
   const mysteryTask = mysteryQuestFor(S.day);
+  const mobilityRoutine = mobilityRoutineFor(S.day);
+  const monsterThreat = (S.questOnlyStreak||0) >= 3 && !S.gateDoneToday;
 
   app.innerHTML = `
     <div style="text-align:center;margin:4px 0 16px">
@@ -1061,13 +1093,14 @@ function render(){
       <div class="bar-meta"><span>Start ${fmt(S.startW)} kg</span><span>${goalPct}% to goal</span></div>
       <div class="inline-w" style="margin-top:12px">
         <input id="wIn" type="number" inputmode="decimal" step="0.1" placeholder="Log today's weight" ${loggedToday?'disabled':''}>
-        <button class="btn sm" onclick="logWeight()" ${loggedToday?'disabled':''}>${loggedToday?'Logged ✓':'Log (+20 XP)'}</button>
+        <button class="btn sm" onclick="logWeight()" ${loggedToday?'disabled':''}>${loggedToday?'Logged ✓':'Log (+10 XP)'}</button>
       </div>
       ${loggedToday?`<div style="font-size:11px;color:var(--muted);letter-spacing:.06em;margin-top:8px;text-transform:uppercase">Weight already logged today - come back tomorrow</div>`:''}
     </section>
 
     <section class="win">
       <div class="eyebrow">Quest - Today's Gate</div>
+      ${monsterThreat?`<div class="penalty" style="margin-bottom:10px">👹 A monster has appeared - clear today's Gate or your streak breaks, daily quest alone won't save it now</div>`:''}
       <div class="gates">
         ${gateBtn('push',gateId)}${gateBtn('pull',gateId)}${gateBtn('legs',gateId)}
       </div>
@@ -1105,11 +1138,11 @@ function render(){
     <section class="win">
       <div class="eyebrow">Hunter's Daily Quest</div>
       <div class="daily">
-        <div class="dq" onclick="toggleDaily('grip')">
+        <div class="dq ${S.dailyDone.grip?'done':''}" onclick="toggleDaily('grip')">
           <span class="chk" style="${S.dailyDone.grip?'background:rgba(77,163,255,.18);color:var(--cyan);box-shadow:0 0 12px rgba(77,163,255,.5)':''}">${S.dailyDone.grip?'✓':''}</span>
           <span class="t">40 reps of grip strengthener<small>Forearm and grip work - every day</small></span>
         </div>
-        <div class="dq" onclick="toggleDaily('mystery')">
+        <div class="dq ${S.dailyDone.mystery?'done':''}" onclick="toggleDaily('mystery')">
           <span class="chk" style="${S.dailyDone.mystery?'background:rgba(77,163,255,.18);color:var(--cyan);box-shadow:0 0 12px rgba(77,163,255,.5)':''}">${S.dailyDone.mystery?'✓':''}</span>
           <span class="t">${mysteryTask}<small>Hunter's mystery task - changes daily</small></span>
         </div>
@@ -1122,6 +1155,20 @@ function render(){
         ${S.dailyClaimed?'Reward claimed ✓':'Claim +30 XP'}
       </button>
       <div class="streak">🔥 Streak: ${S.streak} day${S.streak===1?'':'s'}</div>
+    </section>
+
+    <section class="win">
+      <div class="eyebrow">Mobility</div>
+      <div class="daily">
+        <div class="dq ${S.mobilityDone?'done':''}" onclick="toggleMobility()">
+          <span class="chk" style="${S.mobilityDone?'background:rgba(77,163,255,.18);color:var(--cyan);box-shadow:0 0 12px rgba(77,163,255,.5)':''}">${S.mobilityDone?'✓':''}</span>
+          <span class="t">${mobilityRoutine}<small>Flexibility work - changes daily, no stat attached</small></span>
+        </div>
+      </div>
+      <button class="btn ghost" style="margin-top:12px" onclick="claimMobility()"
+        ${(S.mobilityDone&&!S.mobilityClaimed)?'':'disabled'}>
+        ${S.mobilityClaimed?'Reward claimed ✓':'Claim +20 XP'}
+      </button>
     </section>
     ` : ''}
 
@@ -1169,7 +1216,7 @@ function render(){
             <input type="checkbox" id="pastAwardXp" style="width:auto;margin:0">
             Award XP for this day (Gate +100, Daily Quest +30)
           </label>
-          <label>Weight logged that day (optional, kg) - adds +20 XP</label>
+          <label>Weight logged that day (optional, kg) - adds +10 XP</label>
           <input id="pastWeight" type="number" inputmode="decimal" step="0.1" placeholder="Leave blank to skip">
           <button class="btn ghost sm" style="margin-top:12px" onclick="logPastWorkout()">Add to history</button>
         </div>
@@ -1180,11 +1227,13 @@ function render(){
       <details class="guide">
         <summary>How XP Works</summary>
         <div class="guide-body">
-          <p><b>Clear the Gate</b> (+100 XP): finish every set of your assigned Push/Pull/Legs workout. Also grants stat gains matching the gate (e.g. Push: Strength +1, Endurance +1). Once per day.</p>
+          <p><b>Clear the Gate</b> (+100 XP): finish every set of your assigned Push/Pull/Legs workout. Also grants +1 to the gate's stat - Push: Endurance, Pull: Agility, Legs: Strength. Once per day.</p>
           <p><b>The Gate waits for you.</b> If you don't clear today's assigned Gate (or confirm a scheduled Rest day), it does not move on - tomorrow (and every day after) still shows the same one, until you actually clear it or confirm it. Nothing advances automatically, including Rest days.</p>
           <p><b>Daily Quest</b> (+30 XP): check off both the grip-strengthener task and the mystery task. Grants Vitality +1. Once per day.</p>
-          <p><b>Log your weight</b> (+20 XP): only awarded if it moved the right direction for your goal (up if bulking, down if cutting) - it always logs either way, but XP only comes with real progress. Grants Vitality +1.</p>
+          <p><b>Mobility</b> (+20 XP): complete today's stretch routine. Pure XP, no stat attached, available every day including Rest days - and doesn't count toward your streak.</p>
+          <p><b>Log your weight</b> (+10 XP): only awarded if it moved the right direction for your goal (up if bulking, down if cutting) - it always logs either way, but XP only comes with real progress.</p>
           <p><b>Streak:</b> clearing the Gate or claiming the Daily Quest keeps it alive - you only need one of the two per day. If a day ends with neither done, the streak breaks immediately (before you get a chance to do anything new) and costs up to <b>-50 XP</b> plus a same-day stat penalty - though it never takes XP you don't have. Skipping several days in a row still only costs one penalty, not one per day.</p>
+          <p><b>The Gate always catches up with you.</b> Leaning on the Daily Quest alone only carries the streak for 3 days in a row - on the 4th, a monster appears and that day's Gate becomes mandatory: the Daily Quest alone will no longer save the streak. Clearing the Gate (or confirming Rest) any time resets this clock.</p>
           <p class="note">Leveling gets a little harder each level, capping at level 100 after roughly 2 years of consistent training.</p>
         </div>
       </details>
@@ -1308,8 +1357,8 @@ function completeGate(){
     return;
   }
   const before=levelFromXp(S.xp).lvl;
-  const gained={};
-  for(const k in g.gains){ S.stats[k]+=g.gains[k]; gained[k]=g.gains[k]; }
+  const gained={}; gained[g.gain]=1;
+  S.stats[g.gain]+=1;
   S._upStats=gained;
   S.xp += 100;
   bumpStreak();
@@ -1319,7 +1368,7 @@ function completeGate(){
   const after=levelFromXp(S.xp).lvl;
   render();
   const penaltyXp=S._lastPenaltyXp; S._lastPenaltyXp=null;
-  if(after>before){ showLevelUp(after,g.gains); }
+  if(after>before){ showLevelUp(after,gained); }
   else { toast('Gate cleared','+100 XP - '+g.name+' complete.'); }
   if(penaltyXp){
     setTimeout(()=>{ toast('Streak broken','-'+penaltyXp+' XP penalty. Stats suppressed today.'); }, after>before?400:3000);
@@ -1403,7 +1452,7 @@ function logPastWorkout(){
   const gains = {};
   if(willAward){
     const gate = GATES[g];
-    for(const k in gate.gains){ S.stats[k]=(S.stats[k]||0)+gate.gains[k]; gains[k]=(gains[k]||0)+gate.gains[k]; }
+    S.stats[gate.gain]=(S.stats[gate.gain]||0)+1; gains[gate.gain]=(gains[gate.gain]||0)+1;
     S.stats.vit=(S.stats.vit||0)+1; gains.vit=(gains.vit||0)+1;
     xpGain += 130;
   }
@@ -1411,8 +1460,7 @@ function logPastWorkout(){
   const weightOk = !isNaN(w) && w>=30 && w<=250;
   if(willAward && weightOk){
     S.weightLog[d] = w;
-    S.stats.vit=(S.stats.vit||0)+1; gains.vit=(gains.vit||0)+1;
-    xpGain += 20;
+    xpGain += 10;
   }
   S.xp += xpGain;
   S.history[d] = {gate:g, xp:xpGain, manual:true, xpAwarded:willAward};
@@ -1455,6 +1503,18 @@ function claimDaily(){
     setTimeout(()=>{ toast('Streak broken','-'+penaltyXp+' XP penalty. Stats suppressed today.'); }, after>before?400:3000);
   }
   setTimeout(()=>{ S._upStats=null; },1800);
+}
+function toggleMobility(){ S.mobilityDone=!S.mobilityDone; save(); render(); }
+function claimMobility(){
+  if(S.mobilityClaimed) return;
+  if(!S.mobilityDone) return;
+  const before=levelFromXp(S.xp).lvl;
+  S.xp+=20; S.mobilityClaimed=true;
+  save();
+  const after=levelFromXp(S.xp).lvl;
+  render();
+  if(after>before) showLevelUp(after,{});
+  else toast('Mobility','+20 XP - flexibility work done.');
 }
 function buildWeightChart(){
   const entries = Object.entries(S.weightLog||{}).sort((a,b)=>a[0]<b[0]?-1:1);
@@ -1504,10 +1564,9 @@ function logWeight(){
   const progressed = goingUp ? v>prev : v<prev;
   save();
   if(progressed){
-    S.stats.vit+=1; S._upStats={vit:1}; S.xp+=20;
+    S.xp+=10;
     save(); render();
-    toast('Ascension','Weight logged - +20 XP - Vitality +1');
-    setTimeout(()=>{ S._upStats=null; },1800);
+    toast('Ascension','Weight logged - +10 XP');
   } else { render(); toast('Logged','Weight updated.'); }
 }
 function bumpStreak(){
@@ -1580,7 +1639,8 @@ function startGame(){
     xp:0, stats:{str:10,vit:10,end:10,agi:10},
     startDate:today(), cycleIndex:0, exSets:{}, gateDoneToday:false, tzMigrated:true,
     dailyDone:{grip:false,mystery:false}, dailyClaimed:false,
-    streak:0, lastActive:null, day:today(),
+    mobilityDone:false, mobilityClaimed:false,
+    streak:0, questOnlyStreak:0, lastActive:null, day:today(),
     history:{}, weightLog:{},
     username: myUsername||'', isAdmin:false
   };
