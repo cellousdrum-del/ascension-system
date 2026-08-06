@@ -1110,6 +1110,7 @@ function render(){
   const gateTierIdx = gateTierIndex(info.lvl);
   const gateIsTrial = isTrialToday(S.day, gateId, info.lvl);
   const gateExercises = gateId==='rest' ? null : effectiveGateExercises(S.day, gateId, info.lvl);
+  const gateExercisesDone = gateExercises!=null && gateExercises.every((e,i)=>(S.exSets[i]||0)>=parseSets(e.t));
   const mysteryTask = mysteryQuestFor(S.day);
   const mobilityRoutine = mobilityRoutineFor(S.day);
   const monsterThreat = (S.questOnlyStreak||0) >= 3 && !S.gateDoneToday;
@@ -1174,7 +1175,7 @@ function render(){
         </button>
       ` : `
         <div style="font-family:'Orbitron';font-size:12px;letter-spacing:.1em;color:${gate.color==='red'?'#ff8080':gate.color==='violet'?'#b79cff':'var(--cyan-soft)'};margin-bottom:10px">
-          ${gate.icon} GATE - ${gate.name} <span style="color:var(--muted);font-size:10px">- ${gate.sub}</span>
+          ${gate.icon} GATE - ${gate.name} - RANK ${rk.r} <span style="color:var(--muted);font-size:10px">- ${gate.sub}</span>
         </div>
         <div class="tier-banner">${gateIsTrial?`⚡ TRIAL GATE - preview of Tier ${gateTierIdx+2}/3, clear it for a +20 XP bonus`:`⚡ Tier ${gateTierIdx+1}/3`}</div>
         <ul class="ex">
@@ -1189,6 +1190,9 @@ function render(){
             <span class="ex-tg">${cnt}/${max} sets - ${e.t}</span>
           </li>`;}).join('')}
         </ul>
+        ${!gateExercisesDone
+          ? `<div class="penalty">⚠ Gate not cleared - complete every set above</div>`
+          : `<div style="font-size:12px;color:var(--green);letter-spacing:.08em;margin-top:10px;text-transform:uppercase">✓ All sets complete - clear the Gate below</div>`}
         <button class="btn" id="completeBtn" ${S.gateDoneToday?'disabled':''} onclick="completeGate()">
           ${S.gateDoneToday?'Gate cleared today ✓':'Clear the Gate (+100 XP)'}
         </button>
@@ -1225,6 +1229,9 @@ function render(){
           <span class="t">${mobilityRoutine}<small>Flexibility work - changes daily, no stat attached</small></span>
         </div>
       </div>
+      ${!S.mobilityDone
+        ? `<div class="penalty">⚠ Flexibility not done - complete today's routine</div>`
+        : `<div style="font-size:12px;color:var(--green);letter-spacing:.08em;margin-top:10px;text-transform:uppercase">✓ Routine complete - claim below</div>`}
       <button class="btn ghost" style="margin-top:12px" onclick="claimMobility()"
         ${(S.mobilityDone&&!S.mobilityClaimed)?'':'disabled'}>
         ${S.mobilityClaimed?'Reward claimed ✓':'Claim +20 XP'}
