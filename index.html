@@ -1170,7 +1170,7 @@ function render(){
           <div style="font-family:'Orbitron';font-size:15px;letter-spacing:.14em;color:var(--cyan-soft);margin-bottom:8px">RECOVERY PROTOCOL</div>
           <div style="color:var(--muted);font-size:14px">This is a rest day. Enjoy your temporary freedom, Hunter.</div>
         </div>
-        <button class="btn" ${S.gateDoneToday?'disabled':''} onclick="completeRestDay()">
+        <button class="btn${S.gateDoneToday?' ghost':''}" ${S.gateDoneToday?'disabled':''} onclick="completeRestDay()">
           ${S.gateDoneToday?'Rest day confirmed ✓':'Confirm Rest Day'}
         </button>
       ` : `
@@ -1193,7 +1193,7 @@ function render(){
         ${!gateExercisesDone
           ? `<div class="penalty">⚠ Gate not cleared - complete every set above</div>`
           : `<div style="font-size:12px;color:var(--green);letter-spacing:.08em;margin-top:10px;text-transform:uppercase">✓ All sets complete - clear the Gate below</div>`}
-        <button class="btn" id="completeBtn" ${S.gateDoneToday?'disabled':''} onclick="completeGate()">
+        <button class="btn${S.gateDoneToday?' ghost':''}" id="completeBtn" ${S.gateDoneToday?'disabled':''} onclick="completeGate()">
           ${S.gateDoneToday?'Gate cleared today ✓':'Clear the Gate (+100 XP)'}
         </button>
       `}
