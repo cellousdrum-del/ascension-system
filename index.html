@@ -219,6 +219,27 @@
   #overlay{position:fixed;inset:0;z-index:80;background:radial-gradient(circle at 50% 40%,rgba(77,163,255,0.14),rgba(5,7,15,0.94));
     display:none;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(3px)}
   #overlay.show{display:flex}
+  #boxOverlay{position:fixed;inset:0;z-index:80;background:radial-gradient(circle at 50% 40%,rgba(139,92,246,0.16),rgba(5,7,15,0.94));
+    display:none;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(3px)}
+  #boxOverlay.show{display:flex}
+  .box-ic{font-size:52px;line-height:1;margin:10px 0;filter:drop-shadow(0 0 18px rgba(139,92,246,0.7));
+    animation:glow 1.4s ease-in-out infinite alternate}
+  .box-item{font-size:15px;color:var(--ink);letter-spacing:.04em;margin:4px 0}
+  .box-item .bi-icon{font-size:30px;display:block;margin-bottom:6px}
+  .box-item .bi-name{font-family:'Orbitron';font-size:15px;color:var(--violet);letter-spacing:.05em}
+  .box-item .bi-kind{font-size:11px;color:var(--muted);letter-spacing:.16em;text-transform:uppercase;margin-top:2px}
+
+  .avatar-stage{position:relative;height:200px;margin:10px 0 18px;display:flex;align-items:flex-end;justify-content:center}
+  .avatar-figure{width:70px}
+  .avatar-head{width:42px;height:42px;border-radius:50%;background:linear-gradient(180deg,#131f38,#05070f);
+    margin:0 auto;position:relative;transition:box-shadow .4s}
+  .avatar-body{width:70px;height:88px;border-radius:26px 26px 8px 8px;background:linear-gradient(180deg,#131f38,#05070f);
+    margin-top:-6px;transition:box-shadow .4s}
+  .avatar-eye{position:absolute;top:16px;width:7px;height:5px;border-radius:2px;background:var(--cyan);
+    box-shadow:0 0 8px var(--cyan),0 0 16px var(--cyan)}
+  .avatar-eye.left{left:10px}
+  .avatar-eye.right{right:10px}
+  .avatar-shadow-copy .avatar-head,.avatar-shadow-copy .avatar-body{background:rgba(5,7,15,0.85);box-shadow:none}
   .levelup{max-width:360px;width:100%;text-align:center;border:1px solid var(--cyan);border-radius:3px;
     background:rgba(9,16,33,0.9);padding:28px 22px;box-shadow:0 0 40px rgba(77,163,255,0.5);
     animation:pop .4s cubic-bezier(.2,1.2,.3,1)}
@@ -276,6 +297,16 @@
     <div id="lu-gains"></div>
     <div class="lu-rank" id="lu-rank"></div>
     <button class="btn" style="margin-top:18px" onclick="closeLevelUp()">Continue</button>
+  </div>
+</div>
+
+<div id="boxOverlay">
+  <div class="levelup">
+    <div class="lu-k">Mystery Box</div>
+    <div class="box-ic">📦</div>
+    <div class="lu-t">7-DAY STREAK REWARD</div>
+    <div id="box-item"></div>
+    <button class="btn" style="margin-top:18px" onclick="closeBoxReveal()">Continue</button>
   </div>
 </div>
 
@@ -417,6 +448,8 @@ const RANKS = [
   {min:30,r:'C',lbl:'Rank C'},{min:15,r:'D',lbl:'Rank D'},{min:0,r:'E',lbl:'Rank E'}
 ];
 function rankFor(lvl){ return RANKS.find(x=>lvl>=x.min); }
+const RANK_COLORS = {E:'#7c8aa5', D:'#4da3ff', C:'#34d399', B:'#fbbf24', A:'#fb923c', S:'#8b5cf6'};
+const SHADOW_COUNT = {E:0, D:1, C:2, B:3, A:4, S:6};
 const MAX_LEVEL = 100;
 function xpNeeded(lvl){ return 180 + (lvl-1)*15; }
 function levelFromXp(xp){
@@ -485,6 +518,33 @@ function mobilityRoutineFor(dateStr){
   let h=0;
   for(let i=0;i<dateStr.length;i++){ h = (h*37 + dateStr.charCodeAt(i)) >>> 0; }
   return MOBILITY_ROUTINES[h % MOBILITY_ROUTINES.length];
+}
+
+/* ---------- Avatar mystery-box item pool ---------- */
+const AVATAR_ITEMS = [
+  {id:'ashborn_blade', icon:'🗡️', name:'Ashborn Blade', kind:'Weapon'},
+  {id:'duskfang_sabre', icon:'⚔️', name:'Duskfang Sabre', kind:'Weapon'},
+  {id:'voidstep_dagger', icon:'🔪', name:'Voidstep Dagger', kind:'Weapon'},
+  {id:'cinderreaper_scythe', icon:'🪓', name:'Cinderreaper Scythe', kind:'Weapon'},
+  {id:'wraithguard_cloak', icon:'🧥', name:'Wraithguard Cloak', kind:'Armor'},
+  {id:'nightveil_shroud', icon:'🥋', name:'Nightveil Shroud', kind:'Armor'},
+  {id:'frostbound_gauntlet', icon:'🧤', name:'Frostbound Gauntlet', kind:'Armor'},
+  {id:'umbral_wing_cloak', icon:'🦇', name:'Umbral Wing Cloak', kind:'Armor'},
+  {id:'sovereigns_eye', icon:'👁️', name:"Sovereign's Eye", kind:'Aura'},
+  {id:'starless_aura', icon:'🌑', name:'Starless Aura', kind:'Aura'},
+  {id:'emberfall_crown', icon:'👑', name:'Emberfall Crown', kind:'Regalia'},
+  {id:'hollow_kings_signet', icon:'💍', name:"Hollow King's Signet", kind:'Regalia'},
+  {id:'grimshade_wolf_sigil', icon:'🐺', name:'Grimshade Wolf Sigil', kind:'Companion'},
+  {id:'ironclad_bulwark_emblem', icon:'🛡️', name:'Ironclad Bulwark Emblem', kind:'Companion'}
+];
+function pickBoxItem(streak, dateStr){
+  const owned = new Set(S.avatarItems||[]);
+  const pool = AVATAR_ITEMS.filter(it=>!owned.has(it.id));
+  const list = pool.length ? pool : AVATAR_ITEMS;
+  let h=0;
+  const key = dateStr+'_'+streak;
+  for(let i=0;i<key.length;i++){ h = (h*47 + key.charCodeAt(i)) >>> 0; }
+  return list[h % list.length];
 }
 
 /* ---------- Fixed schedule: 6-on-1-off. The gate only advances when cleared (or on a Rest day) - it waits for you otherwise. ---------- */
@@ -848,7 +908,7 @@ function switchTab(tab){
   render();
 }
 function renderTabNav(){
-  const tabs = [['home','Home'],['progress','Progress'],['social','Social'],['account','Account']];
+  const tabs = [['home','Home'],['progress','Progress'],['avatar','Avatar'],['social','Social'],['account','Account']];
   if(myIsAdmin) tabs.push(['admin','Admin']);
   return `<div class="tabbar" id="tabbarSlot">${tabs.map(([id,label])=>
     `<div class="tab-btn" data-active="${currentTab===id?1:0}" onclick="switchTab('${id}')">${label}${(id==='social'&&(hasUnreadChat||hasUnreadRequest))?'<span class="tab-dot"></span>':''}</div>`
@@ -1072,6 +1132,8 @@ function render(){
   if(S.mobilityDone===undefined) S.mobilityDone = false;
   if(S.mobilityClaimed===undefined) S.mobilityClaimed = false;
   if(S.questOnlyStreak===undefined) S.questOnlyStreak = 0;
+  if(!S.avatarItems) S.avatarItems = [];
+  if(S.lastBoxStreak===undefined) S.lastBoxStreak = 0;
   if(S.penaltyToday===undefined) S.penaltyToday = false;
   if(!S.tzMigrated){ S.tzMigrated = true; S.day = today(); save(); }
   if(S.cycleIndex===undefined){
@@ -1333,6 +1395,53 @@ function render(){
     </section>
     ` : ''}
 
+    ${currentTab==='avatar' ? `
+    <section class="win">
+      <div class="eyebrow">Avatar</div>
+      <div class="avatar-stage">
+        ${Array.from({length: SHADOW_COUNT[rk.r]||0}).map((_,i,arr)=>{
+          const n = arr.length;
+          const offset = Math.round((i - (n-1)/2) * 22);
+          const dist = Math.abs(i-(n-1)/2);
+          const scale = Math.max(0.5, 0.74 - dist*0.05);
+          const op = Math.max(0.15, 0.5 - dist*0.06);
+          return `<div class="avatar-figure avatar-shadow-copy" style="position:absolute;bottom:0;left:calc(50% + ${offset}px);transform:translateX(-50%) scale(${scale});opacity:${op};z-index:1">
+            <div class="avatar-head"></div>
+            <div class="avatar-body"></div>
+          </div>`;
+        }).join('')}
+        <div class="avatar-figure" style="position:relative;z-index:2">
+          <div class="avatar-head" style="box-shadow:0 0 18px ${RANK_COLORS[rk.r]}, 0 0 ${10+Math.min(S.streak,60)}px ${RANK_COLORS[rk.r]}">
+            <span class="avatar-eye left"></span>
+            <span class="avatar-eye right"></span>
+          </div>
+          <div class="avatar-body" style="box-shadow:0 0 18px ${RANK_COLORS[rk.r]}, 0 0 ${10+Math.min(S.streak,60)}px ${RANK_COLORS[rk.r]}"></div>
+        </div>
+      </div>
+      <div style="text-align:center;font-family:'Orbitron';font-size:13px;letter-spacing:.1em;color:${RANK_COLORS[rk.r]}">RANK ${rk.r} HUNTER</div>
+      <div style="text-align:center;font-size:11px;color:var(--muted);margin-top:6px;text-transform:uppercase;letter-spacing:.06em">
+        ${S.streak>0 ? `Next mystery box in ${(S.streak%7===0)?7:(7-(S.streak%7))} day${((S.streak%7===0)?7:(7-(S.streak%7)))===1?'':'s'}` : 'Start a streak to find your first mystery box'}
+      </div>
+    </section>
+
+    <section class="win">
+      <div class="eyebrow">Unlocked Items</div>
+      ${(S.avatarItems&&S.avatarItems.length) ? `<div class="stats">
+        ${S.avatarItems.slice().reverse().map(id=>{
+          const it = AVATAR_ITEMS.find(a=>a.id===id);
+          if(!it) return '';
+          return `<div class="stat" style="justify-content:flex-start;gap:10px">
+            <span style="font-size:20px">${it.icon}</span>
+            <span style="display:flex;flex-direction:column">
+              <span style="color:var(--ink);font-size:12px;letter-spacing:.02em">${esc(it.name)}</span>
+              <span class="k" style="font-size:10px">${esc(it.kind)}</span>
+            </span>
+          </div>`;
+        }).join('')}
+      </div>` : `<p class="note">No items yet - maintain a 7-day streak to open your first mystery box.</p>`}
+    </section>
+    ` : ''}
+
     ${currentTab==='social' ? (dmWith ? `
     <section class="win">
       <div class="hist-back" onclick="closeDm()">&larr; Friends</div>
@@ -1453,6 +1562,7 @@ function completeGate(){
   if(after>before){ showLevelUp(after,gained); }
   else if(trial){ toast('Trial Gate cleared','+120 XP - '+g.name+' complete.'); }
   else { toast('Gate cleared','+100 XP - '+g.name+' complete.'); }
+  revealNewBox(after>before);
   if(penaltyXp){
     setTimeout(()=>{ toast('Streak broken','-'+penaltyXp+' XP penalty. Stats suppressed today.'); }, after>before?400:3000);
   }
@@ -1467,6 +1577,7 @@ function completeRestDay(){
   render();
   const penaltyXp=S._lastPenaltyXp; S._lastPenaltyXp=null;
   toast('Rest confirmed','Recovery day logged. The Gate opens again tomorrow.');
+  revealNewBox(false);
   if(penaltyXp){
     setTimeout(()=>{ toast('Streak broken','-'+penaltyXp+' XP penalty. Stats suppressed today.'); }, 3000);
   }
@@ -1582,6 +1693,7 @@ function claimDaily(){
   const penaltyXp=S._lastPenaltyXp; S._lastPenaltyXp=null;
   if(after>before) showLevelUp(after,{vit:1});
   else toast('Discipline','+30 XP - hunter daily quest.');
+  revealNewBox(after>before);
   if(penaltyXp){
     setTimeout(()=>{ toast('Streak broken','-'+penaltyXp+' XP penalty. Stats suppressed today.'); }, after>before?400:3000);
   }
@@ -1659,6 +1771,13 @@ function bumpStreak(){
   if(broke) applyStreakPenalty();
   S.streak = (S.lastActive===y) ? S.streak+1 : 1;
   S.lastActive=today();
+  if(S.streak>0 && S.streak%7===0 && S.streak>(S.lastBoxStreak||0)){
+    const item = pickBoxItem(S.streak, S.day);
+    if(!S.avatarItems) S.avatarItems=[];
+    S.avatarItems.push(item.id);
+    S.lastBoxStreak = S.streak;
+    S._newBoxItem = item;
+  }
 }
 function applyStreakPenalty(){
   const info = levelFromXp(S.xp);
@@ -1685,7 +1804,23 @@ function showLevelUp(lvl,gains){
   document.getElementById('lu-rank').textContent='Current rank: '+rk.lbl.toUpperCase();
   document.getElementById('overlay').classList.add('show');
 }
-function closeLevelUp(){ document.getElementById('overlay').classList.remove('show'); }
+function closeLevelUp(){
+  document.getElementById('overlay').classList.remove('show');
+  if(pendingBoxReveal){ const item=pendingBoxReveal; pendingBoxReveal=null; showBoxReveal(item); }
+}
+let pendingBoxReveal = null;
+function showBoxReveal(item){
+  document.getElementById('box-item').innerHTML =
+    `<div class="box-item"><span class="bi-icon">${item.icon}</span><span class="bi-name">${esc(item.name)}</span><span class="bi-kind">${esc(item.kind)}</span></div>`;
+  document.getElementById('boxOverlay').classList.add('show');
+}
+function closeBoxReveal(){ document.getElementById('boxOverlay').classList.remove('show'); render(); }
+function revealNewBox(leveledUp){
+  if(!S._newBoxItem) return;
+  const item = S._newBoxItem; S._newBoxItem = null;
+  if(leveledUp) pendingBoxReveal = item;
+  else showBoxReveal(item);
+}
 
 function renderOnboarding(){
   app.innerHTML = `
@@ -1723,7 +1858,7 @@ function startGame(){
     startDate:today(), cycleIndex:0, exSets:{}, gateDoneToday:false, tzMigrated:true,
     dailyDone:{grip:false,mystery:false}, dailyClaimed:false,
     mobilityDone:false, mobilityClaimed:false,
-    streak:0, questOnlyStreak:0, lastActive:null, day:today(),
+    streak:0, questOnlyStreak:0, avatarItems:[], lastBoxStreak:0, lastActive:null, day:today(),
     history:{}, weightLog:{},
     username: myUsername||'', isAdmin:false
   };
