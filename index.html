@@ -1270,7 +1270,7 @@ function render(){
         </ul>
         ${!gateExercisesDone
           ? `<div class="penalty">⚠ Gate not cleared - complete every set above</div>`
-          : `<div style="font-size:12px;color:var(--green);letter-spacing:.08em;margin-top:10px;text-transform:uppercase">✓ All sets complete - clear the Gate below</div>`}
+          : `<div style="font-size:12px;color:var(--green);letter-spacing:.08em;margin-top:10px;text-transform:uppercase">✓ All sets completed</div>`}
         <button class="btn${S.gateDoneToday?' ghost':''}" id="completeBtn" ${S.gateDoneToday?'disabled':''} onclick="completeGate()">
           ${S.gateDoneToday?'Gate cleared today ✓':'Clear the Gate (+100 XP)'}
         </button>
@@ -1291,7 +1291,7 @@ function render(){
       </div>
       ${!(S.dailyDone.grip&&S.dailyDone.mystery)
         ? `<div class="penalty">⚠ Penalty zone active - complete the daily quest</div>`
-        : `<div style="font-size:12px;color:var(--green);letter-spacing:.08em;margin-top:10px;text-transform:uppercase">✓ Daily quest cleared - +30 XP available</div>`}
+        : `<div style="font-size:12px;color:var(--green);letter-spacing:.08em;margin-top:10px;text-transform:uppercase">✓ Daily quest cleared</div>`}
       <button class="btn ghost" style="margin-top:12px" onclick="claimDaily()"
         ${(S.dailyDone.grip&&S.dailyDone.mystery&&!S.dailyClaimed)?'':'disabled'}>
         ${S.dailyClaimed?'Reward claimed ✓':'Claim +30 XP'}
@@ -1309,7 +1309,7 @@ function render(){
       </div>
       ${!S.mobilityDone
         ? `<div class="penalty">⚠ Flexibility not done - complete today's routine</div>`
-        : `<div style="font-size:12px;color:var(--green);letter-spacing:.08em;margin-top:10px;text-transform:uppercase">✓ Routine complete - claim below</div>`}
+        : `<div style="font-size:12px;color:var(--green);letter-spacing:.08em;margin-top:10px;text-transform:uppercase">✓ Routine completed</div>`}
       <button class="btn ghost" style="margin-top:12px" onclick="claimMobility()"
         ${(S.mobilityDone&&!S.mobilityClaimed)?'':'disabled'}>
         ${S.mobilityClaimed?'Reward claimed ✓':'Claim +20 XP'}
