@@ -1406,9 +1406,10 @@ function render(){
         <div class="avatar-circle" style="color:${RANK_COLORS[rk.r]};box-shadow:0 0 20px rgba(${RANK_RGB[rk.r]},0.5)"></div>
         ${Array.from({length: SHADOW_COUNT[rk.r]||0}).map((_,i,arr)=>{
           const n = arr.length;
-          const rawOffset = (i - (n-1)/2) * 40;
-          const offset = Math.round(rawOffset===0 ? 30 : rawOffset);
           const dist = Math.abs(i-(n-1)/2);
+          const dir = (i - (n-1)/2) < 0 ? -1 : 1;
+          const steps = Math.max(0, Math.round(dist - 0.5));
+          const offset = Math.round(dir * (70 + steps*32));
           const scale = Math.max(0.5, 0.74 - dist*0.05);
           const op = Math.max(0.15, 0.5 - dist*0.06);
           return `<div class="avatar-figure avatar-shadow-copy" style="position:absolute;bottom:0;left:calc(50% + ${offset}px);transform:translateX(-50%) scale(${scale});opacity:${op};z-index:1">
