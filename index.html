@@ -318,35 +318,85 @@ const store = (()=>{
 })();
 const LEGACY_KEY='ascension_v1';
 
-/* ---------- Gate data (your real split) ---------- */
+/* ---------- Gate data (your real split), tiered by rank: T1 = E/D, T2 = C/B, T3 = A/S ---------- */
 const GATES = {
   push:{ name:'PUSH', sub:'Park - Calisthenics', icon:'\ud83d\udd34', color:'red',
     gain:'end',
-    ex:[
-      {n:'Parallel bar dips', t:'4x8-12', d:'Chest and triceps. Add weight once you own it.'},
-      {n:'Push-ups (variations)', t:'4x10-15', d:'Alternate standard, decline and diamond.'},
-      {n:'Weighted push-ups', t:'3x8-10', d:'Loaded backpack - your main overload.'},
-      {n:'Pseudo-planche push-ups', t:'3x8', d:'Hands by hips, torso leaning. Shoulders.'},
-      {n:'Pull-ups', t:'4x max', d:'You are at the park - add weight if reps pile up.'},
-      {n:'Hanging leg raises', t:'3x10-12', d:'Core.'}
+    tiers:[
+      [
+        {n:'Parallel bar dips', t:'4x8-12', d:'Chest and triceps. Add weight once you own it.'},
+        {n:'Push-ups (variations)', t:'4x10-15', d:'Alternate standard, decline and diamond.'},
+        {n:'Weighted push-ups', t:'3x8-10', d:'Loaded backpack - your main overload.'},
+        {n:'Pseudo-planche push-ups', t:'3x8', d:'Hands by hips, torso leaning. Shoulders.'},
+        {n:'Pull-ups', t:'4x max', d:'You are at the park - add weight if reps pile up.'},
+        {n:'Hanging leg raises', t:'3x10-12', d:'Core.'}
+      ],
+      [
+        {n:'Parallel bar dips', t:'4x10-15', d:'Chest and triceps. Add weight.'},
+        {n:'Push-ups (variations)', t:'4x15-20', d:'Alternate standard, decline and diamond.'},
+        {n:'Weighted push-ups', t:'4x10-12', d:'Loaded backpack - heavier than last tier.'},
+        {n:'Archer push-ups', t:'3x8 /side', d:'Shift weight fully to one arm each rep. Shoulders and triceps.'},
+        {n:'Weighted pull-ups', t:'4x6-10', d:'Add weight in the backpack.'},
+        {n:'Hanging leg raises to L-sit', t:'3x8-10', d:'Hold the L at the top briefly. Core.'}
+      ],
+      [
+        {n:'Weighted parallel bar dips', t:'4x10-15', d:'Heavy backpack. Chest and triceps.'},
+        {n:'Push-ups (variations)', t:'5x15-20', d:'Alternate standard, decline and diamond.'},
+        {n:'Deficit weighted push-ups', t:'4x10-12', d:'Hands elevated, heavy backpack - extra range.'},
+        {n:'One-arm progression push-ups', t:'3x6-8', d:'Assisted one-arm work. Shoulders and core.'},
+        {n:'Weighted pull-ups (heavy)', t:'4x8-12', d:'Max weight you can control with good form.'},
+        {n:'L-sit to leg raises', t:'4x10-12', d:'Hold the L, then raise. Core.'}
+      ]
     ]},
   pull:{ name:'PULL', sub:'Dumbbells - Home', icon:'\ud83d\udd35', color:'cyan',
     gain:'agi',
-    ex:[
-      {n:'One-arm dumbbell row', t:'4x8-12', d:'Back - go heavy (up to 20 kg).'},
-      {n:'Dumbbell biceps curl', t:'3x10-12', d:'Control the descent 2-3 s.'},
-      {n:'Hammer curl', t:'3x10-12', d:'Brachialis and forearm.'},
-      {n:'Rear-delt raises', t:'3x12-15', d:'Light weight, clean form.'},
-      {n:'Shrugs', t:'3x12-15', d:'Traps.'}
+    tiers:[
+      [
+        {n:'One-arm dumbbell row', t:'4x8-12', d:'Back - go heavy (up to 20 kg).'},
+        {n:'Dumbbell biceps curl', t:'3x10-12', d:'Control the descent 2-3 s.'},
+        {n:'Hammer curl', t:'3x10-12', d:'Brachialis and forearm.'},
+        {n:'Rear-delt raises', t:'3x12-15', d:'Light weight, clean form.'},
+        {n:'Shrugs', t:'3x12-15', d:'Traps.'}
+      ],
+      [
+        {n:'One-arm dumbbell row', t:'4x10-15', d:'Back - heavier than last tier.'},
+        {n:'Dumbbell biceps curl', t:'4x10-12', d:'Slow negative, 3-4 s down.'},
+        {n:'Hammer curl', t:'4x12-15', d:'Brachialis and forearm.'},
+        {n:'Single-arm rear-delt raises', t:'3x12-15 /side', d:'Strict form, one side at a time.'},
+        {n:'Weighted shrugs', t:'4x12-15', d:'Pause 1s at the top.'}
+      ],
+      [
+        {n:'One-arm dumbbell row', t:'5x10-15', d:'Max weight, slow controlled tempo.'},
+        {n:'Curl to press', t:'4x10-12', d:'Curl into a strict press. Combo movement.'},
+        {n:'Cross-body hammer curl', t:'4x12-15', d:'Brachialis and forearm.'},
+        {n:'Single-arm rear-delt raise + row combo', t:'4x10-12 /side', d:'Raise then row without resetting.'},
+        {n:'Weighted shrugs', t:'4x12-15', d:'Heavy, 2s hold at the top.'}
+      ]
     ]},
   legs:{ name:'LEGS', sub:'Dumbbells - Home', icon:'\ud83d\udfe3', color:'violet',
     gain:'str',
-    ex:[
-      {n:'Goblet squat', t:'4x10-12', d:'One dumbbell at the chest. Deep and controlled.'},
-      {n:'Bulgarian split squat', t:'3x8-10 /leg', d:'Dumbbells in hands. Gold with light weight.'},
-      {n:'Romanian deadlift', t:'4x10-12', d:'Hips back, hamstrings and glutes.'},
-      {n:'Walking lunges', t:'3x10 /leg', d:'With dumbbells.'},
-      {n:'Calf raises', t:'4x15-20', d:'One dumbbell, full range.'}
+    tiers:[
+      [
+        {n:'Goblet squat', t:'4x10-12', d:'One dumbbell at the chest. Deep and controlled.'},
+        {n:'Bulgarian split squat', t:'3x8-10 /leg', d:'Dumbbells in hands. Gold with light weight.'},
+        {n:'Romanian deadlift', t:'4x10-12', d:'Hips back, hamstrings and glutes.'},
+        {n:'Walking lunges', t:'3x10 /leg', d:'With dumbbells.'},
+        {n:'Calf raises', t:'4x15-20', d:'One dumbbell, full range.'}
+      ],
+      [
+        {n:'Goblet squat', t:'4x12-15', d:'Heavier, pause 1-2s at the bottom.'},
+        {n:'Bulgarian split squat (deficit)', t:'4x8-10 /leg', d:'Rear foot elevated higher. Dumbbells in hands.'},
+        {n:'Romanian deadlift', t:'4x12-15', d:'Heavier, slow controlled tempo.'},
+        {n:'Weighted walking lunges', t:'4x10 /leg', d:'Heavier dumbbells, longer stride.'},
+        {n:'Single-leg calf raises', t:'4x15-20 /leg', d:'One dumbbell, full range.'}
+      ],
+      [
+        {n:'Goblet squat', t:'5x12-15', d:'Max weight, 3s pause at the bottom.'},
+        {n:'Bulgarian split squat (deficit)', t:'4x10-12 /leg', d:'Heavy, rear foot elevated.'},
+        {n:'Single-leg Romanian deadlift', t:'4x10-12 /leg', d:'Balance and hamstring/glute control.'},
+        {n:'Weighted walking lunges', t:'4x12 /leg', d:'Heavy dumbbells.'},
+        {n:'Single-leg calf raises (weighted)', t:'4x15-20 /leg', d:'Added dumbbell weight.'}
+      ]
     ]}
 };
 const RANKS = [
@@ -379,19 +429,6 @@ const TITLES = [
 ];
 function titleFor(lvl){ let t=TITLES[0]; for(const x of TITLES){ if(lvl>=x.min) t=x; } return t; }
 
-/* ---------- Progressive overload tiers, keyed off the Strength stat ---------- */
-const OVERLOAD_TIERS = [
-  {min:0,  label:'Foundation', tip:'Stick to the base sets and reps shown below.'},
-  {min:20, label:'Tier I',     tip:'Add 1 extra set, or 2 extra reps, on every exercise.'},
-  {min:30, label:'Tier II',    tip:'Slow the lowering (negative) phase to 3-4 seconds on every rep.'},
-  {min:40, label:'Tier III',   tip:'Switch to single-limb variations where possible (one-arm, one-leg).'},
-  {min:50, label:'Tier IV',    tip:'Add external weight (loaded backpack / heavier dumbbell) on top of everything above.'}
-];
-function overloadTierFor(str){
-  let t = OVERLOAD_TIERS[0];
-  for(const tier of OVERLOAD_TIERS){ if(str>=tier.min) t=tier; }
-  return t;
-}
 
 /* ---------- Mystery daily quest pool ---------- */
 const MYSTERY_QUESTS = [
@@ -447,6 +484,27 @@ function legacyScheduleFor(dateStr){
   return CYCLE[idx];
 }
 function todaysGate(){ return CYCLE[S.cycleIndex]; }
+
+/* ---------- Rank-tiered gate content: T1 = rank E/D, T2 = C/B, T3 = A/S, with occasional next-tier trial previews ---------- */
+function gateTierIndex(level){ return level<30?0:(level<70?1:2); }
+function isTrialToday(dateStr, gateId, level){
+  if(gateId==='rest') return false;
+  const tierIdx = gateTierIndex(level);
+  if(tierIdx>=2) return false;
+  const boundary = tierIdx===0 ? 30 : 70;
+  if(boundary - level > 5) return false;
+  let h=0;
+  const key = dateStr+gateId;
+  for(let i=0;i<key.length;i++){ h = (h*41 + key.charCodeAt(i)) >>> 0; }
+  return (h % 4) === 0;
+}
+function effectiveGateTier(dateStr, gateId, level){
+  const tierIdx = gateTierIndex(level);
+  return isTrialToday(dateStr, gateId, level) ? tierIdx+1 : tierIdx;
+}
+function effectiveGateExercises(dateStr, gateId, level){
+  return GATES[gateId].tiers[effectiveGateTier(dateStr, gateId, level)];
+}
 
 /* ---------- State & cloud sync ---------- */
 let S = null;
@@ -1049,7 +1107,9 @@ function render(){
   const proteinLo = Math.round(S.weight*1.6), proteinHi = Math.round(S.weight*2.2);
   const loggedToday = S.weightLog[S.day]!=null;
   const trainedDays = Object.keys(S.history).length;
-  const tier = overloadTierFor(S.stats.str);
+  const gateTierIdx = gateTierIndex(info.lvl);
+  const gateIsTrial = isTrialToday(S.day, gateId, info.lvl);
+  const gateExercises = gateId==='rest' ? null : effectiveGateExercises(S.day, gateId, info.lvl);
   const mysteryTask = mysteryQuestFor(S.day);
   const mobilityRoutine = mobilityRoutineFor(S.day);
   const monsterThreat = (S.questOnlyStreak||0) >= 3 && !S.gateDoneToday;
@@ -1116,9 +1176,9 @@ function render(){
         <div style="font-family:'Orbitron';font-size:12px;letter-spacing:.1em;color:${gate.color==='red'?'#ff8080':gate.color==='violet'?'#b79cff':'var(--cyan-soft)'};margin-bottom:10px">
           ${gate.icon} GATE - ${gate.name} <span style="color:var(--muted);font-size:10px">- ${gate.sub}</span>
         </div>
-        <div class="tier-banner">⚡ Strength ${tier.label} - ${tier.tip}</div>
+        <div class="tier-banner">${gateIsTrial?`⚡ TRIAL GATE - preview of Tier ${gateTierIdx+2}/3, clear it for a +20 XP bonus`:`⚡ Tier ${gateTierIdx+1}/3`}</div>
         <ul class="ex">
-          ${gate.ex.map((e,i)=>{
+          ${gateExercises.map((e,i)=>{
             const max=parseSets(e.t);
             const cnt=S.exSets[i]||0;
             const done=cnt>=max;
@@ -1335,7 +1395,8 @@ function toggleEx(i){
   const gateId=todaysGate();
   const g=GATES[gateId];
   if(!g) return;
-  const max=parseSets(g.ex[i].t);
+  const ex = effectiveGateExercises(S.day, gateId, levelFromXp(S.xp).lvl);
+  const max=parseSets(ex[i].t);
   const cur=S.exSets[i]||0;
   S.exSets[i] = (cur+1)>max ? 0 : cur+1;
   save(); render();
@@ -1346,7 +1407,8 @@ function allChecked(){
   const gateId=todaysGate();
   const g=GATES[gateId];
   if(!g) return false;
-  return g.ex.every((e,i)=>(S.exSets[i]||0)>=parseSets(e.t));
+  const ex = effectiveGateExercises(S.day, gateId, levelFromXp(S.xp).lvl);
+  return ex.every((e,i)=>(S.exSets[i]||0)>=parseSets(e.t));
 }
 function completeGate(){
   const gateId=todaysGate();
@@ -1357,18 +1419,20 @@ function completeGate(){
     return;
   }
   const before=levelFromXp(S.xp).lvl;
+  const trial = isTrialToday(S.day, gateId, levelFromXp(S.xp).lvl);
   const gained={}; gained[g.gain]=1;
   S.stats[g.gain]+=1;
   S._upStats=gained;
-  S.xp += 100;
+  S.xp += trial ? 120 : 100;
   bumpStreak();
   S.gateDoneToday=true;
-  S.history[S.day] = {gate:gateId, xp:100};
+  S.history[S.day] = {gate:gateId, xp:trial?120:100, trial:trial};
   save();
   const after=levelFromXp(S.xp).lvl;
   render();
   const penaltyXp=S._lastPenaltyXp; S._lastPenaltyXp=null;
   if(after>before){ showLevelUp(after,gained); }
+  else if(trial){ toast('Trial Gate cleared','+120 XP - '+g.name+' complete.'); }
   else { toast('Gate cleared','+100 XP - '+g.name+' complete.'); }
   if(penaltyXp){
     setTimeout(()=>{ toast('Streak broken','-'+penaltyXp+' XP penalty. Stats suppressed today.'); }, after>before?400:3000);
