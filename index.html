@@ -449,7 +449,7 @@ const RANKS = [
 function rankFor(lvl){ return RANKS.find(x=>lvl>=x.min); }
 const RANK_COLORS = {E:'#facc15', D:'#a3e635', C:'#22d3ee', B:'#3b82f6', A:'#a855f7', S:'#f43f5e'};
 const RANK_RGB = {E:'250,204,21', D:'163,230,53', C:'34,211,238', B:'59,130,246', A:'168,85,247', S:'244,63,94'};
-const SHADOW_COUNT = {E:0, D:1, C:2, B:3, A:4, S:6};
+const SHADOW_COUNT = {E:1, D:2, C:3, B:4, A:5, S:7};
 const MAX_LEVEL = 100;
 function xpNeeded(lvl){ return 180 + (lvl-1)*15; }
 function levelFromXp(xp){
