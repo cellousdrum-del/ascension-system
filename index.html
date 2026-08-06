@@ -238,7 +238,12 @@
   .avatar-eye.left{left:10px}
   .avatar-eye.right{right:10px}
   .avatar-shadow-copy .avatar-head,.avatar-shadow-copy .avatar-body{background:rgba(5,7,15,0.85)}
-  .avatar-eye.shadow-eye{box-shadow:0 0 4px var(--cyan),0 0 8px var(--cyan);opacity:.7}
+  .avatar-eye.shadow-eye{opacity:.8}
+  .avatar-hair{position:absolute;top:-7px;left:50%;transform:translateX(-50%);width:48px;height:28px;
+    border-radius:50% 50% 18% 18% / 70% 70% 20% 20%;background:linear-gradient(180deg,#0a0e1a,#050710);z-index:1}
+  .avatar-cape{position:absolute;top:32px;left:50%;transform:translateX(-50%);width:66px;height:108px;
+    background:linear-gradient(180deg,rgba(10,14,26,0.95),rgba(5,7,15,0.85));
+    clip-path:polygon(30% 0%, 70% 0%, 100% 100%, 0% 100%)}
   .levelup{max-width:360px;width:100%;text-align:center;border:1px solid var(--cyan);border-radius:3px;
     background:rgba(9,16,33,0.9);padding:28px 22px;box-shadow:0 0 40px rgba(77,163,255,0.5);
     animation:pop .4s cubic-bezier(.2,1.2,.3,1)}
@@ -1408,14 +1413,16 @@ function render(){
           const op = Math.max(0.15, 0.5 - dist*0.06);
           return `<div class="avatar-figure avatar-shadow-copy" style="position:absolute;bottom:0;left:calc(50% + ${offset}px);transform:translateX(-50%) scale(${scale});opacity:${op};z-index:1">
             <div class="avatar-head" style="box-shadow:0 0 10px ${RANK_COLORS[rk.r]}">
-              <span class="avatar-eye shadow-eye left"></span>
-              <span class="avatar-eye shadow-eye right"></span>
+              <span class="avatar-eye shadow-eye left" style="background:${RANK_COLORS[rk.r]};box-shadow:0 0 6px ${RANK_COLORS[rk.r]},0 0 10px ${RANK_COLORS[rk.r]}"></span>
+              <span class="avatar-eye shadow-eye right" style="background:${RANK_COLORS[rk.r]};box-shadow:0 0 6px ${RANK_COLORS[rk.r]},0 0 10px ${RANK_COLORS[rk.r]}"></span>
             </div>
             <div class="avatar-body" style="box-shadow:0 0 10px ${RANK_COLORS[rk.r]}"></div>
           </div>`;
         }).join('')}
         <div class="avatar-figure" style="position:relative;z-index:2">
+          <div class="avatar-cape" style="box-shadow:0 0 20px rgba(${RANK_RGB[rk.r]},0.3)"></div>
           <div class="avatar-head" style="box-shadow:0 0 18px ${RANK_COLORS[rk.r]}, 0 0 ${10+Math.min(S.streak,60)}px ${RANK_COLORS[rk.r]}">
+            <div class="avatar-hair"></div>
             <span class="avatar-eye left"></span>
             <span class="avatar-eye right"></span>
           </div>
