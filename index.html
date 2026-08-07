@@ -1434,7 +1434,7 @@ function render(){
           <div class="avatar-body" style="box-shadow:0 0 18px ${RANK_COLORS[rk.r]}, 0 0 ${10+Math.min(S.streak,60)}px ${RANK_COLORS[rk.r]}"></div>
         </div>
       </div>
-      <div style="text-align:center;font-family:'Orbitron';font-size:13px;letter-spacing:.1em;color:${RANK_COLORS[rk.r]}">RANK ${rk.r} HUNTER</div>
+      <div style="text-align:center;font-family:'Orbitron';font-size:13px;letter-spacing:.1em;color:${RANK_COLORS[rk.r]}">${esc(title.t.toUpperCase())}</div>
       <div style="text-align:center;font-size:11px;color:var(--muted);margin-top:6px;text-transform:uppercase;letter-spacing:.06em">
         ${S.streak>0 ? `Next mystery box in ${(S.streak%7===0)?7:(7-(S.streak%7))} day${((S.streak%7===0)?7:(7-(S.streak%7)))===1?'':'s'}` : 'Start a streak to find your first mystery box'}
       </div>
