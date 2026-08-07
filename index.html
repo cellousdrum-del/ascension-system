@@ -509,19 +509,40 @@ function mysteryQuestFor(dateStr){
 }
 
 /* ---------- Mobility routine pool ---------- */
-const MOBILITY_ROUTINES = [
-  'Hip flexor stretch 60s/side + deep squat hold 60s',
-  'Hamstring stretch 60s/side + standing forward fold 60s',
-  'Shoulder dislocates (band or towel) x15 + doorway chest stretch 45s/side',
-  'Cat-cow x12 + thoracic spine rotations x10/side',
-  'Ankle circles x10/side + calf wall stretch 45s/side',
-  '90/90 hip switches x10/side + pigeon stretch 45s/side',
-  'Neck rolls x8/side + wrist and forearm stretch 45s/side'
+const FLEXIBILITY_TIERS = [
+  [
+    'Hip flexor stretch 45s/side + deep squat hold 45s',
+    'Hamstring stretch 45s/side + standing forward fold 45s',
+    'Shoulder dislocates (band or towel) x15 + doorway chest stretch 45s/side',
+    'Cat-cow x12 + thoracic spine rotations x10/side',
+    'Ankle circles x10/side + calf wall stretch 45s/side',
+    '90/90 hip switches x10/side + pigeon stretch 45s/side',
+    'Neck rolls x8/side + wrist and forearm stretch 45s/side'
+  ],
+  [
+    'Hip flexor stretch with PNF (contract 5s, relax, deepen) 60s/side + full deep squat hold 60s',
+    'Hamstring stretch with PNF 60s/side + straddle forward fold 60s',
+    'Banded shoulder dislocates x15 + doorway chest stretch, lean deeper 60s/side',
+    'Cat-cow x15 + deep thoracic rotation with reach-through x10/side',
+    'Knee-to-wall ankle drill x10/side + bent-knee calf stretch 60s/side',
+    '90/90 hip switches with forward lean x10/side + pigeon with forward fold 60s/side',
+    'Controlled neck circles x10/side + deep wrist flexor and extensor stretch 60s/side'
+  ],
+  [
+    'Front split progression 90s/side + deep squat hold, heels down, 90s',
+    'Straddle split progression 90s + pancake stretch 90s',
+    'Banded shoulder dislocates x20 + bridge hold 30s',
+    'Wall walk or standing bridge (spinal extension) + thoracic rotation hold 15s/side',
+    'Weighted knee-to-wall ankle drill x12/side + calf stretch, straight and bent knee, 90s/side each',
+    'Middle split progression 90s + pigeon with elbows to floor 90s/side',
+    'Advanced neck and wrist mobility flow + shoulder bridge with chest opener 45s'
+  ]
 ];
-function mobilityRoutineFor(dateStr){
+function flexibilityRoutineFor(dateStr, tierIdx){
   let h=0;
   for(let i=0;i<dateStr.length;i++){ h = (h*37 + dateStr.charCodeAt(i)) >>> 0; }
-  return MOBILITY_ROUTINES[h % MOBILITY_ROUTINES.length];
+  const tier = FLEXIBILITY_TIERS[tierIdx] || FLEXIBILITY_TIERS[0];
+  return tier[h % tier.length];
 }
 
 /* ---------- Avatar mystery-box item pool ---------- */
@@ -1190,7 +1211,7 @@ function render(){
   const gateExercises = gateId==='rest' ? null : effectiveGateExercises(S.day, gateId, info.lvl);
   const gateExercisesDone = gateExercises!=null && gateExercises.every((e,i)=>(S.exSets[i]||0)>=parseSets(e.t));
   const mysteryTask = mysteryQuestFor(S.day);
-  const mobilityRoutine = mobilityRoutineFor(S.day);
+  const mobilityRoutine = flexibilityRoutineFor(S.day, gateTierIndex(info.lvl));
   const monsterThreat = (S.questOnlyStreak||0) >= 3 && !S.gateDoneToday;
 
   app.innerHTML = `
@@ -1375,7 +1396,7 @@ function render(){
           <p><b>Clear the Gate</b> (+100 XP): finish every set of your assigned Push/Pull/Legs workout. Also grants +1 to the gate's stat - Push: Endurance, Pull: Agility, Legs: Strength. Once per day.</p>
           <p><b>The Gate waits for you.</b> If you don't clear today's assigned Gate (or confirm a scheduled Rest day), it does not move on - tomorrow (and every day after) still shows the same one, until you actually clear it or confirm it. Nothing advances automatically, including Rest days.</p>
           <p><b>Daily Quest</b> (+30 XP): check off both the grip-strengthener task and the mystery task. Grants Vitality +1. Once per day.</p>
-          <p><b>Flexibility</b> (+20 XP): complete today's stretch routine. Pure XP, no stat attached, available every day including Rest days - and doesn't count toward your streak.</p>
+          <p><b>Flexibility</b> (+20 XP): complete today's stretch routine. A real progressive flexibility program - deeper holds and PNF technique at higher tiers, working toward splits and pancake stretch at the top tier - not just light daily mobility, and it scales with rank the same way the Gates do. Pure XP, no stat attached, available every day including Rest days - and doesn't count toward your streak.</p>
           <p><b>Log your weight</b> (+10 XP): only awarded if it moved the right direction for your goal (up if bulking, down if cutting) - it always logs either way, but XP only comes with real progress.</p>
           <p><b>Streak:</b> clearing the Gate or claiming the Daily Quest keeps it alive - you only need one of the two per day. If a day ends with neither done, the streak breaks immediately (before you get a chance to do anything new) and costs up to <b>-50 XP</b> plus a same-day stat penalty - though it never takes XP you don't have. Skipping several days in a row still only costs one penalty, not one per day.</p>
           <p><b>The Gate always catches up with you.</b> Leaning on the Daily Quest alone only carries the streak for 3 days in a row - on the 4th, a monster appears and that day's Gate becomes mandatory: the Daily Quest alone will no longer save the streak. Clearing the Gate (or confirming Rest) any time resets this clock.</p>
