@@ -54,6 +54,7 @@
   }
   #app{position:relative;z-index:1;max-width:520px;margin:0 auto}
   #app.view-only{pointer-events:none;opacity:.85}
+  #app.view-only .tabbar{pointer-events:auto}
 
   h1,h2,h3,.sys,.rank,.lvl,.stat-val{font-family:'Orbitron',sans-serif}
 
@@ -1165,7 +1166,7 @@ function render(){
     const seedIdx = CYCLE.indexOf(legacyScheduleFor(S.day||today()));
     S.cycleIndex = seedIdx>=0 ? seedIdx : 0;
   }
-  if(S.day !== today()){
+  if(S.day !== today() && !viewOnly){
     const dayActive = S.gateDoneToday || S.dailyClaimed;
     const gateCleared = S.gateDoneToday;
     const questOnly = dayActive && !gateCleared;
