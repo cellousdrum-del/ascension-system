@@ -55,6 +55,7 @@
   #app{position:relative;z-index:1;max-width:520px;margin:0 auto}
   #app.view-only{pointer-events:none;opacity:.85}
   #app.view-only .tabbar{pointer-events:auto}
+  #app.view-only .history-details{pointer-events:auto}
 
   h1,h2,h3,.sys,.rank,.lvl,.stat-val{font-family:'Orbitron',sans-serif}
 
@@ -776,6 +777,8 @@ async function viewProfile(username){
     viewOnly = uname;
     preViewTab = currentTab;
     currentTab = 'home';
+    historyNav = {level:'years', year:null, month:null};
+    historyOpen = false;
     render();
   }catch(e){ toast('Error','Could not load that profile.'); }
 }
@@ -783,6 +786,8 @@ function exitViewOnly(){
   S = ownS; ownS = null; viewOnly = null;
   currentTab = preViewTab || 'admin';
   preViewTab = null;
+  historyNav = {level:'years', year:null, month:null};
+  historyOpen = false;
   render();
 }
 async function loadAdminList(){
@@ -1363,7 +1368,7 @@ function render(){
         <div class="stat"><span class="k">Days Trained</span><span class="stat-val">${trainedDays}</span></div>
         <div class="stat"><span class="k">Current Streak</span><span class="stat-val">${S.streak}</span></div>
       </div>
-      <details class="guide" style="margin-top:14px"${historyOpen?' open':''}>
+      <details class="guide history-details" style="margin-top:14px"${historyOpen?' open':''}>
         <summary>View full history</summary>
         <div class="guide-body">${buildHistory()}</div>
       </details>
