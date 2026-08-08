@@ -1619,6 +1619,7 @@ function completeRestDay(){
   if(todaysGate()!=='rest' || S.gateDoneToday) return;
   S.gateDoneToday = true;
   bumpStreak();
+  S.history[S.day] = {gate:'rest', xp:0};
   save();
   render();
   const penaltyXp=S._lastPenaltyXp; S._lastPenaltyXp=null;
@@ -1668,7 +1669,8 @@ function buildHistory(){
       dayList.map(d=>{
         const h=S.history[d];
         const w=S.weightLog?S.weightLog[d]:null;
-        let line=`${GATES[h.gate].name} ${h.manual?'(logged manually)':'cleared (+'+h.xp+' XP)'}`;
+        let line = h.gate==='rest' ? 'Rest day confirmed'
+          : `${GATES[h.gate].name} ${h.manual?'(logged manually)':'cleared (+'+h.xp+' XP)'}`;
         if(w!=null) line+=` &middot; Weight ${fmt(w)} kg`;
         return `<p style="margin:0 0 8px;font-size:13px"><b style="color:var(--cyan-soft)">${d}</b> - ${line}</p>`;
       }).join('');
