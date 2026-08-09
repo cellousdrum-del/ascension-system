@@ -222,12 +222,23 @@
   #boxOverlay{position:fixed;inset:0;z-index:80;background:radial-gradient(circle at 50% 40%,rgba(139,92,246,0.16),rgba(5,7,15,0.94));
     display:none;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(3px)}
   #boxOverlay.show{display:flex}
-  .box-ic{font-size:52px;line-height:1;margin:10px 0;filter:drop-shadow(0 0 18px rgba(139,92,246,0.7));
-    animation:glow 1.4s ease-in-out infinite alternate}
+  .box-chest{width:76px;height:64px;margin:14px auto 8px;position:relative;
+    animation:chest-glow 1.6s ease-in-out infinite alternate}
+  .box-chest .bc-band{position:absolute;top:0;left:50%;transform:translateX(-50%);width:9px;height:64px;
+    background:rgba(224,172,42,0.55);z-index:1}
+  .box-chest .bc-lid{position:absolute;top:0;left:2px;width:72px;height:28px;border-radius:16px 16px 3px 3px;
+    background:linear-gradient(180deg,#3d2712,#1c1206);border:2px solid #e0ac2a;border-bottom:none;z-index:2}
+  .box-chest .bc-body{position:absolute;bottom:0;left:0;width:76px;height:40px;border-radius:3px 3px 9px 9px;
+    background:linear-gradient(180deg,#2c1c0c,#130c05);border:2px solid #e0ac2a;z-index:2}
+  .box-chest .bc-lock{position:absolute;top:24px;left:50%;transform:translateX(-50%);width:15px;height:15px;
+    border-radius:3px;background:#f6ca4d;box-shadow:0 0 10px #f6ca4d,0 0 20px rgba(246,202,77,0.7);z-index:3}
+  @keyframes chest-glow{0%{filter:drop-shadow(0 0 8px rgba(224,172,42,0.4))}100%{filter:drop-shadow(0 0 20px rgba(224,172,42,0.85))}}
   .box-item{font-size:15px;color:var(--ink);letter-spacing:.04em;margin:4px 0}
-  .box-item .bi-icon{font-size:30px;display:block;margin-bottom:6px}
-  .box-item .bi-name{font-family:'Orbitron';font-size:15px;color:var(--violet);letter-spacing:.05em}
-  .box-item .bi-kind{font-size:11px;color:var(--muted);letter-spacing:.16em;text-transform:uppercase;margin-top:2px}
+  .box-item .bi-icon-big{font-size:70px;display:block;margin:8px 0 12px}
+  .box-item .bi-rank-badge{display:inline-block;font-family:'Orbitron';font-size:11px;letter-spacing:.2em;
+    padding:3px 10px;border:1px solid currentColor;border-radius:2px;margin-bottom:8px}
+  .box-item .bi-name-big{font-family:'Orbitron';font-size:19px;display:block;letter-spacing:.05em;margin-bottom:6px}
+  .box-item .bi-kind{font-size:11px;color:var(--muted);letter-spacing:.16em;text-transform:uppercase;display:block;margin-top:2px}
 
   .avatar-stage{position:relative;height:200px;margin:10px 0 18px;display:flex;align-items:flex-end;justify-content:center}
   .avatar-figure{width:70px}
@@ -310,11 +321,18 @@
 
 <div id="boxOverlay">
   <div class="levelup">
-    <div class="lu-k">Mystery Box</div>
-    <div class="box-ic">📦</div>
-    <div class="lu-t">7-DAY STREAK REWARD</div>
-    <div id="box-item"></div>
-    <button class="btn" style="margin-top:18px" onclick="closeBoxReveal()">Continue</button>
+    <div id="box-step1">
+      <div class="lu-k">Mystery Box</div>
+      <div class="box-chest"><div class="bc-band"></div><div class="bc-lid"></div><div class="bc-body"></div><div class="bc-lock"></div></div>
+      <div class="lu-t">7-DAY STREAK REWARD</div>
+      <p class="note" style="margin-top:10px">A mystery box dropped from your streak. Open it to see what's inside.</p>
+      <button class="btn" style="margin-top:18px" onclick="revealBoxItem()">Open</button>
+    </div>
+    <div id="box-step2" style="display:none">
+      <div class="lu-k">You Obtained</div>
+      <div id="box-item"></div>
+      <button class="btn" style="margin-top:18px" onclick="closeBoxReveal()">Continue</button>
+    </div>
   </div>
 </div>
 
@@ -552,29 +570,53 @@ function flexibilityRoutineFor(dateStr, tierIdx){
 
 /* ---------- Avatar mystery-box item pool ---------- */
 const AVATAR_ITEMS = [
-  {id:'ashborn_blade', icon:'🗡️', name:'Ashborn Blade', kind:'Weapon'},
-  {id:'duskfang_sabre', icon:'⚔️', name:'Duskfang Sabre', kind:'Weapon'},
-  {id:'voidstep_dagger', icon:'🔪', name:'Voidstep Dagger', kind:'Weapon'},
-  {id:'cinderreaper_scythe', icon:'🪓', name:'Cinderreaper Scythe', kind:'Weapon'},
-  {id:'wraithguard_cloak', icon:'🧥', name:'Wraithguard Cloak', kind:'Armor'},
-  {id:'nightveil_shroud', icon:'🥋', name:'Nightveil Shroud', kind:'Armor'},
-  {id:'frostbound_gauntlet', icon:'🧤', name:'Frostbound Gauntlet', kind:'Armor'},
-  {id:'umbral_wing_cloak', icon:'🦇', name:'Umbral Wing Cloak', kind:'Armor'},
-  {id:'sovereigns_eye', icon:'👁️', name:"Sovereign's Eye", kind:'Aura'},
-  {id:'starless_aura', icon:'🌑', name:'Starless Aura', kind:'Aura'},
-  {id:'emberfall_crown', icon:'👑', name:'Emberfall Crown', kind:'Regalia'},
-  {id:'hollow_kings_signet', icon:'💍', name:"Hollow King's Signet", kind:'Regalia'},
-  {id:'grimshade_wolf_sigil', icon:'🐺', name:'Grimshade Wolf Sigil', kind:'Companion'},
-  {id:'ironclad_bulwark_emblem', icon:'🛡️', name:'Ironclad Bulwark Emblem', kind:'Companion'}
+  // E-Rank - common dungeon drops, the kind any low-level hunter clears out first
+  {id:'rusted_goblin_fang', icon:'🦴', name:'Rusted Goblin Fang', kind:'Weapon', rank:'E'},
+  {id:'tattered_scout_wrap', icon:'🧣', name:'Tattered Scout Wrap', kind:'Armor', rank:'E'},
+  {id:'flickering_mana_shard', icon:'💠', name:'Flickering Mana Shard', kind:'Relic', rank:'E'},
+  // D-Rank - hardier beast-kin drops
+  {id:'ironjaw_kobold_tusk', icon:'🦷', name:'Ironjaw Kobold Tusk', kind:'Weapon', rank:'D'},
+  {id:'hardened_carapace_plate', icon:'🪨', name:'Hardened Carapace Plate', kind:'Armor', rank:'D'},
+  {id:'ashen_ember_core', icon:'🔥', name:'Ashen Ember Core', kind:'Relic', rank:'D'},
+  // C-Rank
+  {id:'voidstep_dagger', icon:'🔪', name:'Voidstep Dagger', kind:'Weapon', rank:'C'},
+  {id:'nightveil_shroud', icon:'🥋', name:'Nightveil Shroud', kind:'Armor', rank:'C'},
+  {id:'grimshade_wolf_sigil', icon:'🐺', name:'Grimshade Wolf Sigil', kind:'Companion', rank:'C'},
+  {id:'starless_aura', icon:'🌑', name:'Starless Aura', kind:'Aura', rank:'C'},
+  // B-Rank
+  {id:'duskfang_sabre', icon:'⚔️', name:'Duskfang Sabre', kind:'Weapon', rank:'B'},
+  {id:'frostbound_gauntlet', icon:'🧤', name:'Frostbound Gauntlet', kind:'Armor', rank:'B'},
+  {id:'wraithguard_cloak', icon:'🧥', name:'Wraithguard Cloak', kind:'Armor', rank:'B'},
+  {id:'ironclad_bulwark_emblem', icon:'🛡️', name:'Ironclad Bulwark Emblem', kind:'Companion', rank:'B'},
+  // A-Rank - national-hunter-tier artifacts
+  {id:'cinderreaper_scythe', icon:'🪓', name:'Cinderreaper Scythe', kind:'Weapon', rank:'A'},
+  {id:'umbral_wing_cloak', icon:'🦇', name:'Umbral Wing Cloak', kind:'Armor', rank:'A'},
+  {id:'hollow_kings_signet', icon:'💍', name:"Hollow King's Signet", kind:'Regalia', rank:'A'},
+  // S-Rank - monarch/sovereign-tier
+  {id:'ashborn_blade', icon:'🗡️', name:'Ashborn Blade', kind:'Weapon', rank:'S'},
+  {id:'sovereigns_eye', icon:'👁️', name:"Sovereign's Eye", kind:'Aura', rank:'S'},
+  {id:'emberfall_crown', icon:'👑', name:'Emberfall Crown', kind:'Regalia', rank:'S'}
 ];
-function pickBoxItem(streak, dateStr){
+const RANK_ORDER = ['E','D','C','B','A','S'];
+function pickBoxItem(streak, dateStr, playerRank){
   const owned = new Set(S.avatarItems||[]);
-  const pool = AVATAR_ITEMS.filter(it=>!owned.has(it.id));
-  const list = pool.length ? pool : AVATAR_ITEMS;
   let h=0;
   const key = dateStr+'_'+streak;
   for(let i=0;i<key.length;i++){ h = (h*47 + key.charCodeAt(i)) >>> 0; }
-  return list[h % list.length];
+
+  const idx = RANK_ORDER.indexOf(playerRank);
+  const bumpUp = idx>=0 && idx<RANK_ORDER.length-1 && (h%100)<10;
+  const targetRank = bumpUp ? RANK_ORDER[idx+1] : (playerRank||'E');
+
+  const rankPool = AVATAR_ITEMS.filter(it=>it.rank===targetRank);
+  const unowned = rankPool.filter(it=>!owned.has(it.id));
+  const anyUnowned = AVATAR_ITEMS.filter(it=>!owned.has(it.id));
+  const list = unowned.length ? unowned : (rankPool.length ? rankPool : (anyUnowned.length ? anyUnowned : AVATAR_ITEMS));
+
+  let h2=0;
+  const key2 = key+'_pick';
+  for(let i=0;i<key2.length;i++){ h2 = (h2*31 + key2.charCodeAt(i)) >>> 0; }
+  return list[h2 % list.length];
 }
 
 /* ---------- Fixed schedule: 6-on-1-off. The gate only advances when cleared (or on a Rest day) - it waits for you otherwise. ---------- */
@@ -1476,11 +1518,12 @@ function render(){
         ${S.avatarItems.slice().reverse().map(id=>{
           const it = AVATAR_ITEMS.find(a=>a.id===id);
           if(!it) return '';
-          return `<div class="stat" style="justify-content:flex-start;gap:10px">
-            <span style="font-size:20px">${it.icon}</span>
+          const rc = RANK_COLORS[it.rank] || RANK_COLORS.E;
+          return `<div class="stat" style="justify-content:flex-start;gap:10px;border-left:2px solid ${rc}">
+            <span style="font-size:20px;filter:drop-shadow(0 0 6px ${rc})">${it.icon}</span>
             <span style="display:flex;flex-direction:column">
-              <span style="color:var(--ink);font-size:12px;letter-spacing:.02em">${esc(it.name)}</span>
-              <span class="k" style="font-size:10px">${esc(it.kind)}</span>
+              <span style="color:${rc};font-size:12px;letter-spacing:.02em;text-shadow:0 0 8px ${rc}66">${esc(it.name)}</span>
+              <span class="k" style="font-size:10px">${esc(it.kind)} &middot; <span style="color:${rc}">${it.rank}-Rank</span></span>
             </span>
           </div>`;
         }).join('')}
@@ -1820,7 +1863,8 @@ function bumpStreak(){
   S.streak = (S.lastActive===y) ? S.streak+1 : 1;
   S.lastActive=today();
   if(S.streak>0 && S.streak%7===0 && S.streak>(S.lastBoxStreak||0)){
-    const item = pickBoxItem(S.streak, S.day);
+    const playerRank = rankFor(levelFromXp(S.xp).lvl).r;
+    const item = pickBoxItem(S.streak, S.day, playerRank);
     if(!S.avatarItems) S.avatarItems=[];
     S.avatarItems.push(item.id);
     S.lastBoxStreak = S.streak;
@@ -1857,12 +1901,28 @@ function closeLevelUp(){
   if(pendingBoxReveal){ const item=pendingBoxReveal; pendingBoxReveal=null; showBoxReveal(item); }
 }
 let pendingBoxReveal = null;
+let currentBoxItem = null;
 function showBoxReveal(item){
-  document.getElementById('box-item').innerHTML =
-    `<div class="box-item"><span class="bi-icon">${item.icon}</span><span class="bi-name">${esc(item.name)}</span><span class="bi-kind">${esc(item.kind)}</span></div>`;
+  currentBoxItem = item;
+  document.getElementById('box-step1').style.display='';
+  document.getElementById('box-step2').style.display='none';
   document.getElementById('boxOverlay').classList.add('show');
 }
-function closeBoxReveal(){ document.getElementById('boxOverlay').classList.remove('show'); render(); }
+function revealBoxItem(){
+  const item = currentBoxItem;
+  if(!item){ closeBoxReveal(); return; }
+  const rc = RANK_COLORS[item.rank] || RANK_COLORS.E;
+  document.getElementById('box-item').innerHTML =
+    `<div class="box-item" style="color:${rc}">
+       <span class="bi-icon-big" style="filter:drop-shadow(0 0 22px ${rc})">${item.icon}</span>
+       <span class="bi-rank-badge">${item.rank}-RANK</span>
+       <span class="bi-name-big" style="text-shadow:0 0 16px ${rc}">${esc(item.name)}</span>
+       <span class="bi-kind">${esc(item.kind)}</span>
+     </div>`;
+  document.getElementById('box-step1').style.display='none';
+  document.getElementById('box-step2').style.display='';
+}
+function closeBoxReveal(){ document.getElementById('boxOverlay').classList.remove('show'); currentBoxItem=null; render(); }
 function revealNewBox(leveledUp){
   if(!S._newBoxItem) return;
   const item = S._newBoxItem; S._newBoxItem = null;
