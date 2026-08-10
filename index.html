@@ -525,10 +525,45 @@ const MYSTERY_QUESTS = [
   'Hold a 90-second plank to end the day strong','Do a 5-minute full-body mobility flow (cat-cow, hip circles, arm swings)',
   'Stretch your wrists and forearms for 2 minutes'
 ];
-function mysteryQuestFor(dateStr){
+/* ---------- Shuffle-cycle picker: each pool gets a shuffled play order (seeded, so it's
+   identical on every device) that's walked one-per-day; every item is shown once before any
+   repeats, then the pool reshuffles and the cycle starts over. No Math.random - the shuffle
+   itself is seeded from a hash so state synced through Firestore stays consistent. ---------- */
+function hashStr(str, mult){
   let h=0;
-  for(let i=0;i<dateStr.length;i++){ h = (h*31 + dateStr.charCodeAt(i)) >>> 0; }
-  return MYSTERY_QUESTS[h % MYSTERY_QUESTS.length];
+  for(let i=0;i<str.length;i++){ h = (h*mult + str.charCodeAt(i)) >>> 0; }
+  return h;
+}
+function seededShuffle(n, seed){
+  const a = Array.from({length:n}, (_,i)=>i);
+  let s = seed >>> 0;
+  function rnd(){
+    s = (s + 0x6D2B79F5) >>> 0;
+    let t = Math.imul(s ^ (s>>>15), 1 | s);
+    t = (t + Math.imul(t ^ (t>>>7), 61 | t)) ^ t;
+    return ((t ^ (t>>>14)) >>> 0) / 4294967296;
+  }
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(rnd()*(i+1));
+    const tmp=a[i]; a[i]=a[j]; a[j]=tmp;
+  }
+  return a;
+}
+function makeCycle(poolLen, seedKey, extra){
+  const c = { order: seededShuffle(poolLen, hashStr(seedKey+'_g0',53)), pos:0, gen:0 };
+  if(extra) Object.assign(c, extra);
+  return c;
+}
+function advanceCycle(cycle, poolLen, seedKey){
+  let pos = (cycle.pos||0) + 1;
+  let gen = cycle.gen||0;
+  let order = cycle.order;
+  if(pos >= poolLen){
+    gen += 1;
+    order = seededShuffle(poolLen, hashStr(seedKey+'_g'+gen,53));
+    pos = 0;
+  }
+  return Object.assign({}, cycle, { order, pos, gen });
 }
 
 /* ---------- Mobility routine pool ---------- */
@@ -540,7 +575,14 @@ const FLEXIBILITY_TIERS = [
     'Shoulder dislocates (band or towel) x15 + doorway chest stretch 45s/side',
     'Calf stretch (straight leg against wall) 45s/side',
     'Pigeon stretch (hip external rotation) 45s/side',
-    'Lat and side-body stretch (overhead side reach) 45s/side'
+    'Lat and side-body stretch (overhead side reach) 45s/side',
+    'Adductor/groin stretch (seated butterfly, gentle press) 45s',
+    'Glute stretch (figure-4, lying or seated) 45s/side',
+    'Ankle mobility (weighted knee-to-wall drives) 12 reps/side',
+    'Cat-cow flow for spinal mobility x10',
+    'Neck stretch (ear to shoulder, gentle) 30s/side',
+    'Wrist and forearm stretch (palm and back of hand) 30s/side',
+    'Thoracic rotation (open book stretch, lying on side) 45s/side'
   ],
   [
     'Hip flexor stretch with PNF (contract 5s, relax, deepen) 60s/side',
@@ -549,7 +591,14 @@ const FLEXIBILITY_TIERS = [
     'Banded shoulder dislocates x20 + deep doorway chest stretch, lean further, 60s/side',
     'Calf stretch, straight and bent knee variations, 60s/side each',
     'Pigeon stretch with forward fold 60s/side',
-    'Deep lat stretch with rotation 60s/side'
+    'Deep lat stretch with rotation 60s/side',
+    'Adductor stretch with PNF (seated butterfly, gentle press-and-release) 60s',
+    'Glute and piriformis stretch with PNF (figure-4, contract-relax) 60s/side',
+    'Ankle mobility drill, weighted knee-to-wall x15/side + calf raise holds',
+    'Thread-the-needle thoracic rotation with pause 60s/side',
+    '90/90 hip switch flow x10/side (internal/external rotation)',
+    'Standing quad and hip flexor combo stretch, reach overhead, 60s/side',
+    'Deep neck and upper trap stretch with light overpressure 45s/side'
   ],
   [
     'Front split progression 90s/side',
@@ -558,15 +607,16 @@ const FLEXIBILITY_TIERS = [
     'Banded shoulder dislocates x25 + bridge hold 30s (shoulders and spine)',
     'Advanced calf stretch (deep lunge, back knee straight) 90s/side',
     'Deep pigeon with elbows to floor + figure-4 stretch 90s/side',
-    'Spine flexibility flow: cobra or bridge + deep side bend 90s'
+    'Spine flexibility flow: cobra or bridge + deep side bend 90s',
+    'Full pancake fold, chest toward floor, 90s',
+    'Deep couch stretch (rear foot elevated hip flexor) 90s/side',
+    'Standing to full forward fold, palms flat, 90s',
+    'Scorpion stretch (prone, foot reaching to opposite hand) 60s/side',
+    'Weighted PNF hamstring stretch (strap-assisted) 90s/side',
+    'Bridge progression toward full wheel pose, 30s hold x3',
+    'Deep 90/90 hip stretch with forward lean 90s/side'
   ]
 ];
-function flexibilityRoutineFor(dateStr, tierIdx){
-  let h=0;
-  for(let i=0;i<dateStr.length;i++){ h = (h*37 + dateStr.charCodeAt(i)) >>> 0; }
-  const tier = FLEXIBILITY_TIERS[tierIdx] || FLEXIBILITY_TIERS[0];
-  return tier[h % tier.length];
-}
 
 /* ---------- Avatar mystery-box item pool ---------- */
 const AVATAR_ITEMS = [
@@ -1211,6 +1261,15 @@ function render(){
   if(!S.avatarItems) S.avatarItems = [];
   if(S.lastBoxStreak===undefined) S.lastBoxStreak = 0;
   if(S.penaltyToday===undefined) S.penaltyToday = false;
+  if(!S.mysteryCycle || !Array.isArray(S.mysteryCycle.order) || S.mysteryCycle.order.length!==MYSTERY_QUESTS.length){
+    S.mysteryCycle = makeCycle(MYSTERY_QUESTS.length, 'mystery');
+  }
+  { // Flexibility cycle is per-tier - a fresh shuffle starts the first time you reach a tier.
+    const flexTierNow = gateTierIndex(levelFromXp(S.xp).lvl);
+    if(!S.flexCycle || S.flexCycle.tier!==flexTierNow || !Array.isArray(S.flexCycle.order) || S.flexCycle.order.length!==FLEXIBILITY_TIERS[flexTierNow].length){
+      S.flexCycle = makeCycle(FLEXIBILITY_TIERS[flexTierNow].length, 'flex_'+flexTierNow, {tier:flexTierNow});
+    }
+  }
   if(!S.tzMigrated){ S.tzMigrated = true; S.day = today(); save(); }
   if(S.cycleIndex===undefined){
     const seedIdx = CYCLE.indexOf(legacyScheduleFor(S.day||today()));
@@ -1239,6 +1298,12 @@ function render(){
       S.questOnlyStreak = 0;
     }
 
+    S.mysteryCycle = advanceCycle(S.mysteryCycle, MYSTERY_QUESTS.length, 'mystery');
+    const flexTierForAdvance = gateTierIndex(levelFromXp(S.xp).lvl);
+    if(S.flexCycle && S.flexCycle.tier===flexTierForAdvance){
+      S.flexCycle = advanceCycle(S.flexCycle, FLEXIBILITY_TIERS[flexTierForAdvance].length, 'flex_'+flexTierForAdvance);
+    }
+
     S.day = today();
     S.exSets = {};
     S.dailyDone = {grip:false,mystery:false};
@@ -1261,8 +1326,8 @@ function render(){
   const gateIsTrial = isTrialToday(S.day, gateId, info.lvl);
   const gateExercises = gateId==='rest' ? null : effectiveGateExercises(S.day, gateId, info.lvl);
   const gateExercisesDone = gateExercises!=null && gateExercises.every((e,i)=>(S.exSets[i]||0)>=parseSets(e.t));
-  const mysteryTask = mysteryQuestFor(S.day);
-  const mobilityRoutine = flexibilityRoutineFor(S.day, gateTierIndex(info.lvl));
+  const mysteryTask = MYSTERY_QUESTS[S.mysteryCycle.order[S.mysteryCycle.pos]];
+  const mobilityRoutine = FLEXIBILITY_TIERS[S.flexCycle.tier][S.flexCycle.order[S.flexCycle.pos]];
   const monsterThreat = (S.questOnlyStreak||0) >= 3 && !S.gateDoneToday;
 
   app.innerHTML = `
