@@ -1430,7 +1430,7 @@ function render(){
         ? `<div class="penalty">⚠ Penalty zone active - complete the daily quest</div>`
         : `<div style="font-size:12px;color:var(--green);letter-spacing:.08em;margin-top:10px;text-transform:uppercase">✓ Daily quest cleared</div>`}
       <button class="btn${S.dailyClaimed?' ghost':''}" style="margin-top:12px" onclick="claimDaily()"
-        ${(S.dailyDone.grip&&S.dailyDone.mystery&&!S.dailyClaimed)?'':'disabled'}>
+        ${S.dailyClaimed?'disabled':''}>
         ${S.dailyClaimed?'Reward claimed ✓':'Claim +30 XP'}
       </button>
       <div class="streak">🔥 Streak: ${S.streak} day${S.streak===1?'':'s'}</div>
@@ -1448,7 +1448,7 @@ function render(){
         ? `<div class="penalty">⚠ Flexibility not done - complete today's routine</div>`
         : `<div style="font-size:12px;color:var(--green);letter-spacing:.08em;margin-top:10px;text-transform:uppercase">✓ Routine completed</div>`}
       <button class="btn${S.mobilityClaimed?' ghost':''}" style="margin-top:12px" onclick="claimMobility()"
-        ${(S.mobilityDone&&!S.mobilityClaimed)?'':'disabled'}>
+        ${S.mobilityClaimed?'disabled':''}>
         ${S.mobilityClaimed?'Reward claimed ✓':'Claim +20 XP'}
       </button>
     </section>
@@ -1838,7 +1838,10 @@ function logPastWorkout(){
 }
 function claimDaily(){
   if(S.dailyClaimed) return;
-  if(!(S.dailyDone.grip&&S.dailyDone.mystery)) return;
+  if(!(S.dailyDone.grip&&S.dailyDone.mystery)){
+    toast('Quest incomplete','Complete both tasks to claim the daily quest.');
+    return;
+  }
   const before=levelFromXp(S.xp).lvl;
   S.xp+=30; S.dailyClaimed=true;
   S.stats.vit+=1; S._upStats={vit:1};
@@ -1858,7 +1861,10 @@ function claimDaily(){
 function toggleMobility(){ S.mobilityDone=!S.mobilityDone; save(); render(); }
 function claimMobility(){
   if(S.mobilityClaimed) return;
-  if(!S.mobilityDone) return;
+  if(!S.mobilityDone){
+    toast('Routine incomplete','Complete today\'s flexibility routine to claim it.');
+    return;
+  }
   const before=levelFromXp(S.xp).lvl;
   S.xp+=20; S.mobilityClaimed=true;
   save();
