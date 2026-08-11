@@ -1429,7 +1429,7 @@ function render(){
       ${!(S.dailyDone.grip&&S.dailyDone.mystery)
         ? `<div class="penalty">⚠ Penalty zone active - complete the daily quest</div>`
         : `<div style="font-size:12px;color:var(--green);letter-spacing:.08em;margin-top:10px;text-transform:uppercase">✓ Daily quest cleared</div>`}
-      <button class="btn ghost" style="margin-top:12px" onclick="claimDaily()"
+      <button class="btn${S.dailyClaimed?' ghost':''}" style="margin-top:12px" onclick="claimDaily()"
         ${(S.dailyDone.grip&&S.dailyDone.mystery&&!S.dailyClaimed)?'':'disabled'}>
         ${S.dailyClaimed?'Reward claimed ✓':'Claim +30 XP'}
       </button>
@@ -1447,7 +1447,7 @@ function render(){
       ${!S.mobilityDone
         ? `<div class="penalty">⚠ Flexibility not done - complete today's routine</div>`
         : `<div style="font-size:12px;color:var(--green);letter-spacing:.08em;margin-top:10px;text-transform:uppercase">✓ Routine completed</div>`}
-      <button class="btn ghost" style="margin-top:12px" onclick="claimMobility()"
+      <button class="btn${S.mobilityClaimed?' ghost':''}" style="margin-top:12px" onclick="claimMobility()"
         ${(S.mobilityDone&&!S.mobilityClaimed)?'':'disabled'}>
         ${S.mobilityClaimed?'Reward claimed ✓':'Claim +20 XP'}
       </button>
