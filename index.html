@@ -1400,7 +1400,9 @@ function render(){
         <input id="wIn" type="number" inputmode="decimal" step="0.1" placeholder="Log today's weight" ${loggedToday?'disabled':''}>
         <button class="btn${loggedToday?' ghost':''} sm" onclick="logWeight()" ${loggedToday?'disabled':''}>${loggedToday?'Logged ✓':(S.penaltyToday?'Log (+5 XP, weakened)':'Log (+10 XP)')}</button>
       </div>
-      ${loggedToday?`<div style="font-size:11px;color:var(--muted);letter-spacing:.06em;margin-top:8px;text-transform:uppercase">Weight already logged today - come back tomorrow</div>`:''}
+      ${loggedToday
+        ? `<div style="font-size:12px;color:var(--green);letter-spacing:.08em;margin-top:10px;text-transform:uppercase">✓ Weight logged today</div>`
+        : `<div class="penalty">⚠ Weight not logged - come back once today's weigh-in is in</div>`}
     </section>
 
     <section class="win rank-${rk.r.toLowerCase()}">
