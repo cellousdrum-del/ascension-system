@@ -1385,7 +1385,7 @@ function render(){
         ${statBox('Endurance',S.stats.end,'end')}
         ${statBox('Agility',S.stats.agi,'agi')}
       </div>
-      ${S.penaltyToday?`<div class="penalty" style="margin-top:10px">⚠ PENALTY ZONE ACTIVE - stats suppressed until tomorrow (streak broken)</div>`:''}
+      ${S.penaltyToday?`<div class="penalty" style="margin-top:10px">⚠ WEAKENED - streak broken. Half XP and doubled grip reps until tomorrow.</div>`:''}
     </section>
 
     <section class="win">
@@ -1438,7 +1438,7 @@ function render(){
           ? `<div class="penalty">⚠ Gate not cleared - complete every set above</div>`
           : `<div style="font-size:12px;color:var(--green);letter-spacing:.08em;margin-top:10px;text-transform:uppercase">✓ All sets completed</div>`}
         <button class="btn${S.gateDoneToday?' ghost':''}" id="completeBtn" ${S.gateDoneToday?'disabled':''} onclick="completeGate()">
-          ${S.gateDoneToday?'Gate cleared today ✓':'Clear the Gate (+100 XP)'}
+          ${S.gateDoneToday?'Gate cleared today ✓':(S.penaltyToday?'Clear the Gate (+50 XP, weakened)':'Clear the Gate (+100 XP)')}
         </button>
       `}
     </section>
@@ -1448,7 +1448,7 @@ function render(){
       <div class="daily">
         <div class="dq ${S.dailyDone.grip?'done':''}" onclick="toggleDaily('grip')">
           <span class="chk" style="${S.dailyDone.grip?'background:rgba(77,163,255,.18);color:var(--cyan);box-shadow:0 0 12px rgba(77,163,255,.5)':''}">${S.dailyDone.grip?'✓':''}</span>
-          <span class="t">40 reps of grip strengthener<small>Forearm and grip work - every day</small></span>
+          <span class="t">${S.penaltyToday?'80 reps of grip strengthener':'40 reps of grip strengthener'}<small>${S.penaltyToday?'Penalty Quest - doubled for breaking your streak':'Forearm and grip work - every day'}</small></span>
         </div>
         <div class="dq ${S.dailyDone.mystery?'done':''}" onclick="toggleDaily('mystery')">
           <span class="chk" style="${S.dailyDone.mystery?'background:rgba(77,163,255,.18);color:var(--cyan);box-shadow:0 0 12px rgba(77,163,255,.5)':''}">${S.dailyDone.mystery?'✓':''}</span>
@@ -1460,7 +1460,7 @@ function render(){
         : `<div style="font-size:12px;color:var(--green);letter-spacing:.08em;margin-top:10px;text-transform:uppercase">✓ Daily quest cleared</div>`}
       <button class="btn${S.dailyClaimed?' ghost':''}" style="margin-top:12px" onclick="claimDaily()"
         ${S.dailyClaimed?'disabled':''}>
-        ${S.dailyClaimed?'Reward claimed ✓':'Claim +30 XP'}
+        ${S.dailyClaimed?'Reward claimed ✓':(S.penaltyToday?'Claim +15 XP (weakened)':'Claim +30 XP')}
       </button>
       <div class="streak">🔥 Streak: ${S.streak} day${S.streak===1?'':'s'}</div>
     </section>
@@ -1478,7 +1478,7 @@ function render(){
         : `<div style="font-size:12px;color:var(--green);letter-spacing:.08em;margin-top:10px;text-transform:uppercase">✓ Routine completed</div>`}
       <button class="btn${S.mobilityClaimed?' ghost':''}" style="margin-top:12px" onclick="claimMobility()"
         ${S.mobilityClaimed?'disabled':''}>
-        ${S.mobilityClaimed?'Reward claimed ✓':'Claim +20 XP'}
+        ${S.mobilityClaimed?'Reward claimed ✓':(S.penaltyToday?'Claim +10 XP (weakened)':'Claim +20 XP')}
       </button>
     </section>
     ` : ''}
@@ -1729,25 +1729,30 @@ function completeGate(){
     toast('Quest incomplete','Complete every set to clear the Gate.');
     return;
   }
+  const weakened = !!S.penaltyToday;
   const before=levelFromXp(S.xp).lvl;
   const trial = isTrialToday(S.day, gateId, levelFromXp(S.xp).lvl);
   const gained={}; gained[g.gain]=1;
   S.stats[g.gain]+=1;
   S._upStats=gained;
-  S.xp += trial ? 120 : 100;
+  const baseXp = trial ? 120 : 100;
+  const xpGain = weakened ? Math.round(baseXp/2) : baseXp;
+  S.xp += xpGain;
   bumpStreak();
   S.gateDoneToday=true;
-  S.history[S.day] = {gate:gateId, xp:trial?120:100, trial:trial};
+  S.history[S.day] = {gate:gateId, xp:xpGain, trial:trial};
   save();
   const after=levelFromXp(S.xp).lvl;
   render();
   const penaltyXp=S._lastPenaltyXp; S._lastPenaltyXp=null;
+  const penaltyStat=S._lastPenaltyStat; S._lastPenaltyStat=null;
+  const weakTag = weakened ? ' (weakened, halved)' : '';
   if(after>before){ showLevelUp(after,gained); }
-  else if(trial){ toast('Trial Gate cleared','+120 XP - '+g.name+' complete.'); }
-  else { toast('Gate cleared','+100 XP - '+g.name+' complete.'); }
+  else if(trial){ toast('Trial Gate cleared','+'+xpGain+' XP'+weakTag+' - '+g.name+' complete.'); }
+  else { toast('Gate cleared','+'+xpGain+' XP'+weakTag+' - '+g.name+' complete.'); }
   revealNewBox(after>before);
-  if(penaltyXp){
-    setTimeout(()=>{ toast('Streak broken','-'+penaltyXp+' XP penalty. Stats suppressed today.'); }, after>before?400:3000);
+  if(penaltyXp || penaltyStat){
+    setTimeout(()=>{ toast('Streak broken', buildPenaltyMsg(penaltyXp, penaltyStat)); }, after>before?400:3000);
   }
   setTimeout(()=>{ S._upStats=null; },1800);
 }
@@ -1760,10 +1765,11 @@ function completeRestDay(){
   save();
   render();
   const penaltyXp=S._lastPenaltyXp; S._lastPenaltyXp=null;
+  const penaltyStat=S._lastPenaltyStat; S._lastPenaltyStat=null;
   toast('Rest confirmed','Recovery day logged. The Gate opens again tomorrow.');
   revealNewBox(false);
-  if(penaltyXp){
-    setTimeout(()=>{ toast('Streak broken','-'+penaltyXp+' XP penalty. Stats suppressed today.'); }, 3000);
+  if(penaltyXp || penaltyStat){
+    setTimeout(()=>{ toast('Streak broken', buildPenaltyMsg(penaltyXp, penaltyStat)); }, 3000);
   }
 }
 const MONTH_NAMES=['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -1871,19 +1877,22 @@ function claimDaily(){
     toast('Quest incomplete','Complete both tasks to claim the daily quest.');
     return;
   }
+  const weakened = !!S.penaltyToday;
   const before=levelFromXp(S.xp).lvl;
-  S.xp+=30; S.dailyClaimed=true;
+  const xpGain = weakened ? Math.round(30/2) : 30;
+  S.xp+=xpGain; S.dailyClaimed=true;
   S.stats.vit+=1; S._upStats={vit:1};
   bumpStreak();
   save();
   const after=levelFromXp(S.xp).lvl;
   render();
   const penaltyXp=S._lastPenaltyXp; S._lastPenaltyXp=null;
+  const penaltyStat=S._lastPenaltyStat; S._lastPenaltyStat=null;
   if(after>before) showLevelUp(after,{vit:1});
-  else toast('Discipline','+30 XP - hunter daily quest.');
+  else toast('Discipline','+'+xpGain+' XP'+(weakened?' (weakened, halved)':'')+' - hunter daily quest.');
   revealNewBox(after>before);
-  if(penaltyXp){
-    setTimeout(()=>{ toast('Streak broken','-'+penaltyXp+' XP penalty. Stats suppressed today.'); }, after>before?400:3000);
+  if(penaltyXp || penaltyStat){
+    setTimeout(()=>{ toast('Streak broken', buildPenaltyMsg(penaltyXp, penaltyStat)); }, after>before?400:3000);
   }
   setTimeout(()=>{ S._upStats=null; },1800);
 }
@@ -1894,13 +1903,15 @@ function claimMobility(){
     toast('Routine incomplete','Complete today\'s flexibility routine to claim it.');
     return;
   }
+  const weakened = !!S.penaltyToday;
   const before=levelFromXp(S.xp).lvl;
-  S.xp+=20; S.mobilityClaimed=true;
+  const xpGain = weakened ? Math.round(20/2) : 20;
+  S.xp+=xpGain; S.mobilityClaimed=true;
   save();
   const after=levelFromXp(S.xp).lvl;
   render();
   if(after>before) showLevelUp(after,{});
-  else toast('Flexibility','+20 XP - flexibility work done.');
+  else toast('Flexibility','+'+xpGain+' XP'+(weakened?' (weakened, halved)':'')+' - flexibility work done.');
 }
 function buildWeightChart(){
   const entries = Object.entries(S.weightLog||{}).sort((a,b)=>a[0]<b[0]?-1:1);
@@ -1950,9 +1961,11 @@ function logWeight(){
   const progressed = goingUp ? v>prev : v<prev;
   save();
   if(progressed){
-    S.xp+=10;
+    const weakened = !!S.penaltyToday;
+    const xpGain = weakened ? Math.round(10/2) : 10;
+    S.xp+=xpGain;
     save(); render();
-    toast('Ascension','Weight logged - +10 XP');
+    toast('Ascension','Weight logged - +'+xpGain+' XP'+(weakened?' (weakened, halved)':''));
   } else { render(); toast('Logged','Weight updated.'); }
 }
 function bumpStreak(){
@@ -1972,12 +1985,46 @@ function bumpStreak(){
   }
 }
 function applyStreakPenalty(){
-  const info = levelFromXp(S.xp);
-  const xpLoss = Math.min(50, info.into);
-  if(xpLoss<=0) return; // nothing to take from a 0-XP account - skip silently, no fake penalty banner
-  S.xp -= xpLoss;
+  const beforeLvl = levelFromXp(S.xp).lvl;
+
+  // Rank-protected level demotion: the loss is allowed to drop you a level, but never
+  // below the floor level of your CURRENT rank.
+  const rankFloorLvl = rankFor(beforeLvl).min;
+  let rankFloorXp = 0;
+  for(let l=1; l<rankFloorLvl; l++){ rankFloorXp += xpNeeded(l); }
+
+  // XP loss: 20% of the XP needed to clear your current level (e.g. level 8 needs 285 XP
+  // to clear, so a break there costs 57 XP), clamped at the rank floor above.
+  const xpLoss = Math.round(xpNeeded(beforeLvl) * 0.20);
+  const targetXp = Math.max(rankFloorXp, S.xp - xpLoss);
+  const actualLoss = Math.max(0, S.xp - targetXp);
+  S.xp = targetXp;
+
+  // Real stat rollback: your highest stat (the one you have leaned on most) permanently
+  // drops by 1, floored at 1 so it can never hit zero.
+  const statKeys = ['str','vit','end','agi'];
+  let topKey = statKeys[0];
+  statKeys.forEach(k=>{ if((S.stats[k]||0) > (S.stats[topKey]||0)) topKey = k; });
+  S.stats[topKey] = Math.max(1, (S.stats[topKey]||0) - 1);
+
+  // Box-progress setback is free: the caller resets S.streak to 0 right after this call,
+  // and box eligibility is measured purely as streak % 7, so any partial progress toward
+  // the next mystery box is wiped along with the streak.
+
+  // XP debuff + Penalty Quest (doubled grip) both live for exactly one day via the existing
+  // S.penaltyToday flag - consumed by the XP-award functions and the daily quest render,
+  // and cleared automatically at the next day rollover.
   S.penaltyToday = true;
-  S._lastPenaltyXp = xpLoss;
+  S._lastPenaltyXp = actualLoss;
+  S._lastPenaltyStat = topKey;
+}
+const PENALTY_STAT_LABEL = {str:'Strength',vit:'Vitality',end:'Endurance',agi:'Agility'};
+function buildPenaltyMsg(xpLoss, statKey){
+  const parts = [];
+  if(xpLoss>0) parts.push('-'+xpLoss+' XP');
+  if(statKey) parts.push('-1 '+PENALTY_STAT_LABEL[statKey]);
+  parts.push('box progress reset');
+  return parts.join(', ')+'. Weakened today: half XP earned, double grip reps.';
 }
 
 let toastT;
