@@ -273,6 +273,13 @@
 
   .tier-banner{font-size:12px;letter-spacing:.04em;color:var(--gold);border:1px dashed rgba(251,191,36,0.4);
     border-radius:2px;padding:9px 11px;margin:2px 0 12px;background:rgba(251,191,36,0.05)}
+  #trialOverlay{position:fixed;inset:0;z-index:80;background:radial-gradient(circle at 50% 40%,rgba(251,191,36,0.18),rgba(5,7,15,0.94));
+    display:none;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(3px)}
+  #trialOverlay.show{display:flex}
+  #trialOverlay .levelup{border-color:var(--gold);box-shadow:0 0 40px rgba(251,191,36,0.5)}
+  #trialOverlay .lu-k{color:var(--gold)}
+  .trial-ic{font-size:52px;line-height:1;margin:10px 0;filter:drop-shadow(0 0 18px rgba(251,191,36,0.7));
+    animation:glow 1.4s ease-in-out infinite alternate}
   .hist-row{display:flex;justify-content:space-between;align-items:center;padding:11px 4px;
     border-bottom:1px dashed rgba(77,163,255,0.14);cursor:pointer;font-size:14px}
   .hist-row:last-child{border-bottom:none}
@@ -333,6 +340,16 @@
       <div id="box-item"></div>
       <button class="btn" style="margin-top:18px" onclick="closeBoxReveal()">Continue</button>
     </div>
+  </div>
+</div>
+
+<div id="trialOverlay">
+  <div class="levelup">
+    <div class="lu-k">A Monster Has Appeared</div>
+    <div class="trial-ic">⚡</div>
+    <div class="lu-t">TRIAL GATE</div>
+    <p class="note" style="margin-top:8px">Today's Gate is a harder challenge - clear it for a +20 XP bonus.</p>
+    <button class="btn" style="margin-top:18px" onclick="closeTrialAlert()">Face it</button>
   </div>
 </div>
 
@@ -1278,6 +1295,11 @@ function render(){
     S.cycleIndex = seedIdx>=0 ? seedIdx : 0;
   }
   if(S.day !== today() && !viewOnly){
+    // How many real calendar days passed since we last saw you, not just "before vs after" -
+    // otherwise clearing the Gate once and then never reopening the app again would freeze your
+    // streak forever, since only the single last-tracked day's completion was ever checked.
+    const gap = daysBetween(S.day, today());
+    const fullySkippedDays = Math.max(0, gap - 1);
     const dayActive = S.gateDoneToday || S.dailyClaimed;
     const gateCleared = S.gateDoneToday;
     const questOnly = dayActive && !gateCleared;
@@ -1288,7 +1310,7 @@ function render(){
     // else: stays frozen exactly where it is - Rest included, nothing advances it automatically
 
     S.penaltyToday = false;
-    let brokeStreak = !dayActive && S.streak>0;
+    let brokeStreak = (!dayActive && S.streak>0) || (fullySkippedDays>0 && S.streak>0);
     if(gateCleared){ S.questOnlyStreak = 0; }
     if(questOnly){
       if((S.questOnlyStreak||0) >= 3 && S.streak>0) brokeStreak = true;
@@ -1326,6 +1348,11 @@ function render(){
   const loggedToday = S.weightLog[S.day]!=null;
   const trainedDays = Object.keys(S.history).length;
   const gateIsTrial = isTrialToday(S.day, gateId, info.lvl);
+  if(gateIsTrial && !S.gateDoneToday && !viewOnly && S.trialNotifiedDay!==S.day){
+    S.trialNotifiedDay = S.day;
+    save();
+    document.getElementById('trialOverlay').classList.add('show');
+  }
   const gateExercises = gateId==='rest' ? null : effectiveGateExercises(S.day, gateId, info.lvl);
   const gateExercisesDone = gateExercises!=null && gateExercises.every((e,i)=>(S.exSets[i]||0)>=parseSets(e.t));
   const mysteryTask = MYSTERY_QUESTS[S.mysteryCycle.order[S.mysteryCycle.pos]];
@@ -1996,6 +2023,7 @@ function revealBoxItem(){
   document.getElementById('box-step2').style.display='';
 }
 function closeBoxReveal(){ document.getElementById('boxOverlay').classList.remove('show'); currentBoxItem=null; render(); }
+function closeTrialAlert(){ document.getElementById('trialOverlay').classList.remove('show'); }
 function revealNewBox(leveledUp){
   if(!S._newBoxItem) return;
   const item = S._newBoxItem; S._newBoxItem = null;
