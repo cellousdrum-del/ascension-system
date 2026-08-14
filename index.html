@@ -1539,12 +1539,19 @@ function render(){
         <summary>How XP Works</summary>
         <div class="guide-body">
           <p><b>Clear the Gate</b> (+100 XP): finish every set of your assigned Push/Pull/Legs workout. Also grants +1 to the gate's stat - Push: Endurance, Pull: Agility, Legs: Strength. Once per day.</p>
+          <p><b>Trial Gate</b> (+120 XP): near a rank-up boundary, today's Gate occasionally gets swapped for a harder tier - you'll get a full-screen "a monster has appeared" alert the moment you open the app that day. Clear it for the bonus XP.</p>
           <p><b>The Gate waits for you.</b> If you don't clear today's assigned Gate (or confirm a scheduled Rest day), it does not move on - tomorrow (and every day after) still shows the same one, until you actually clear it or confirm it. Nothing advances automatically, including Rest days.</p>
           <p><b>Daily Quest</b> (+30 XP): check off both the grip-strengthener task and the mystery task. Grants Vitality +1. Once per day.</p>
-          <p><b>Flexibility</b> (+20 XP): complete today's stretch routine. A real progressive flexibility program - deeper holds and PNF technique at higher tiers, working toward splits and pancake stretch at the top tier - not just light daily mobility, and it scales with rank the same way the Gates do. Pure XP, no stat attached, available every day including Rest days - and doesn't count toward your streak.</p>
+          <p><b>Flexibility</b> (+20 XP): complete today's stretch routine, drawn from a curated pool of real static stretches (no mobility drills, no yoga flows) - deeper holds and PNF technique at higher tiers, working toward splits and pancake at the top tier, scaling with rank the same way the Gates do. Pure XP, no stat attached, available every day including Rest days - and doesn't count toward your streak.</p>
           <p><b>Log your weight</b> (+10 XP): only awarded if it moved the right direction for your goal (up if bulking, down if cutting) - it always logs either way, but XP only comes with real progress.</p>
-          <p><b>Streak:</b> clearing the Gate or claiming the Daily Quest keeps it alive - you only need one of the two per day. If a day ends with neither done, the streak breaks immediately (before you get a chance to do anything new) and costs up to <b>-50 XP</b> plus a same-day stat penalty - though it never takes XP you don't have. Skipping several days in a row still only costs one penalty, not one per day.</p>
-          <p><b>The Gate always catches up with you.</b> Leaning on the Daily Quest alone only carries the streak for 3 days in a row - on the 4th, a monster appears and that day's Gate becomes mandatory: the Daily Quest alone will no longer save the streak. Clearing the Gate (or confirming Rest) any time resets this clock.</p>
+          <p><b>Streak:</b> clearing the Gate, claiming the Daily Quest, or confirming a Rest day all keep it alive - you only need one of those per day.</p>
+          <p><b>Quest-only grace period.</b> Leaning on the Daily Quest alone (instead of the Gate) only carries the streak for 3 days in a row - on the 4th, the Gate becomes mandatory again and the Daily Quest alone will no longer save it. Clearing the Gate (or confirming Rest) any time resets this clock. This is unrelated to Trial Gates above.</p>
+          <p><b>Breaking your streak has real consequences</b> - and simply not opening the app doesn't protect it; the moment you do open it again, however many days passed, the break is detected and applied. Everything below happens together, all at once:</p>
+          <p>&bull; <b>XP loss</b> - 20% of the XP needed to clear your current level (e.g. level 8 needs 285 XP to clear, so breaking there costs 57 XP). It can drop you a level, but never below the XP floor of your current rank.</p>
+          <p>&bull; <b>Stat rollback</b> - your highest stat permanently drops by 1 (never below 1).</p>
+          <p>&bull; <b>Weakened</b> - every XP reward is halved for the rest of that day.</p>
+          <p>&bull; <b>Penalty Quest</b> - the grip-strengthener task doubles to 80 reps for the day.</p>
+          <p>&bull; <b>Box progress reset</b> - your streak resets to 0, wiping any progress toward the next mystery box with it.</p>
           <p class="note">Leveling gets a little harder each level, capping at level 100 after roughly 2 years of consistent training.</p>
         </div>
       </details>
@@ -1622,6 +1629,15 @@ function render(){
           </div>`;
         }).join('')}
       </div>` : `<p class="note">No items yet - maintain a 7-day streak to open your first mystery box.</p>`}
+      <details class="guide" style="margin-top:12px">
+        <summary>How Mystery Boxes Work</summary>
+        <div class="guide-body">
+          <p><b>Drop timing:</b> a box drops every 7 days of streak (day 7, 14, 21, ...). Confirming a Rest day counts toward it just like clearing the Gate or claiming the Daily Quest.</p>
+          <p><b>Rank odds:</b> the item inside is drawn from your current hunter rank's item pool 90% of the time. The other 10% it's bumped up to the pool one rank above (S-rank can never bump further).</p>
+          <p><b>No duplicates until you've seen it all:</b> each box first tries to give you an item of the chosen rank you don't already own. Only once every item at that rank is unlocked can it start repeating.</p>
+          <p><b>Breaking your streak</b> resets it to 0, so any progress toward your next box resets too - see "How XP Works" on the Home tab for the full streak-break penalty.</p>
+        </div>
+      </details>
     </section>
     ` : ''}
 
