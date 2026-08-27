@@ -821,6 +821,9 @@ let lastSeenChatId = null;
 let dmWith = null;
 let dmMsgs = [];
 let dmUnsub = null;
+let dmUnreadUnsub = null;
+let hasUnreadDm = false;
+let lastDmSnapshotMsgs = [];
 let friendsList = [];
 let incomingRequests = [];
 let friendUids = new Set();
@@ -895,6 +898,7 @@ async function onAuthReady(user){
     if(S){ saveLocalCloud(); pushCloud(); }
     startUnreadWatcher();
     startRequestWatcher();
+    startDmUnreadWatcher();
     render();
   } else {
     clearTimeout(pushTimer);
@@ -902,6 +906,7 @@ async function onAuthReady(user){
     stopDmListener();
     stopUnreadWatcher();
     stopRequestWatcher();
+    stopDmUnreadWatcher();
     currentUid = null; S = null; ownS = null; myUsername = null; myIsAdmin = false;
     dmWith = null; dmMsgs = []; friendsList = []; incomingRequests = [];
     friendUids = new Set(); outgoingPendingUids = new Set(); incomingPendingUids = new Set();
@@ -1113,7 +1118,7 @@ function buildFriendsSectionsHtml(){
       ${friendsList.length ? friendsList.map(f=>`
         <div class="hist-row" style="cursor:default">
           <span onclick="openDm('${f.uid}','${esc(f.username)}')" style="cursor:pointer;display:flex;flex:1;justify-content:space-between;align-items:center;gap:8px">
-            <span class="hr-n">${esc(f.username)}</span>
+            <span class="hr-n">${esc(f.username)}${isDmThreadUnread(dmThreadId(currentUid,f.uid))?'<span class="tab-dot" style="position:static;display:inline-block;margin-left:6px;vertical-align:middle"></span>':''}</span>
             <span class="hr-c">${f.trainedDays}d trained - ${f.streak}d streak</span>
           </span>
           <span style="display:flex;gap:8px;flex:0 0 auto;margin-left:10px">
@@ -1133,7 +1138,7 @@ function switchTab(tab){
 function renderTabNav(){
   const tabs = [['home','Home'],['progress','Progress'],['avatar','Avatar'],['social','Social']];
   return `<div class="tabbar" id="tabbarSlot">${tabs.map(([id,label])=>
-    `<div class="tab-btn" data-active="${currentTab===id?1:0}" onclick="switchTab('${id}')">${label}${(id==='social'&&(hasUnreadChat||hasUnreadRequest))?'<span class="tab-dot"></span>':''}</div>`
+    `<div class="tab-btn" data-active="${currentTab===id?1:0}" onclick="switchTab('${id}')">${label}${(id==='social'&&(hasUnreadChat||hasUnreadRequest||hasUnreadDm))?'<span class="tab-dot"></span>':''}</div>`
   ).join('')}</div>`;
 }
 
@@ -1247,8 +1252,53 @@ async function sendChatMessage(){
 }
 
 function dmThreadId(a,b){ return [a,b].sort().join('_'); }
+function dmLastSeenKey(dmId){ return 'ascension_dmlastseen_'+dmId; }
+function latestDmByThread(){
+  const map = {};
+  lastDmSnapshotMsgs.forEach(m=>{
+    const ts = (m.timestamp && m.timestamp.toMillis) ? m.timestamp.toMillis() : 0;
+    if(!map[m.dmId] || ts > map[m.dmId].ts) map[m.dmId] = {id:m.id, uid:m.uid, ts};
+  });
+  return map;
+}
+function isDmThreadUnread(dmId){
+  const latest = latestDmByThread()[dmId];
+  if(!latest || latest.uid===currentUid) return false;
+  return store.get(dmLastSeenKey(dmId)) !== latest.id;
+}
+function recomputeDmUnread(){
+  const map = latestDmByThread();
+  let any = false;
+  Object.keys(map).forEach(dmId=>{ if(isDmThreadUnread(dmId)) any = true; });
+  if(any !== hasUnreadDm){ hasUnreadDm = any; renderTabBar(); }
+}
+function startDmUnreadWatcher(){
+  if(dmUnreadUnsub || !currentUid) return;
+  const q = window.fb.query(window.fb.collection(window.fb.db,'dmMessages'), window.fb.where('participants','array-contains',currentUid));
+  dmUnreadUnsub = window.fb.onSnapshot(q, (snap)=>{
+    const msgs = [];
+    snap.forEach(d=>msgs.push(Object.assign({id:d.id}, d.data())));
+    lastDmSnapshotMsgs = msgs;
+    if(currentTab==='social' && !viewOnly && dmWith && currentUid){
+      const openId = dmThreadId(currentUid, dmWith.uid);
+      const latest = latestDmByThread()[openId];
+      if(latest) store.set(dmLastSeenKey(openId), latest.id);
+    }
+    recomputeDmUnread();
+    const friendsEl = document.getElementById('friendsSlot');
+    if(friendsEl) friendsEl.innerHTML = buildFriendsSectionsHtml();
+  }, ()=>{});
+}
+function stopDmUnreadWatcher(){
+  if(dmUnreadUnsub){ dmUnreadUnsub(); dmUnreadUnsub=null; }
+  hasUnreadDm = false; lastDmSnapshotMsgs = [];
+}
 function openDm(uid, username){
   dmWith = {uid, username};
+  const id = dmThreadId(currentUid, uid);
+  const latest = latestDmByThread()[id];
+  if(latest) store.set(dmLastSeenKey(id), latest.id);
+  recomputeDmUnread();
   render();
 }
 function closeDm(){
