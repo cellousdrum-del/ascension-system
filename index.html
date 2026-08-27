@@ -1420,6 +1420,7 @@ function render(){
   const trainedDays = Object.keys(S.history).length;
   const notifSupported = ('Notification' in window);
   const notifStatus = notifSupported ? Notification.permission : 'unsupported';
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
   const gateIsTrial = isTrialToday(S.day, gateId, info.lvl);
   let trialAlertShownThisRender = false;
   if(gateIsTrial && !S.gateDoneToday && !viewOnly && S.trialNotifiedDay!==S.day){
@@ -1798,7 +1799,8 @@ function render(){
         ${notifStatus==='granted'?'Notifications enabled ✓':notifStatus==='denied'?'Blocked by browser':notifStatus==='unsupported'?'Not supported here':'Enable Trial Gate notifications'}
       </button>
       ${notifStatus==='denied'?`<p class="note" style="margin-top:8px">Notifications are blocked for this site in your browser settings - re-enable them there if you want this.</p>`:''}
-      <p class="note" style="margin-top:8px">On iPhone, this only works if the app is added to your Home Screen - Safari tabs don't support notifications. Also only fires while the app is open somewhere, not when it's fully closed.</p>
+      ${isIOS?`<p class="note" style="margin-top:8px">On iPhone, this only works if the app is added to your Home Screen - Safari tabs don't support notifications.</p>`:''}
+      <p class="note" style="margin-top:8px">Also only fires while the app is open somewhere, not when it's fully closed.</p>
     </section>
 
     ${myIsAdmin ? `
