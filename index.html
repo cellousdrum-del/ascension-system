@@ -56,6 +56,8 @@
   #app.view-only{pointer-events:none;opacity:.85}
   #app.view-only .tabbar{pointer-events:auto}
   #app.view-only .history-details{pointer-events:auto}
+  #app.view-only .social-view{pointer-events:auto}
+  #app.view-only .social-view input:disabled,#app.view-only .social-view button:disabled{opacity:.4}
 
   h1,h2,h3,.sys,.rank,.lvl,.stat-val{font-family:'Orbitron',sans-serif}
 
@@ -805,6 +807,7 @@ let currentUid = null;
 let myUsername = null;
 let myIsAdmin = false;
 let ownS = null;
+let ownUid = null;
 let viewOnly = null;
 let pendingImport = null;
 let pendingUsername = null;
@@ -970,23 +973,42 @@ async function viewProfile(username){
     const q = window.fb.query(window.fb.collection(window.fb.db,'users'), window.fb.where('username','==',uname));
     const snap = await window.fb.getDocs(q);
     if(snap.empty){ toast('Not found','No hunter with that username.'); return; }
+    // Stop the admin's own social watchers before swapping identity - their queries hold
+    // stale closures over the old currentUid, and we don't want them cross-firing while
+    // we're impersonating someone else's read-only view.
+    stopUnreadWatcher();
+    stopRequestWatcher();
+    stopDmUnreadWatcher();
     ownS = S;
+    ownUid = currentUid;
     S = snap.docs[0].data();
+    currentUid = snap.docs[0].id;
     viewOnly = uname;
     preViewTab = currentTab;
     currentTab = 'home';
+    friendsList = []; incomingRequests = []; friendUids = new Set();
+    outgoingPendingUids = new Set(); incomingPendingUids = new Set();
+    dmWith = null; dmMsgs = [];
     historyNav = {level:'years', year:null, month:null};
     historyOpen = false;
     render();
   }catch(e){ toast('Error','Could not load that profile.'); }
 }
 function exitViewOnly(){
-  S = ownS; ownS = null; viewOnly = null;
+  S = ownS; ownS = null;
+  currentUid = ownUid; ownUid = null;
+  viewOnly = null;
   currentTab = preViewTab || 'account';
   preViewTab = null;
+  friendsList = []; incomingRequests = []; friendUids = new Set();
+  outgoingPendingUids = new Set(); incomingPendingUids = new Set();
+  dmWith = null; dmMsgs = [];
   historyNav = {level:'years', year:null, month:null};
   historyOpen = false;
   render();
+  startUnreadWatcher();
+  startRequestWatcher();
+  startDmUnreadWatcher();
 }
 async function loadAdminList(){
   const el = document.getElementById('adminList');
@@ -1025,7 +1047,7 @@ async function toggleBan(uid, username, currentlyBanned){
 
 function friendReqId(fromUid, toUid){ return fromUid+'_'+toUid; }
 async function sendFriendRequest(uid, username){
-  if(!currentUid || uid===currentUid) return;
+  if(viewOnly || !currentUid || uid===currentUid) return;
   try{
     await window.fb.setDoc(window.fb.doc(window.fb.db,'friendRequests', friendReqId(currentUid, uid)), {
       fromUid: currentUid, fromUsername: myUsername, toUid: uid, toUsername: username,
@@ -1036,6 +1058,7 @@ async function sendFriendRequest(uid, username){
   }catch(e){ toast('Error','Could not send friend request.'); }
 }
 async function acceptFriendRequest(reqId){
+  if(viewOnly) return;
   try{
     await window.fb.setDoc(window.fb.doc(window.fb.db,'friendRequests', reqId), {status:'accepted'}, {merge:true});
     toast('Friend added','You are now friends.');
@@ -1043,12 +1066,14 @@ async function acceptFriendRequest(reqId){
   }catch(e){ toast('Error','Could not accept request.'); }
 }
 async function declineFriendRequest(reqId){
+  if(viewOnly) return;
   try{
     await window.fb.deleteDoc(window.fb.doc(window.fb.db,'friendRequests', reqId));
     loadFriendsData();
   }catch(e){ toast('Error','Could not decline request.'); }
 }
 async function removeFriend(reqId, uid, username){
+  if(viewOnly) return;
   if(!confirm('Remove '+username+' as a friend?')) return;
   try{
     await window.fb.deleteDoc(window.fb.doc(window.fb.db,'friendRequests', reqId));
@@ -1525,7 +1550,7 @@ function render(){
   app.innerHTML = `
     <div style="text-align:center;margin:4px 0 16px;position:relative">
       <div class="eyebrow" style="justify-content:center">Ascension System</div>
-      <button class="account-icon-btn${currentTab==='account'?' active':''}" onclick="switchTab('account')" title="Account" aria-label="Account">&#9881;&#xFE0E;</button>
+      ${!viewOnly ? `<button class="account-icon-btn${currentTab==='account'?' active':''}" onclick="switchTab('account')" title="Account" aria-label="Account">&#9881;&#xFE0E;</button>` : ''}
     </div>
 
     ${renderTabNav()}
@@ -1813,7 +1838,7 @@ function render(){
     </section>
     ` : ''}
 
-    ${currentTab==='social' ? (dmWith ? `
+    ${currentTab==='social' ? `<div class="social-view">${dmWith ? `
     <section class="win">
       <div class="hist-back" onclick="closeDm()">&larr; Friends</div>
       <div class="eyebrow">${esc(dmWith.username)}</div>
@@ -1821,8 +1846,8 @@ function render(){
         <p class="note">Loading messages...</p>
       </div>
       <div class="inline-w">
-        <input id="dmInput" placeholder="Message..." onkeydown="if(event.key==='Enter'){sendDmMessage();}">
-        <button class="btn sm" onclick="sendDmMessage()">Send</button>
+        <input id="dmInput" placeholder="Message..." onkeydown="if(event.key==='Enter'){sendDmMessage();}" ${viewOnly?'disabled':''}>
+        <button class="btn sm" onclick="sendDmMessage()" ${viewOnly?'disabled':''}>Send</button>
       </div>
     </section>
     ` : `
@@ -1833,11 +1858,11 @@ function render(){
         <p class="note">Loading messages...</p>
       </div>
       <div class="inline-w">
-        <input id="chatInput" placeholder="Message..." onkeydown="if(event.key==='Enter'){sendChatMessage();}">
-        <button class="btn sm" onclick="sendChatMessage()">Send</button>
+        <input id="chatInput" placeholder="Message..." onkeydown="if(event.key==='Enter'){sendChatMessage();}" ${viewOnly?'disabled':''}>
+        <button class="btn sm" onclick="sendChatMessage()" ${viewOnly?'disabled':''}>Send</button>
       </div>
     </section>
-    `) : ''}
+    `}</div>` : ''}
 
     ${currentTab==='account' ? `
     <section class="win">
@@ -1881,8 +1906,8 @@ function render(){
     <div class="foot">Arise.</div>
     <button class="reset" onclick="hardReset()">Reset on awakening (erase data)</button>
   `;
-  const onSocialHome = currentTab==='social' && !viewOnly && S && !dmWith;
-  const onDm = currentTab==='social' && !viewOnly && S && dmWith;
+  const onSocialHome = currentTab==='social' && S && !dmWith;
+  const onDm = currentTab==='social' && S && dmWith;
   if(onSocialHome){ startChatListener(); loadFriendsData(); } else stopChatListener();
   if(onDm) startDmListener(); else stopDmListener();
 
