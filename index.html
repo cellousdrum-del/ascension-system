@@ -287,6 +287,13 @@
   #trialOverlay .lu-k{color:var(--gold)}
   .trial-ic{font-size:52px;line-height:1;margin:10px 0;filter:drop-shadow(0 0 18px rgba(251,191,36,0.7));
     animation:glow 1.4s ease-in-out infinite alternate}
+  #gateWarningOverlay{position:fixed;inset:0;z-index:80;background:radial-gradient(circle at 50% 40%,rgba(239,68,68,0.18),rgba(5,7,15,0.94));
+    display:none;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(3px)}
+  #gateWarningOverlay.show{display:flex}
+  #gateWarningOverlay .levelup{border-color:var(--red);box-shadow:0 0 40px rgba(239,68,68,0.5)}
+  #gateWarningOverlay .lu-k{color:var(--red)}
+  .warn-ic{font-size:52px;line-height:1;margin:10px 0;filter:drop-shadow(0 0 18px rgba(239,68,68,0.7));
+    animation:glow 1.4s ease-in-out infinite alternate}
   .hist-row{display:flex;justify-content:space-between;align-items:center;padding:11px 4px;
     border-bottom:1px dashed rgba(77,163,255,0.14);cursor:pointer;font-size:14px}
   .hist-row:last-child{border-bottom:none}
@@ -357,6 +364,16 @@
     <div class="lu-t">TRIAL GATE</div>
     <p class="note" style="margin-top:8px">Today's Gate is a harder challenge - clear it for a +20 XP bonus.</p>
     <button class="btn" style="margin-top:18px" onclick="closeTrialAlert()">Face it</button>
+  </div>
+</div>
+
+<div id="gateWarningOverlay">
+  <div class="levelup">
+    <div class="lu-k">Streak At Risk</div>
+    <div class="warn-ic">⚠</div>
+    <div class="lu-t">THE GATE DEMANDS YOU</div>
+    <p class="note" style="margin-top:8px">You've leaned on the Daily Quest for 3 days straight. Clear today's Gate (or confirm Rest) - the Daily Quest alone will not save your streak tonight.</p>
+    <button class="btn" style="margin-top:18px" onclick="closeGateWarning()">Understood</button>
   </div>
 </div>
 
@@ -1406,16 +1423,38 @@ function render(){
   const notifSupported = ('Notification' in window);
   const notifStatus = notifSupported ? Notification.permission : 'unsupported';
   const gateIsTrial = isTrialToday(S.day, gateId, info.lvl);
+  let trialAlertShownThisRender = false;
   if(gateIsTrial && !S.gateDoneToday && !viewOnly && S.trialNotifiedDay!==S.day){
     S.trialNotifiedDay = S.day;
     save();
     document.getElementById('trialOverlay').classList.add('show');
+    trialAlertShownThisRender = true;
     if(('Notification' in window) && Notification.permission==='granted'){
       try{
         const n = new Notification('A Monster Has Appeared', {
           body: "Today's Gate is a Trial Gate - clear it for a +20 XP bonus.",
           icon: 'icon-192.png',
           tag: 'trial-gate-'+S.day
+        });
+        n.onclick = ()=>{ window.focus(); n.close(); };
+      }catch(e){}
+    }
+  }
+  // Warn BEFORE the streak actually breaks: if the last 3 days were saved by the Daily Quest
+  // alone, today the real Gate is mandatory again - give a heads-up instead of only finding
+  // out after the streak is already gone at tomorrow's rollover.
+  const questOnlyRisk = (S.questOnlyStreak||0)>=3 && S.streak>0 && !S.gateDoneToday && gateId!=='rest';
+  if(questOnlyRisk && !viewOnly && S.gateWarningNotifiedDay!==S.day){
+    S.gateWarningNotifiedDay = S.day;
+    save();
+    if(trialAlertShownThisRender){ pendingGateWarning = true; }
+    else { document.getElementById('gateWarningOverlay').classList.add('show'); }
+    if(('Notification' in window) && Notification.permission==='granted'){
+      try{
+        const n = new Notification('Streak At Risk', {
+          body: "You've leaned on the Daily Quest for 3 days straight - clear today's Gate or your streak breaks tonight.",
+          icon: 'icon-192.png',
+          tag: 'gate-warning-'+S.day
         });
         n.onclick = ()=>{ window.focus(); n.close(); };
       }catch(e){}
@@ -1621,7 +1660,7 @@ function render(){
           <p><b>Flexibility</b> (+20 XP): complete today's stretch routine, drawn from a curated pool of real static stretches (no mobility drills, no yoga flows) - deeper holds and PNF technique at higher tiers, working toward splits and pancake at the top tier, scaling with rank the same way the Gates do. Pure XP, no stat attached, available every day including Rest days - and doesn't count toward your streak.</p>
           <p><b>Log your weight</b> (+10 XP): only awarded if it moved the right direction for your goal (up if bulking, down if cutting) - it always logs either way, but XP only comes with real progress.</p>
           <p><b>Streak:</b> clearing the Gate, claiming the Daily Quest, or confirming a Rest day all keep it alive - you only need one of those per day.</p>
-          <p><b>Quest-only grace period.</b> Leaning on the Daily Quest alone (instead of the Gate) only carries the streak for 3 days in a row - on the 4th, the Gate becomes mandatory again and the Daily Quest alone will no longer save it. Clearing the Gate (or confirming Rest) any time resets this clock. This is unrelated to Trial Gates above.</p>
+          <p><b>Quest-only grace period.</b> Leaning on the Daily Quest alone (instead of the Gate) only carries the streak for 3 days in a row - on the 4th, the Gate becomes mandatory again and the Daily Quest alone will no longer save it. You'll get a full-screen "Streak At Risk" warning (and a browser notification, if enabled) on that critical day, before the streak actually breaks - not just after. Clearing the Gate (or confirming Rest) any time resets this clock. This is unrelated to Trial Gates above.</p>
           <p><b>Breaking your streak has real consequences</b> - and simply not opening the app doesn't protect it; the moment you do open it again, however many days passed, the break is detected and applied. Everything below happens together, all at once:</p>
           <p>&bull; <b>XP loss</b> - 20% of the XP needed to clear your current level (e.g. level 8 needs 285 XP to clear, so breaking there costs 57 XP). It can drop you a level, but never below the XP floor of your current rank.</p>
           <p>&bull; <b>Stat rollback</b> - your highest stat permanently drops by 1 (never below 1).</p>
@@ -2160,6 +2199,7 @@ function closeLevelUp(){
   if(pendingBoxReveal){ const item=pendingBoxReveal; pendingBoxReveal=null; showBoxReveal(item); }
 }
 let pendingBoxReveal = null;
+let pendingGateWarning = false;
 let currentBoxItem = null;
 function showBoxReveal(item){
   currentBoxItem = item;
@@ -2182,7 +2222,11 @@ function revealBoxItem(){
   document.getElementById('box-step2').style.display='';
 }
 function closeBoxReveal(){ document.getElementById('boxOverlay').classList.remove('show'); currentBoxItem=null; render(); }
-function closeTrialAlert(){ document.getElementById('trialOverlay').classList.remove('show'); }
+function closeTrialAlert(){
+  document.getElementById('trialOverlay').classList.remove('show');
+  if(pendingGateWarning){ pendingGateWarning=false; document.getElementById('gateWarningOverlay').classList.add('show'); }
+}
+function closeGateWarning(){ document.getElementById('gateWarningOverlay').classList.remove('show'); }
 function enableTrialNotifications(){
   if(!('Notification' in window)){
     toast('Not supported','Your browser does not support notifications.');
