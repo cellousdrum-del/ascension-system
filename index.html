@@ -99,6 +99,13 @@
   .eyebrow::before{content:"\201C";opacity:.8}
   .eyebrow::after{content:"\201D";opacity:.8;margin-left:auto}
 
+  .account-icon-btn{position:absolute;top:-3px;right:0;background:transparent;border:1px solid var(--line);
+    border-radius:2px;color:var(--cyan-soft);font-size:15px;width:28px;height:28px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;transition:.2s;padding:0}
+  .account-icon-btn:hover{border-color:var(--cyan);color:var(--cyan)}
+  .account-icon-btn.active{border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 10px rgba(77,163,255,0.4);
+    background:rgba(77,163,255,0.08)}
+
   .title-xl{font-size:26px;font-weight:900;letter-spacing:.04em;margin:0;
     text-shadow:0 0 18px rgba(77,163,255,0.45)}
 
@@ -1124,7 +1131,7 @@ function switchTab(tab){
   render();
 }
 function renderTabNav(){
-  const tabs = [['home','Home'],['progress','Progress'],['avatar','Avatar'],['social','Social'],['account','Account']];
+  const tabs = [['home','Home'],['progress','Progress'],['avatar','Avatar'],['social','Social']];
   return `<div class="tabbar" id="tabbarSlot">${tabs.map(([id,label])=>
     `<div class="tab-btn" data-active="${currentTab===id?1:0}" onclick="switchTab('${id}')">${label}${(id==='social'&&(hasUnreadChat||hasUnreadRequest))?'<span class="tab-dot"></span>':''}</div>`
   ).join('')}</div>`;
@@ -1466,8 +1473,9 @@ function render(){
   const monsterThreat = (S.questOnlyStreak||0) >= 3 && !S.gateDoneToday;
 
   app.innerHTML = `
-    <div style="text-align:center;margin:4px 0 16px">
+    <div style="text-align:center;margin:4px 0 16px;position:relative">
       <div class="eyebrow" style="justify-content:center">Ascension System</div>
+      <button class="account-icon-btn${currentTab==='account'?' active':''}" onclick="switchTab('account')" title="Account" aria-label="Account">&#9881;&#xFE0E;</button>
     </div>
 
     ${renderTabNav()}
