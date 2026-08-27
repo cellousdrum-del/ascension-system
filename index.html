@@ -57,6 +57,9 @@
   #app.view-only .tabbar{pointer-events:auto}
   #app.view-only .history-details{pointer-events:auto}
   #app.view-only .social-view{pointer-events:auto}
+  #app.view-only .account-icon-btn{pointer-events:auto}
+  #app.view-only .account-view{pointer-events:auto}
+  #app.view-only .account-view button:disabled{opacity:.4}
   #app.view-only .social-view input:disabled,#app.view-only .social-view button:disabled{opacity:.4}
 
   h1,h2,h3,.sys,.rank,.lvl,.stat-val{font-family:'Orbitron',sans-serif}
@@ -993,9 +996,17 @@ async function viewProfile(username){
     historyNav = {level:'years', year:null, month:null};
     historyOpen = false;
     render();
+    // Restart the watchers now bound to the viewed user's uid, so the Social tab-dot,
+    // friend-request badge, etc. reflect THEIR notifications while we're diving into them.
+    startUnreadWatcher();
+    startRequestWatcher();
+    startDmUnreadWatcher();
   }catch(e){ toast('Error','Could not load that profile.'); }
 }
 function exitViewOnly(){
+  stopUnreadWatcher();
+  stopRequestWatcher();
+  stopDmUnreadWatcher();
   S = ownS; ownS = null;
   currentUid = ownUid; ownUid = null;
   viewOnly = null;
@@ -1554,7 +1565,7 @@ function render(){
       <div style="flex:1;display:flex;justify-content:center;min-width:0">
         <div class="eyebrow" style="margin:0">Ascension System</div>
       </div>
-      ${!viewOnly ? `<button class="account-icon-btn${currentTab==='account'?' active':''}" onclick="switchTab('account')" title="Account" aria-label="Account">&#9881;&#xFE0E;</button>` : `<div style="width:40px;flex:0 0 auto"></div>`}
+      <button class="account-icon-btn${currentTab==='account'?' active':''}" onclick="switchTab('account')" title="Account" aria-label="Account">&#9881;&#xFE0E;</button>
     </div>
 
     ${renderTabNav()}
@@ -1868,13 +1879,13 @@ function render(){
     </section>
     `}</div>` : ''}
 
-    ${currentTab==='account' ? `
+    ${currentTab==='account' ? `<div class="account-view">
     <section class="win">
       <div class="eyebrow">Account</div>
       <p style="font-size:12px;color:var(--muted);margin:0 0 12px">Logged in as <b style="color:var(--cyan-soft)">${esc(myUsername||'')}</b>. Your progress syncs automatically to any device you log into. A local backup file is still a good extra safety net.</p>
       <div style="display:flex;gap:10px">
-        <button class="btn ghost sm" style="flex:1" onclick="exportProgress()">Backup progress</button>
-        <button class="btn ghost sm" style="flex:1" onclick="document.getElementById('importFile').click()">Restore backup</button>
+        <button class="btn ghost sm" style="flex:1" onclick="exportProgress()" ${viewOnly?'disabled':''}>Backup progress</button>
+        <button class="btn ghost sm" style="flex:1" onclick="document.getElementById('importFile').click()" ${viewOnly?'disabled':''}>Restore backup</button>
       </div>
       <button class="btn ghost" style="margin-top:14px" onclick="doLogout()">Log out</button>
     </section>
@@ -1905,7 +1916,7 @@ function render(){
       </details>
     </section>
     ` : ''}
-    ` : ''}
+    </div>` : ''}
 
     <div class="foot">Arise.</div>
     <button class="reset" onclick="hardReset()">Reset on awakening (erase data)</button>
@@ -2389,6 +2400,7 @@ function hardReset(){
 }
 
 function exportProgress(){
+  if(viewOnly){ toast('Not allowed','Exit the read-only view first.'); return; }
   if(!S){ toast('Nothing to back up','Start your journey first.'); return; }
   const blob = new Blob([JSON.stringify(S,null,2)], {type:'application/json'});
   const url = URL.createObjectURL(blob);
