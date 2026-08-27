@@ -101,12 +101,13 @@
   .eyebrow::before{content:"\201C";opacity:.8}
   .eyebrow::after{content:"\201D";opacity:.8;margin-left:auto}
 
-  .account-icon-btn{position:absolute;top:-3px;right:0;background:transparent;border:1px solid var(--line);
-    border-radius:2px;color:var(--cyan-soft);font-size:15px;width:28px;height:28px;cursor:pointer;
-    display:flex;align-items:center;justify-content:center;transition:.2s;padding:0}
-  .account-icon-btn:hover{border-color:var(--cyan);color:var(--cyan)}
-  .account-icon-btn.active{border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 10px rgba(77,163,255,0.4);
-    background:rgba(77,163,255,0.08)}
+  .account-icon-btn{flex:0 0 auto;background:rgba(77,163,255,0.14);border:1.5px solid var(--cyan);
+    border-radius:4px;color:var(--cyan);font-size:20px;width:40px;height:40px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;transition:.2s;padding:0;
+    box-shadow:0 0 14px rgba(77,163,255,0.4)}
+  .account-icon-btn:hover{background:rgba(77,163,255,0.22);box-shadow:0 0 20px rgba(77,163,255,0.6)}
+  .account-icon-btn.active{background:rgba(77,163,255,0.28);box-shadow:0 0 20px rgba(77,163,255,0.65);
+    border-color:#fff}
 
   .title-xl{font-size:26px;font-weight:900;letter-spacing:.04em;margin:0;
     text-shadow:0 0 18px rgba(77,163,255,0.45)}
@@ -1548,9 +1549,10 @@ function render(){
   const monsterThreat = (S.questOnlyStreak||0) >= 3 && !S.gateDoneToday;
 
   app.innerHTML = `
-    <div style="text-align:center;margin:4px 0 16px;position:relative">
-      <div class="eyebrow" style="justify-content:center">Ascension System</div>
-      ${!viewOnly ? `<button class="account-icon-btn${currentTab==='account'?' active':''}" onclick="switchTab('account')" title="Account" aria-label="Account">&#9881;&#xFE0E;</button>` : ''}
+    <div style="display:flex;align-items:center;gap:8px;margin:4px 0 16px">
+      <div style="width:40px;flex:0 0 auto"></div>
+      <div class="eyebrow" style="flex:1;justify-content:center;margin:0">Ascension System</div>
+      ${!viewOnly ? `<button class="account-icon-btn${currentTab==='account'?' active':''}" onclick="switchTab('account')" title="Account" aria-label="Account">&#9881;&#xFE0E;</button>` : `<div style="width:40px;flex:0 0 auto"></div>`}
     </div>
 
     ${renderTabNav()}
