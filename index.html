@@ -374,8 +374,8 @@
   <div class="levelup">
     <div class="lu-k">A Monster Has Appeared</div>
     <div class="trial-ic">⚡</div>
-    <div class="lu-t">TRIAL GATE</div>
-    <p class="note" style="margin-top:8px">Today's Gate is a harder challenge - clear it for a +20 XP bonus.</p>
+    <div class="lu-t" id="trial-title">TRIAL GATE</div>
+    <p class="note" style="margin-top:8px" id="trial-body">Today's Gate is a harder challenge - clear it for a +20 XP bonus.</p>
     <button class="btn" style="margin-top:18px" onclick="closeTrialAlert()">Face it</button>
   </div>
 </div>
@@ -1572,12 +1572,19 @@ function render(){
   if(gateIsTrial && !S.gateDoneToday && !viewOnly && S.trialNotifiedDay!==S.day){
     S.trialNotifiedDay = S.day;
     save();
+    const trialBonusEffort = gateId==='custom';
+    document.getElementById('trial-title').textContent = trialBonusEffort ? 'BONUS EFFORT DAY' : 'TRIAL GATE';
+    document.getElementById('trial-body').textContent = trialBonusEffort
+      ? "Today's Gate asks for one extra set of everything - clear it for a +20 XP bonus."
+      : "Today's Gate is a harder challenge - clear it for a +20 XP bonus.";
     document.getElementById('trialOverlay').classList.add('show');
     trialAlertShownThisRender = true;
     if(('Notification' in window) && Notification.permission==='granted'){
       try{
         const n = new Notification('A Monster Has Appeared', {
-          body: "Today's Gate is a Trial Gate - clear it for a +20 XP bonus.",
+          body: trialBonusEffort
+            ? "Today's Gate is a Bonus Effort Day - one extra set of everything for a +20 XP bonus."
+            : "Today's Gate is a Trial Gate - clear it for a +20 XP bonus.",
           icon: 'icon-192.png',
           tag: 'trial-gate-'+S.day
         });
@@ -1806,7 +1813,7 @@ function render(){
       <details class="guide" style="margin-top:10px">
         <summary>Log a past workout</summary>
         <div class="guide-body">
-          <p class="note" style="margin-bottom:10px">Adds an entry to your history log. XP is only awarded if you check the box below - use that for a day you genuinely trained but forgot to log live.</p>
+          <p class="note" style="margin-bottom:10px">Adds an entry to your history log. XP is only awarded if you check the box below - use that for a day you genuinely trained but forgot to log live. Only backfills the default Push/Pull/Legs split - custom days aren't supported here yet.</p>
           <label>Date</label>
           <input id="pastDate" type="date" max="${today()}">
           <label>Gate</label>
@@ -1973,10 +1980,10 @@ function render(){
     </section>
 
     <section class="win">
-      <div class="eyebrow">Trial Gate Notifications</div>
-      <p style="font-size:12px;color:var(--muted);margin:0 0 12px">Get a real browser notification the moment a Trial Gate appears, on top of the full-screen alert in the app.</p>
+      <div class="eyebrow">Gate Alert Notifications</div>
+      <p style="font-size:12px;color:var(--muted);margin:0 0 12px">Get a real browser notification the moment a Trial Gate or Bonus Effort Day appears, or when your streak is at risk - on top of the full-screen alerts in the app.</p>
       <button class="btn${notifStatus==='granted'?' ghost':''} sm" onclick="enableTrialNotifications()" ${(notifStatus==='granted'||notifStatus==='unsupported')?'disabled':''}>
-        ${notifStatus==='granted'?'Notifications enabled ✓':notifStatus==='denied'?'Blocked by browser':notifStatus==='unsupported'?'Not supported here':'Enable Trial Gate notifications'}
+        ${notifStatus==='granted'?'Notifications enabled ✓':notifStatus==='denied'?'Blocked by browser':notifStatus==='unsupported'?'Not supported here':'Enable Gate notifications'}
       </button>
       ${notifStatus==='denied'?`<p class="note" style="margin-top:8px">Notifications are blocked for this site in your browser settings - re-enable them there if you want this.</p>`:''}
       ${isIOS?`<p class="note" style="margin-top:8px">On iPhone, this only works if the app is added to your Home Screen - Safari tabs don't support notifications.</p>`:''}
@@ -2559,7 +2566,7 @@ function enableTrialNotifications(){
   if(Notification.permission==='granted'){ render(); return; }
   Notification.requestPermission().then(perm=>{
     if(perm==='granted'){
-      toast('Notifications enabled', "You'll get a browser alert when a Trial Gate appears.");
+      toast('Notifications enabled', "You'll get a browser alert for Trial Gates, Bonus Effort Days, and Streak At Risk warnings.");
     } else {
       toast('Not enabled','Notification permission was not granted.');
     }
