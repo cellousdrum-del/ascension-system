@@ -149,7 +149,7 @@
   .weight-now span{font-size:14px;color:var(--muted);font-weight:500}
   .weight-goal{font-size:13px;color:var(--cyan-soft);letter-spacing:.06em}
 
-  .gates{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:2px 0 12px}
+  .gates{display:grid;grid-template-columns:repeat(auto-fit,minmax(84px,1fr));gap:8px;margin:2px 0 12px}
   .gate{border:1px solid rgba(77,163,255,0.3);border-radius:2px;padding:10px 4px;text-align:center;
     cursor:pointer;background:rgba(11,20,40,0.5);transition:.15s;user-select:none}
   .gate .g-ic{font-size:18px;line-height:1}
@@ -780,7 +780,36 @@ function legacyScheduleFor(dateStr){
   const idx = ((offset % 7) + 7) % 7;
   return CYCLE[idx];
 }
-function todaysGate(){ return CYCLE[S.cycleIndex]; }
+function todaysGate(){
+  if(S.customRoutineMode) return (S.customTrainingSlot||0)>=6 ? 'rest' : 'custom';
+  return CYCLE[S.cycleIndex];
+}
+
+/* ---------- Custom routine mode: up to 6 user-defined days. Two independent counters - a
+   training-slot position (0-5, always followed by Rest) and a day pointer that only advances
+   on training days and is never touched by Rest - so the day rotation keeps "jumping to the
+   next one" continuously even when it doesn't divide evenly into the 6-day block. ---------- */
+const MAX_CUSTOM_DAYS = 6;
+const DAY_COLORS = {
+  red:{hex:'#ff6b6b', rgb:'255,107,107'},
+  cyan:{hex:'#4da3ff', rgb:'77,163,255'},
+  violet:{hex:'#a855f7', rgb:'168,85,247'},
+  green:{hex:'#34d399', rgb:'52,211,153'},
+  gold:{hex:'#facc15', rgb:'250,204,21'},
+  orange:{hex:'#fb923c', rgb:'251,146,60'}
+};
+function todaysCustomDay(){
+  if(!S.customDays || !S.customDays.length) return null;
+  const ptr = (S.customDayPointer||0) % S.customDays.length;
+  return S.customDays[ptr];
+}
+function gateInfo(gateId){
+  if(gateId==='custom'){
+    const d = todaysCustomDay();
+    return d ? {id:'custom', name:d.name, icon:d.icon, color:d.color, sub:'Custom Day', wandererSub:null, gain:d.stat} : null;
+  }
+  return GATES[gateId];
+}
 
 /* ---------- Rank-tiered gate content: T1 = rank E/D, T2 = C/B, T3 = A/S, with occasional next-tier trial previews ---------- */
 function gateTierIndex(level){ return level<30?0:(level<70?1:2); }
@@ -800,9 +829,17 @@ function effectiveGateTier(dateStr, gateId, level){
   return isTrialToday(dateStr, gateId, level) ? tierIdx+1 : tierIdx;
 }
 function effectiveGateExercises(dateStr, gateId, level){
+  if(gateId==='custom'){
+    const d = todaysCustomDay();
+    return d ? d.exercises : [];
+  }
   const g = GATES[gateId];
   const tiers = (S.wandererMode && g.wandererTiers) ? g.wandererTiers : g.tiers;
   return tiers[effectiveGateTier(dateStr, gateId, level)];
+}
+function requiredSetsFor(gateId, exerciseText, dateStr, level){
+  const base = parseSets(exerciseText);
+  return (gateId==='custom' && isTrialToday(dateStr, gateId, level)) ? base+1 : base;
 }
 
 /* ---------- State & cloud sync ---------- */
@@ -1173,7 +1210,7 @@ function switchTab(tab){
   render();
 }
 function renderTabNav(){
-  const tabs = [['home','Home'],['progress','Progress'],['avatar','Avatar'],['social','Social']];
+  const tabs = [['home','Home'],['routine','Routine'],['progress','Progress'],['avatar','Avatar'],['social','Social']];
   return `<div class="tabbar" id="tabbarSlot">${tabs.map(([id,label])=>
     `<div class="tab-btn" data-active="${currentTab===id?1:0}" onclick="switchTab('${id}')">${label}${(id==='social'&&(hasUnreadChat||hasUnreadRequest||hasUnreadDm))?'<span class="tab-dot"></span>':''}</div>`
   ).join('')}</div>`;
@@ -1445,6 +1482,10 @@ function render(){
   if(S.lastBoxStreak===undefined) S.lastBoxStreak = 0;
   if(S.penaltyToday===undefined) S.penaltyToday = false;
   if(S.wandererMode===undefined) S.wandererMode = false;
+  if(S.customRoutineMode===undefined) S.customRoutineMode = false;
+  if(!S.customDays) S.customDays = [];
+  if(S.customTrainingSlot===undefined) S.customTrainingSlot = 0;
+  if(S.customDayPointer===undefined) S.customDayPointer = 0;
   if(!S.mysteryCycle || !Array.isArray(S.mysteryCycle.order) || S.mysteryCycle.order.length!==MYSTERY_QUESTS.length){
     S.mysteryCycle = makeCycle(MYSTERY_QUESTS.length, 'mystery');
   }
@@ -1470,7 +1511,17 @@ function render(){
     const questOnly = dayActive && !gateCleared;
 
     if(gateCleared){
-      S.cycleIndex = (S.cycleIndex + 1) % CYCLE.length;
+      if(S.customRoutineMode){
+        const wasRest = (S.customTrainingSlot||0) >= 6;
+        if(wasRest){
+          S.customTrainingSlot = 0;
+        } else {
+          S.customTrainingSlot = (S.customTrainingSlot||0) + 1;
+          S.customDayPointer = ((S.customDayPointer||0) + 1) % Math.max(1, (S.customDays||[]).length);
+        }
+      } else {
+        S.cycleIndex = (S.cycleIndex + 1) % CYCLE.length;
+      }
     }
     // else: stays frozen exactly where it is - Rest included, nothing advances it automatically
 
@@ -1507,7 +1558,8 @@ function render(){
   const rk = rankFor(info.lvl);
   const title = titleFor(info.lvl);
   const gateId = todaysGate();
-  const gate = GATES[gateId];
+  const gate = gateInfo(gateId);
+  const curCustomDay = S.customRoutineMode ? todaysCustomDay() : null;
   const goalPct = Math.max(0, Math.min(100, Math.round((S.weight - S.startW)/(S.goalW - S.startW)*100)));
   const proteinLo = Math.round(S.weight*1.6), proteinHi = Math.round(S.weight*2.2);
   const loggedToday = S.weightLog[S.day]!=null;
@@ -1554,7 +1606,7 @@ function render(){
     }
   }
   const gateExercises = gateId==='rest' ? null : effectiveGateExercises(S.day, gateId, info.lvl);
-  const gateExercisesDone = gateExercises!=null && gateExercises.every((e,i)=>(S.exSets[i]||0)>=parseSets(e.t));
+  const gateExercisesDone = gateExercises!=null && gateExercises.every((e,i)=>(S.exSets[i]||0)>=requiredSetsFor(gateId, e.t, S.day, info.lvl));
   const mysteryTask = MYSTERY_QUESTS[S.mysteryCycle.order[S.mysteryCycle.pos]];
   const mobilityRoutine = FLEXIBILITY_TIERS[S.flexCycle.tier][S.flexCycle.order[S.flexCycle.pos]];
   const monsterThreat = (S.questOnlyStreak||0) >= 3 && !S.gateDoneToday;
@@ -1571,11 +1623,13 @@ function render(){
     ${renderTabNav()}
 
     ${currentTab==='home' ? `
+    ${!S.customRoutineMode ? `
     <div class="wanderer-toggle${S.wandererMode?' on':''}" onclick="toggleWandererMode()">
       <span class="wt-icon">&#9992;</span>
       <span class="wt-label">Wanderer Mode</span>
       <span class="wt-state">${S.wandererMode?'ON - Calisthenics':'OFF'}</span>
     </div>
+    ` : ''}
     <section class="win">
       <div class="hunter-top">
         <div>
@@ -1618,9 +1672,16 @@ function render(){
       <div class="eyebrow">Quest - Today's Gate</div>
       ${monsterThreat?`<div class="penalty" style="margin-bottom:10px">👹 A monster has appeared - clear today's Gate or your streak breaks, daily quest alone won't save it now</div>`:''}
       <div class="gates">
-        ${gateBtn('push',gateId)}${gateBtn('pull',gateId)}${gateBtn('legs',gateId)}
+        ${S.customRoutineMode
+          ? (S.customDays||[]).map(d=>customDayChip(d, gateId==='custom' && curCustomDay && curCustomDay.id===d.id)).join('')
+          : `${gateBtn('push',gateId)}${gateBtn('pull',gateId)}${gateBtn('legs',gateId)}`}
       </div>
-      ${gateId==='rest' ? `
+      ${(S.customRoutineMode && !gate) ? `
+        <div style="text-align:center;padding:22px 10px 10px">
+          <div style="color:var(--muted);font-size:14px">You haven't set up any custom days yet.</div>
+          <button class="btn" style="margin-top:14px" onclick="switchTab('routine')">Go to Routine tab</button>
+        </div>
+      ` : gateId==='rest' ? `
         <div style="text-align:center;padding:22px 10px 10px">
           <div style="font-family:'Orbitron';font-size:15px;letter-spacing:.14em;color:var(--cyan-soft);margin-bottom:8px">RECOVERY PROTOCOL</div>
           <div style="color:var(--muted);font-size:14px">This is a rest day. Enjoy your temporary freedom, Hunter.</div>
@@ -1629,20 +1690,20 @@ function render(){
           ${S.gateDoneToday?'Rest day confirmed ✓':'Confirm Rest Day'}
         </button>
       ` : `
-        <div style="font-family:'Orbitron';font-size:12px;letter-spacing:.1em;color:${gate.color==='red'?'#ff8080':gate.color==='violet'?'#b79cff':'var(--cyan-soft)'};margin-bottom:10px">
-          ${gate.icon} GATE - ${gate.name} <span style="display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:2px;border:1px solid ${RANK_COLORS[rk.r]};color:${RANK_COLORS[rk.r]};background:rgba(${RANK_RGB[rk.r]},0.15);box-shadow:0 0 10px rgba(${RANK_RGB[rk.r]},0.6);font-size:11px;font-weight:900;vertical-align:middle;margin:0 2px">${rk.r}</span> <span style="color:var(--muted);font-size:10px">${(S.wandererMode && gate.wandererSub) ? gate.wandererSub : gate.sub}</span>
+        <div style="font-family:'Orbitron';font-size:12px;letter-spacing:.1em;color:${gateHeaderColor(gate.color)};margin-bottom:10px">
+          ${gate.icon} GATE - ${esc(gate.name)} <span style="display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:2px;border:1px solid ${RANK_COLORS[rk.r]};color:${RANK_COLORS[rk.r]};background:rgba(${RANK_RGB[rk.r]},0.15);box-shadow:0 0 10px rgba(${RANK_RGB[rk.r]},0.6);font-size:11px;font-weight:900;vertical-align:middle;margin:0 2px">${rk.r}</span> <span style="color:var(--muted);font-size:10px">${(S.wandererMode && gate.wandererSub) ? gate.wandererSub : gate.sub}</span>
         </div>
-        ${gateIsTrial?`<div class="tier-banner">⚡ TRIAL GATE - a harder challenge today, clear it for a +20 XP bonus</div>`:''}
+        ${gateIsTrial?(gateId==='custom'?`<div class="tier-banner">⚡ BONUS EFFORT DAY - one extra set of everything today, clear it for a +20 XP bonus</div>`:`<div class="tier-banner">⚡ TRIAL GATE - a harder challenge today, clear it for a +20 XP bonus</div>`):''}
         <ul class="ex">
           ${gateExercises.map((e,i)=>{
-            const max=parseSets(e.t);
+            const max=requiredSetsFor(gateId, e.t, S.day, info.lvl);
             const cnt=S.exSets[i]||0;
             const done=cnt>=max;
             return `
           <li class="${done?'done':''}" onclick="toggleEx(${i})">
             <span class="chk">${done?'✓':(cnt>0?cnt:'')}</span>
-            <span class="ex-nm">${e.n}<small>${e.d}</small></span>
-            <span class="ex-tg">${cnt}/${max} sets - ${e.t}</span>
+            <span class="ex-nm">${esc(e.n)}${e.d?`<small>${esc(e.d)}</small>`:''}</span>
+            <span class="ex-tg">${cnt}/${max} sets - ${esc(e.t)}</span>
           </li>`;}).join('')}
         </ul>
         ${!gateExercisesDone
@@ -1691,6 +1752,26 @@ function render(){
         ${S.mobilityClaimed?'disabled':''}>
         ${S.mobilityClaimed?'Reward claimed ✓':(S.penaltyToday?'Claim +10 XP (weakened)':'Claim +20 XP')}
       </button>
+    </section>
+    ` : ''}
+
+    ${currentTab==='routine' ? `
+    <section class="win">
+      <div class="eyebrow">Routine</div>
+      <p style="font-size:12px;color:var(--muted);margin:0 0 12px">Choose the default Push/Pull/Legs split or build your own fully custom training days. Daily Quest and Flexibility are unaffected either way.</p>
+      <div style="display:flex;gap:10px">
+        <button class="btn${!S.customRoutineMode?'':' ghost'} sm" style="flex:1" onclick="toggleCustomRoutineMode()" ${!S.customRoutineMode?'disabled':''}>Default (Push/Pull/Legs)</button>
+        <button class="btn${S.customRoutineMode?'':' ghost'} sm" style="flex:1" onclick="toggleCustomRoutineMode()" ${S.customRoutineMode?'disabled':''}>Custom Routine</button>
+      </div>
+    </section>
+
+    <section class="win">
+      <div class="eyebrow">Your Custom Days (${(S.customDays||[]).length}/${MAX_CUSTOM_DAYS})</div>
+      <p class="note" style="margin-bottom:10px">Build these anytime, whether or not Custom Routine is currently active above.</p>
+      ${(S.customDays&&S.customDays.length) ? S.customDays.map((d,i)=>customDayEditorHtml(d,i,S.customDays.length)).join('') : `<p class="note">No custom days yet - add one below.</p>`}
+      ${(S.customDays||[]).length < MAX_CUSTOM_DAYS
+        ? `<button class="btn ghost" style="margin-top:10px" onclick="addCustomDay()">+ Add Custom Day</button>`
+        : `<p class="note" style="margin-top:10px">Maximum of 6 custom days reached.</p>`}
     </section>
     ` : ''}
 
@@ -1752,7 +1833,8 @@ function render(){
           <p><b>Clear the Gate</b> (+100 XP): finish every set of your assigned Push/Pull/Legs workout. Also grants +1 to the gate's stat - Push: Endurance, Pull: Agility, Legs: Strength. Once per day.</p>
           <p><b>Trial Gate</b> (+120 XP): near a rank-up boundary, today's Gate occasionally gets swapped for a harder tier - you'll get a full-screen "a monster has appeared" alert the moment you open the app that day. Clear it for the bonus XP. Turn on browser notifications in the Account tab to also get a real system alert alongside it.</p>
           <p><b>The Gate waits for you.</b> If you don't clear today's assigned Gate (or confirm a scheduled Rest day), it does not move on - tomorrow (and every day after) still shows the same one, until you actually clear it or confirm it. Nothing advances automatically, including Rest days.</p>
-          <p><b>Wanderer Mode</b> (toggle at the top of Home): swaps Pull and Legs to calisthenics-only exercises for when you're traveling and don't have dumbbells - Push is already park-friendly, so it stays the same. Same XP, same stat gains, same rank tiers - only the exercises change. Flip it back off once you're home.</p>
+          <p><b>Wanderer Mode</b> (toggle at the top of Home): swaps Pull and Legs to calisthenics-only exercises for when you're traveling and don't have dumbbells - Push is already park-friendly, so it stays the same. Same XP, same stat gains, same rank tiers - only the exercises change. Flip it back off once you're home. Only available on the default Push/Pull/Legs split.</p>
+          <p><b>Custom Routine</b> (Routine tab): build your own training days instead of Push/Pull/Legs - any number from 1 to 6, each with its own name, icon, color, assigned stat, and exercise list. Custom days have no rank tiers (one flat list) and give the same +100 XP as any Gate. Rest still appears mandatorily every 7th day - if your day count doesn't divide evenly into 6, the rotation just keeps jumping to the next day in your list, even mid-cycle. Occasionally a "Bonus Effort Day" asks for one extra set of everything for +20 XP, using the same trigger as Trial Gates below. Switch back to Default anytime without losing your custom setup.</p>
           <p><b>Daily Quest</b> (+30 XP): check off both the grip-strengthener task and the mystery task. Grants Vitality +1. Once per day.</p>
           <p><b>Flexibility</b> (+20 XP): complete today's stretch routine, drawn from a curated pool of real static stretches (no mobility drills, no yoga flows) - deeper holds and PNF technique at higher tiers, working toward splits and pancake at the top tier, scaling with rank the same way the Gates do. Pure XP, no stat attached, available every day including Rest days - and doesn't count toward your streak.</p>
           <p><b>Log your weight</b> (+10 XP): only awarded if it moved the right direction for your goal (up if bulking, down if cutting) - it always logs either way, but XP only comes with real progress.</p>
@@ -1941,20 +2023,28 @@ function gateBtn(id,activeId){
   return `<div class="gate" data-color="${g.color}" data-active="${activeId===id?1:0}">
     <div class="g-ic">${g.icon}</div><div class="g-nm">${g.name}</div><div class="g-sub">${sub.split(' - ')[0]}</div></div>`;
 }
+const GATE_HEADER_COLORS = {red:'#ff8080', cyan:'var(--cyan-soft)', violet:'#b79cff', green:'#6ee7b7', gold:'#fde68a', orange:'#fdba74'};
+function gateHeaderColor(color){ return GATE_HEADER_COLORS[color] || 'var(--cyan-soft)'; }
+function customDayChip(d,isActive){
+  const c = DAY_COLORS[d.color] || DAY_COLORS.cyan;
+  return `<div class="gate" style="${isActive?`border-color:${c.hex};background:rgba(${c.rgb},0.12);box-shadow:0 0 16px rgba(${c.rgb},0.35)`:''}">
+    <div class="g-ic">${d.icon}</div><div class="g-nm" style="${isActive?`color:${c.hex}`:''}">${esc(d.name).toUpperCase()}</div><div class="g-sub">CUSTOM</div></div>`;
+}
 
 function toggleEx(i){
   const gateId=todaysGate();
-  const g=GATES[gateId];
+  const g=gateInfo(gateId);
   if(!g) return;
-  const ex = effectiveGateExercises(S.day, gateId, levelFromXp(S.xp).lvl);
-  const max=parseSets(ex[i].t);
+  const level = levelFromXp(S.xp).lvl;
+  const ex = effectiveGateExercises(S.day, gateId, level);
+  const max=requiredSetsFor(gateId, ex[i].t, S.day, level);
   const cur=S.exSets[i]||0;
   S.exSets[i] = (cur+1)>max ? 0 : cur+1;
   save(); render();
 }
 function toggleDaily(k){ S.dailyDone[k]=!S.dailyDone[k]; save(); render(); }
 function toggleWandererMode(){
-  if(viewOnly) return;
+  if(viewOnly || S.customRoutineMode) return;
   S.wandererMode = !S.wandererMode;
   S.exSets = {}; // exercise list changes (Pull/Legs swap to calisthenics) - stale checkmarks would point at the wrong exercise
   save();
@@ -1963,16 +2053,149 @@ function toggleWandererMode(){
     S.wandererMode?'Pull and Legs now use calisthenics only. Push is unchanged.':'Back to the normal dumbbell routine.');
 }
 
+/* ---------- Custom routine editor ---------- */
+function statLabel(stat){ return {str:'Strength',vit:'Vitality',end:'Endurance',agi:'Agility'}[stat] || stat; }
+function makeCustomDayId(){ return 'cd_'+Date.now()+'_'+Math.floor(Math.random()*1000); }
+function findCustomDay(id){ return (S.customDays||[]).find(d=>d.id===id); }
+function customDayEditorHtml(d,i,total){
+  const c = DAY_COLORS[d.color] || DAY_COLORS.cyan;
+  return `
+    <details class="guide" style="margin-top:${i===0?'0':'10px'}">
+      <summary>${d.icon} ${esc(d.name)} <small style="color:${c.hex}">${statLabel(d.stat)}</small> - ${d.exercises.length} exercise${d.exercises.length===1?'':'s'}</summary>
+      <div class="guide-body">
+        <label>Day name</label>
+        <input id="cdname_${d.id}" value="${esc(d.name)}" maxlength="30">
+        <label>Icon (single emoji)</label>
+        <input id="cdicon_${d.id}" value="${esc(d.icon)}" maxlength="4">
+        <label>Color</label>
+        <select id="cdcolor_${d.id}">
+          ${Object.keys(DAY_COLORS).map(k=>`<option value="${k}" ${d.color===k?'selected':''}>${k[0].toUpperCase()+k.slice(1)}</option>`).join('')}
+        </select>
+        <label>Stat gained on completion</label>
+        <select id="cdstat_${d.id}">
+          <option value="str" ${d.stat==='str'?'selected':''}>Strength</option>
+          <option value="vit" ${d.stat==='vit'?'selected':''}>Vitality</option>
+          <option value="end" ${d.stat==='end'?'selected':''}>Endurance</option>
+          <option value="agi" ${d.stat==='agi'?'selected':''}>Agility</option>
+        </select>
+        <label style="margin-top:16px">Exercises</label>
+        ${d.exercises.map((ex,ei)=>`
+        <div class="inline-w" style="margin-bottom:8px">
+          <input id="cdexn_${d.id}_${ei}" placeholder="Exercise name" value="${esc(ex.n)}">
+          <input id="cdext_${d.id}_${ei}" placeholder="e.g. 4x8-12" value="${esc(ex.t)}" style="max-width:110px">
+          <button class="btn ghost sm" style="flex:0 0 auto;padding:6px 10px" onclick="removeCustomExercise('${d.id}',${ei})">✕</button>
+        </div>`).join('')}
+        <button class="btn ghost sm" onclick="addCustomExercise('${d.id}')">+ Add Exercise</button>
+        <div style="display:flex;gap:8px;margin-top:16px">
+          <button class="btn sm" style="flex:1" onclick="saveCustomDay('${d.id}')">Save Day</button>
+          <button class="btn ghost sm" style="flex:0 0 auto;padding:6px 12px" onclick="moveCustomDay('${d.id}',-1)" ${i===0?'disabled':''}>↑</button>
+          <button class="btn ghost sm" style="flex:0 0 auto;padding:6px 12px" onclick="moveCustomDay('${d.id}',1)" ${i===total-1?'disabled':''}>↓</button>
+          <button class="btn ghost sm" style="flex:0 0 auto;color:var(--red)" onclick="deleteCustomDay('${d.id}')">Delete</button>
+        </div>
+      </div>
+    </details>`;
+}
+function toggleCustomRoutineMode(){
+  if(viewOnly) return;
+  if(!S.customRoutineMode && (!S.customDays || !S.customDays.length)){
+    toast('Add a day first','Create at least one custom day below before switching to Custom Routine.');
+    return;
+  }
+  S.customRoutineMode = !S.customRoutineMode;
+  S.exSets = {};
+  save(); render();
+  toast(S.customRoutineMode?'Custom routine on':'Default routine on',
+    S.customRoutineMode?'Your custom days are now active.':'Back to the default Push/Pull/Legs split.');
+}
+function addCustomDay(){
+  if(viewOnly) return;
+  if(!S.customDays) S.customDays = [];
+  if(S.customDays.length >= MAX_CUSTOM_DAYS){ toast('Limit reached','You can have up to 6 custom days.'); return; }
+  S.customDays.push({ id: makeCustomDayId(), name:'New Day', icon:'💪', color:'cyan', stat:'str', exercises:[{n:'',t:'',d:''}] });
+  save(); render();
+}
+function saveCustomDay(id){
+  if(viewOnly) return;
+  const d = findCustomDay(id);
+  if(!d) return;
+  const nameEl = document.getElementById('cdname_'+id);
+  const name = (nameEl.value||'').trim();
+  if(!name){ toast('Missing name','Give this day a name.'); return; }
+  const icon = (document.getElementById('cdicon_'+id).value||'').trim() || '💪';
+  const color = document.getElementById('cdcolor_'+id).value;
+  const stat = document.getElementById('cdstat_'+id).value;
+  const exercises = [];
+  for(let i=0;i<d.exercises.length;i++){
+    const nEl = document.getElementById('cdexn_'+id+'_'+i);
+    const tEl = document.getElementById('cdext_'+id+'_'+i);
+    if(!nEl || !tEl) continue;
+    const n = nEl.value.trim(), t = tEl.value.trim();
+    if(!n && !t) continue;
+    exercises.push({n: n||'Exercise', t: t||'1x1', d:''});
+  }
+  if(!exercises.length){ toast('Add an exercise','A day needs at least one exercise.'); return; }
+  const wasToday = S.customRoutineMode && todaysGate()==='custom' && todaysCustomDay() && todaysCustomDay().id===id;
+  d.name=name; d.icon=icon; d.color=color; d.stat=stat; d.exercises=exercises;
+  if(wasToday) S.exSets = {};
+  save(); render();
+  toast('Saved', name+' updated.');
+}
+function addCustomExercise(dayId){
+  if(viewOnly) return;
+  const d = findCustomDay(dayId);
+  if(!d) return;
+  d.exercises.push({n:'',t:'',d:''});
+  save(); render();
+}
+function removeCustomExercise(dayId,index){
+  if(viewOnly) return;
+  const d = findCustomDay(dayId);
+  if(!d) return;
+  if(d.exercises.length<=1){ toast('Cannot remove','A day needs at least one exercise - edit it instead.'); return; }
+  const wasToday = S.customRoutineMode && todaysGate()==='custom' && todaysCustomDay() && todaysCustomDay().id===dayId;
+  d.exercises.splice(index,1);
+  if(wasToday) S.exSets = {};
+  save(); render();
+}
+function moveCustomDay(dayId,direction){
+  if(viewOnly) return;
+  const arr = S.customDays||[];
+  const idx = arr.findIndex(d=>d.id===dayId);
+  if(idx<0) return;
+  const newIdx = idx+direction;
+  if(newIdx<0 || newIdx>=arr.length) return;
+  const activeDay = S.customRoutineMode ? todaysCustomDay() : null;
+  const tmp = arr[idx]; arr[idx]=arr[newIdx]; arr[newIdx]=tmp;
+  if(activeDay){
+    const newPos = arr.findIndex(d=>d.id===activeDay.id);
+    if(newPos>=0) S.customDayPointer = newPos;
+  }
+  save(); render();
+}
+function deleteCustomDay(dayId){
+  if(viewOnly) return;
+  if(!confirm('Delete this custom day? Past history stays intact, but this cannot be undone.')) return;
+  const arr = S.customDays||[];
+  const idx = arr.findIndex(d=>d.id===dayId);
+  if(idx<0) return;
+  arr.splice(idx,1);
+  S.customDayPointer = arr.length ? (((S.customDayPointer||0) % arr.length) + arr.length) % arr.length : 0;
+  S.exSets = {};
+  save(); render();
+  toast('Deleted','Custom day removed.');
+}
+
 function allChecked(){
   const gateId=todaysGate();
-  const g=GATES[gateId];
+  const g=gateInfo(gateId);
   if(!g) return false;
-  const ex = effectiveGateExercises(S.day, gateId, levelFromXp(S.xp).lvl);
-  return ex.every((e,i)=>(S.exSets[i]||0)>=parseSets(e.t));
+  const level = levelFromXp(S.xp).lvl;
+  const ex = effectiveGateExercises(S.day, gateId, level);
+  return ex.every((e,i)=>(S.exSets[i]||0)>=requiredSetsFor(gateId, e.t, S.day, level));
 }
 function completeGate(){
   const gateId=todaysGate();
-  const g=GATES[gateId];
+  const g=gateInfo(gateId);
   if(!g || S.gateDoneToday) return;
   if(!allChecked()){
     toast('Quest incomplete','Complete every set to clear the Gate.');
@@ -1989,7 +2212,9 @@ function completeGate(){
   S.xp += xpGain;
   bumpStreak();
   S.gateDoneToday=true;
-  S.history[S.day] = {gate:gateId, xp:xpGain, trial:trial};
+  S.history[S.day] = (gateId==='custom')
+    ? {gate:'custom', xp:xpGain, trial:trial, customName:g.name, customIcon:g.icon, customColor:g.color}
+    : {gate:gateId, xp:xpGain, trial:trial};
   save();
   const after=levelFromXp(S.xp).lvl;
   render();
@@ -1997,7 +2222,7 @@ function completeGate(){
   const penaltyStat=S._lastPenaltyStat; S._lastPenaltyStat=null;
   const weakTag = weakened ? ' (weakened, halved)' : '';
   if(after>before){ showLevelUp(after,gained); }
-  else if(trial){ toast('Trial Gate cleared','+'+xpGain+' XP'+weakTag+' - '+g.name+' complete.'); }
+  else if(trial){ toast(gateId==='custom'?'Bonus effort cleared':'Trial Gate cleared','+'+xpGain+' XP'+weakTag+' - '+g.name+' complete.'); }
   else { toast('Gate cleared','+'+xpGain+' XP'+weakTag+' - '+g.name+' complete.'); }
   revealNewBox(after>before);
   if(penaltyXp || penaltyStat){
@@ -2061,8 +2286,9 @@ function buildHistory(){
       dayList.map(d=>{
         const h=S.history[d];
         const w=S.weightLog?S.weightLog[d]:null;
+        const dayLabel = h.gate==='custom' ? esc(h.customName||'Custom Day') : (h.gate==='rest' ? null : GATES[h.gate].name);
         let line = h.gate==='rest' ? 'Rest day confirmed'
-          : `${GATES[h.gate].name} ${h.manual?'(logged manually)':'cleared (+'+h.xp+' XP)'}`;
+          : `${dayLabel} ${h.manual?'(logged manually)':'cleared (+'+h.xp+' XP)'}`;
         if(w!=null) line+=` &middot; Weight ${fmt(w)} kg`;
         return `<p style="margin:0 0 8px;font-size:13px"><b style="color:var(--cyan-soft)">${d}</b> - ${line}</p>`;
       }).join('');
