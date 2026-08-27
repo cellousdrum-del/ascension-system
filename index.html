@@ -970,7 +970,7 @@ async function viewProfile(username){
 }
 function exitViewOnly(){
   S = ownS; ownS = null; viewOnly = null;
-  currentTab = preViewTab || 'admin';
+  currentTab = preViewTab || 'account';
   preViewTab = null;
   historyNav = {level:'years', year:null, month:null};
   historyOpen = false;
@@ -1119,14 +1119,12 @@ function buildFriendsSectionsHtml(){
 }
 
 function switchTab(tab){
-  if(tab==='admin' && !myIsAdmin) return;
   currentTab = tab;
   if(tab==='social') hasUnreadChat = false;
   render();
 }
 function renderTabNav(){
   const tabs = [['home','Home'],['progress','Progress'],['avatar','Avatar'],['social','Social'],['account','Account']];
-  if(myIsAdmin) tabs.push(['admin','Admin']);
   return `<div class="tabbar" id="tabbarSlot">${tabs.map(([id,label])=>
     `<div class="tab-btn" data-active="${currentTab===id?1:0}" onclick="switchTab('${id}')">${label}${(id==='social'&&(hasUnreadChat||hasUnreadRequest))?'<span class="tab-dot"></span>':''}</div>`
   ).join('')}</div>`;
@@ -1802,27 +1800,27 @@ function render(){
       ${notifStatus==='denied'?`<p class="note" style="margin-top:8px">Notifications are blocked for this site in your browser settings - re-enable them there if you want this.</p>`:''}
       <p class="note" style="margin-top:8px">On iPhone, this only works if the app is added to your Home Screen - Safari tabs don't support notifications. Also only fires while the app is open somewhere, not when it's fully closed.</p>
     </section>
+
+    ${myIsAdmin ? `
+    <section class="win">
+      <details class="guide" ontoggle="if(this.open) loadAdminList()">
+        <summary>Admin Panel</summary>
+        <div class="guide-body">
+          <label>Compare Hunters</label>
+          <div class="inline-w">
+            <input id="cmpUser" placeholder="Username to look up" autocapitalize="none">
+            <button class="btn sm" onclick="viewProfile(document.getElementById('cmpUser').value)">View</button>
+          </div>
+          <div id="adminList" style="margin-top:14px"><p class="note">Loading roster...</p></div>
+        </div>
+      </details>
+    </section>
     ` : ''}
-
-    ${(currentTab==='admin' && myIsAdmin) ? `
-    <section class="win">
-      <div class="eyebrow">Compare Hunters</div>
-      <div class="inline-w">
-        <input id="cmpUser" placeholder="Username to look up" autocapitalize="none">
-        <button class="btn sm" onclick="viewProfile(document.getElementById('cmpUser').value)">View</button>
-      </div>
-    </section>
-
-    <section class="win">
-      <div class="eyebrow">Admin Panel</div>
-      <div id="adminList"><p class="note">Loading roster...</p></div>
-    </section>
     ` : ''}
 
     <div class="foot">Arise.</div>
     <button class="reset" onclick="hardReset()">Reset on awakening (erase data)</button>
   `;
-  if(myIsAdmin && currentTab==='admin' && !viewOnly) loadAdminList();
   const onSocialHome = currentTab==='social' && !viewOnly && S && !dmWith;
   const onDm = currentTab==='social' && !viewOnly && S && dmWith;
   if(onSocialHome){ startChatListener(); loadFriendsData(); } else stopChatListener();
