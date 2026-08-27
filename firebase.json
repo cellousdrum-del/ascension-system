@@ -5,7 +5,8 @@
       "firebase.json",
       "**/.*",
       "**/.*/**",
-      "*.backup-*.html"
+      "*.backup-*.html",
+      "backups/**"
     ],
     "headers": [
       {
