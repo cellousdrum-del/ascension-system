@@ -273,6 +273,13 @@
 
   .tier-banner{font-size:12px;letter-spacing:.04em;color:var(--gold);border:1px dashed rgba(251,191,36,0.4);
     border-radius:2px;padding:9px 11px;margin:2px 0 12px;background:rgba(251,191,36,0.05)}
+  .wanderer-toggle{display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:3px;cursor:pointer;
+    border:1px solid var(--line);background:rgba(9,16,33,0.6);margin-bottom:14px;transition:.25s;user-select:none}
+  .wanderer-toggle .wt-icon{font-size:18px}
+  .wanderer-toggle .wt-label{font-family:'Orbitron';font-size:12px;letter-spacing:.1em;text-transform:uppercase;flex:1}
+  .wanderer-toggle .wt-state{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .wanderer-toggle.on{border-color:var(--green);background:rgba(52,211,153,0.1);box-shadow:0 0 16px rgba(52,211,153,0.25)}
+  .wanderer-toggle.on .wt-state{color:var(--green);font-weight:700}
   #trialOverlay{position:fixed;inset:0;z-index:80;background:radial-gradient(circle at 50% 40%,rgba(251,191,36,0.18),rgba(5,7,15,0.94));
     display:none;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(3px)}
   #trialOverlay.show{display:flex}
@@ -435,7 +442,7 @@ const GATES = {
         {n:'Hanging knee raises (slow, full control)', t:'4x15-18', d:'Pause at the top. Core.'}
       ]
     ]},
-  pull:{ name:'PULL', sub:'Dumbbells - Home', icon:'\ud83d\udd35', color:'cyan',
+  pull:{ name:'PULL', sub:'Dumbbells - Home', wandererSub:'Park - Calisthenics', icon:'\ud83d\udd35', color:'cyan',
     gain:'agi',
     tiers:[
       [
@@ -459,8 +466,31 @@ const GATES = {
         {n:'Single-arm rear-delt raise + row combo', t:'4x10-12 /side', d:'Raise then row without resetting.'},
         {n:'Weighted shrugs', t:'4x12-15', d:'Heavy, 2s hold at the top.'}
       ]
+    ],
+    wandererTiers:[
+      [
+        {n:'Pull-ups', t:'4x5-8', d:'Back and biceps. Negatives if you cannot yet do a full rep.'},
+        {n:'Inverted rows', t:'4x8-12', d:'Low bar or two sturdy chairs. Adjust body angle for difficulty.'},
+        {n:'Chin-ups', t:'3x5-8', d:'Underhand grip. Biceps and back.'},
+        {n:'Towel or pole rows', t:'3x10-12', d:'Rear delts and upper back.'},
+        {n:'Dead hang', t:'3x20-30s', d:'Grip and shoulder health.'}
+      ],
+      [
+        {n:'Pull-ups', t:'4x8-12', d:'Strict form, full range.'},
+        {n:'Archer pull-ups (assisted)', t:'3x4-6 /side', d:'Shift weight to one arm each rep.'},
+        {n:'Inverted rows (feet elevated)', t:'4x10-15', d:'Feet up on a bench or ledge for a harder angle.'},
+        {n:'Chin-ups (slow negative)', t:'4x6-10', d:'3-4s controlled descent.'},
+        {n:'Towel or rope rows', t:'4x12-15', d:'Rear delts and upper back.'}
+      ],
+      [
+        {n:'Weighted or max-rep pull-ups', t:'5x8-12', d:'Add weight in the backpack if bodyweight feels easy.'},
+        {n:'Archer pull-ups', t:'4x6-8 /side', d:'Full range, minimal assistance.'},
+        {n:'One-arm-assisted pull-up', t:'4x4-6 /side', d:'Support wrist with the other hand.'},
+        {n:'Typewriter pull-ups', t:'3x6-8', d:'Pull up, shift side to side at the top.'},
+        {n:'L-sit pull-ups', t:'3x5-8', d:'Legs held straight out during the pull.'}
+      ]
     ]},
-  legs:{ name:'LEGS', sub:'Dumbbells - Home', icon:'\ud83d\udfe3', color:'violet',
+  legs:{ name:'LEGS', sub:'Dumbbells - Home', wandererSub:'Park - Calisthenics', icon:'\ud83d\udfe3', color:'violet',
     gain:'str',
     tiers:[
       [
@@ -483,6 +513,29 @@ const GATES = {
         {n:'Single-leg Romanian deadlift', t:'4x10-12 /leg', d:'Balance and hamstring/glute control.'},
         {n:'Weighted walking lunges', t:'4x12 /leg', d:'Heavy dumbbells.'},
         {n:'Single-leg calf raises (weighted)', t:'4x15-20 /leg', d:'Added dumbbell weight.'}
+      ]
+    ],
+    wandererTiers:[
+      [
+        {n:'Bodyweight squats', t:'4x15-20', d:'Full depth, controlled tempo.'},
+        {n:'Split squat (rear foot elevated)', t:'3x10-12 /leg', d:'Bench or ledge behind you. Bodyweight Bulgarian split squat.'},
+        {n:'Single-leg Romanian deadlift', t:'4x10-12 /leg', d:'Bodyweight. Balance and hamstring control.'},
+        {n:'Walking lunges', t:'3x12 /leg', d:'Bodyweight, full stride.'},
+        {n:'Calf raises (step edge)', t:'4x20-25', d:'Full range, pause at the top.'}
+      ],
+      [
+        {n:'Jump squats', t:'4x12-15', d:'Explosive, soft landing.'},
+        {n:'Bulgarian split squat (deficit)', t:'4x10-12 /leg', d:'Front foot elevated too, for extra range.'},
+        {n:'Single-leg Romanian deadlift (slow)', t:'4x12-15 /leg', d:'3s down, controlled.'},
+        {n:'Weighted walking lunges', t:'4x12 /leg', d:'Add weight in the backpack.'},
+        {n:'Single-leg calf raises', t:'4x15-20 /leg', d:'Step edge, full range.'}
+      ],
+      [
+        {n:'Pistol squat progression', t:'4x5-8 /leg', d:'Assisted (hold a post) or full pistol if ready.'},
+        {n:'Jump lunges', t:'4x10 /leg', d:'Explosive, alternate legs each rep.'},
+        {n:'Shrimp squats', t:'3x5-8 /leg', d:'Advanced single-leg squat, back knee stays low.'},
+        {n:'Weighted walking lunges', t:'4x14 /leg', d:'Heavy backpack, long stride.'},
+        {n:'Single-leg calf raises (weighted)', t:'4x20 /leg', d:'Added backpack weight.'}
       ]
     ]}
 };
@@ -717,7 +770,9 @@ function effectiveGateTier(dateStr, gateId, level){
   return isTrialToday(dateStr, gateId, level) ? tierIdx+1 : tierIdx;
 }
 function effectiveGateExercises(dateStr, gateId, level){
-  return GATES[gateId].tiers[effectiveGateTier(dateStr, gateId, level)];
+  const g = GATES[gateId];
+  const tiers = (S.wandererMode && g.wandererTiers) ? g.wandererTiers : g.tiers;
+  return tiers[effectiveGateTier(dateStr, gateId, level)];
 }
 
 /* ---------- State & cloud sync ---------- */
@@ -1280,6 +1335,7 @@ function render(){
   if(!S.avatarItems) S.avatarItems = [];
   if(S.lastBoxStreak===undefined) S.lastBoxStreak = 0;
   if(S.penaltyToday===undefined) S.penaltyToday = false;
+  if(S.wandererMode===undefined) S.wandererMode = false;
   if(!S.mysteryCycle || !Array.isArray(S.mysteryCycle.order) || S.mysteryCycle.order.length!==MYSTERY_QUESTS.length){
     S.mysteryCycle = makeCycle(MYSTERY_QUESTS.length, 'mystery');
   }
@@ -1367,6 +1423,11 @@ function render(){
     ${renderTabNav()}
 
     ${currentTab==='home' ? `
+    <div class="wanderer-toggle${S.wandererMode?' on':''}" onclick="toggleWandererMode()">
+      <span class="wt-icon">&#9992;</span>
+      <span class="wt-label">Wanderer Mode</span>
+      <span class="wt-state">${S.wandererMode?'ON - Calisthenics':'OFF'}</span>
+    </div>
     <section class="win">
       <div class="hunter-top">
         <div>
@@ -1421,7 +1482,7 @@ function render(){
         </button>
       ` : `
         <div style="font-family:'Orbitron';font-size:12px;letter-spacing:.1em;color:${gate.color==='red'?'#ff8080':gate.color==='violet'?'#b79cff':'var(--cyan-soft)'};margin-bottom:10px">
-          ${gate.icon} GATE - ${gate.name} <span style="display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:2px;border:1px solid ${RANK_COLORS[rk.r]};color:${RANK_COLORS[rk.r]};background:rgba(${RANK_RGB[rk.r]},0.15);box-shadow:0 0 10px rgba(${RANK_RGB[rk.r]},0.6);font-size:11px;font-weight:900;vertical-align:middle;margin:0 2px">${rk.r}</span> <span style="color:var(--muted);font-size:10px">${gate.sub}</span>
+          ${gate.icon} GATE - ${gate.name} <span style="display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:2px;border:1px solid ${RANK_COLORS[rk.r]};color:${RANK_COLORS[rk.r]};background:rgba(${RANK_RGB[rk.r]},0.15);box-shadow:0 0 10px rgba(${RANK_RGB[rk.r]},0.6);font-size:11px;font-weight:900;vertical-align:middle;margin:0 2px">${rk.r}</span> <span style="color:var(--muted);font-size:10px">${(S.wandererMode && gate.wandererSub) ? gate.wandererSub : gate.sub}</span>
         </div>
         ${gateIsTrial?`<div class="tier-banner">⚡ TRIAL GATE - a harder challenge today, clear it for a +20 XP bonus</div>`:''}
         <ul class="ex">
@@ -1543,6 +1604,7 @@ function render(){
           <p><b>Clear the Gate</b> (+100 XP): finish every set of your assigned Push/Pull/Legs workout. Also grants +1 to the gate's stat - Push: Endurance, Pull: Agility, Legs: Strength. Once per day.</p>
           <p><b>Trial Gate</b> (+120 XP): near a rank-up boundary, today's Gate occasionally gets swapped for a harder tier - you'll get a full-screen "a monster has appeared" alert the moment you open the app that day. Clear it for the bonus XP.</p>
           <p><b>The Gate waits for you.</b> If you don't clear today's assigned Gate (or confirm a scheduled Rest day), it does not move on - tomorrow (and every day after) still shows the same one, until you actually clear it or confirm it. Nothing advances automatically, including Rest days.</p>
+          <p><b>Wanderer Mode</b> (toggle at the top of Home): swaps Pull and Legs to calisthenics-only exercises for when you're traveling and don't have dumbbells - Push is already park-friendly, so it stays the same. Same XP, same stat gains, same rank tiers - only the exercises change. Flip it back off once you're home.</p>
           <p><b>Daily Quest</b> (+30 XP): check off both the grip-strengthener task and the mystery task. Grants Vitality +1. Once per day.</p>
           <p><b>Flexibility</b> (+20 XP): complete today's stretch routine, drawn from a curated pool of real static stretches (no mobility drills, no yoga flows) - deeper holds and PNF technique at higher tiers, working toward splits and pancake at the top tier, scaling with rank the same way the Gates do. Pure XP, no stat attached, available every day including Rest days - and doesn't count toward your streak.</p>
           <p><b>Log your weight</b> (+10 XP): only awarded if it moved the right direction for your goal (up if bulking, down if cutting) - it always logs either way, but XP only comes with real progress.</p>
@@ -1716,8 +1778,9 @@ function statBox(label,val,key){
 }
 function gateBtn(id,activeId){
   const g=GATES[id];
+  const sub = (S.wandererMode && g.wandererSub) ? g.wandererSub : g.sub;
   return `<div class="gate" data-color="${g.color}" data-active="${activeId===id?1:0}">
-    <div class="g-ic">${g.icon}</div><div class="g-nm">${g.name}</div><div class="g-sub">${g.sub.split(' - ')[0]}</div></div>`;
+    <div class="g-ic">${g.icon}</div><div class="g-nm">${g.name}</div><div class="g-sub">${sub.split(' - ')[0]}</div></div>`;
 }
 
 function toggleEx(i){
@@ -1731,6 +1794,15 @@ function toggleEx(i){
   save(); render();
 }
 function toggleDaily(k){ S.dailyDone[k]=!S.dailyDone[k]; save(); render(); }
+function toggleWandererMode(){
+  if(viewOnly) return;
+  S.wandererMode = !S.wandererMode;
+  S.exSets = {}; // exercise list changes (Pull/Legs swap to calisthenics) - stale checkmarks would point at the wrong exercise
+  save();
+  render();
+  toast(S.wandererMode?'Wanderer Mode on':'Wanderer Mode off',
+    S.wandererMode?'Pull and Legs now use calisthenics only. Push is unchanged.':'Back to the normal dumbbell routine.');
+}
 
 function allChecked(){
   const gateId=todaysGate();
