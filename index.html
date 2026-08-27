@@ -1551,7 +1551,9 @@ function render(){
   app.innerHTML = `
     <div style="display:flex;align-items:center;gap:8px;margin:4px 0 16px">
       <div style="width:40px;flex:0 0 auto"></div>
-      <div class="eyebrow" style="flex:1;justify-content:center;margin:0">Ascension System</div>
+      <div style="flex:1;display:flex;justify-content:center;min-width:0">
+        <div class="eyebrow" style="margin:0">Ascension System</div>
+      </div>
       ${!viewOnly ? `<button class="account-icon-btn${currentTab==='account'?' active':''}" onclick="switchTab('account')" title="Account" aria-label="Account">&#9881;&#xFE0E;</button>` : `<div style="width:40px;flex:0 0 auto"></div>`}
     </div>
 
