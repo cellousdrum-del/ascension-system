@@ -149,7 +149,7 @@
   .weight-now span{font-size:14px;color:var(--muted);font-weight:500}
   .weight-goal{font-size:13px;color:var(--cyan-soft);letter-spacing:.06em}
 
-  .gates{display:grid;grid-template-columns:repeat(auto-fit,minmax(84px,1fr));gap:8px;margin:2px 0 12px}
+  .gates{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:2px 0 12px}
   .gate{border:1px solid rgba(77,163,255,0.3);border-radius:2px;padding:10px 4px;text-align:center;
     cursor:pointer;background:rgba(11,20,40,0.5);transition:.15s;user-select:none}
   .gate .g-ic{font-size:18px;line-height:1}
@@ -307,11 +307,6 @@
   #gateWarningOverlay .lu-k{color:var(--red)}
   .warn-ic{font-size:52px;line-height:1;margin:10px 0;filter:drop-shadow(0 0 18px rgba(239,68,68,0.7));
     animation:glow 1.4s ease-in-out infinite alternate}
-  #emailMigrationOverlay{position:fixed;inset:0;z-index:80;background:radial-gradient(circle at 50% 40%,rgba(77,163,255,0.16),rgba(5,7,15,0.94));
-    display:none;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(3px)}
-  #emailMigrationOverlay.show{display:flex}
-  #emailMigrationOverlay .levelup{border-color:var(--cyan);box-shadow:0 0 40px rgba(77,163,255,0.5)}
-  #emailMigrationOverlay .lu-k{color:var(--cyan)}
   .hist-row{display:flex;justify-content:space-between;align-items:center;padding:11px 4px;
     border-bottom:1px dashed rgba(77,163,255,0.14);cursor:pointer;font-size:14px}
   .hist-row:last-child{border-bottom:none}
@@ -379,8 +374,8 @@
   <div class="levelup">
     <div class="lu-k">A Monster Has Appeared</div>
     <div class="trial-ic">⚡</div>
-    <div class="lu-t" id="trial-title">TRIAL GATE</div>
-    <p class="note" style="margin-top:8px" id="trial-body">Today's Gate is a harder challenge - clear it for a +20 XP bonus.</p>
+    <div class="lu-t">TRIAL GATE</div>
+    <p class="note" style="margin-top:8px">Today's Gate is a harder challenge - clear it for a +20 XP bonus.</p>
     <button class="btn" style="margin-top:18px" onclick="closeTrialAlert()">Face it</button>
   </div>
 </div>
@@ -395,17 +390,6 @@
   </div>
 </div>
 
-<div id="emailMigrationOverlay">
-  <div class="levelup">
-    <div class="lu-k">System Notice</div>
-    <div class="trial-ic">✉️</div>
-    <div class="lu-t">SECURE YOUR ACCOUNT</div>
-    <p class="note" style="margin-top:8px">Your account has no real email attached, so if you ever forget your password, there's no way to recover it. Add one now from the Account tab to enable password recovery.</p>
-    <button class="btn" style="margin-top:18px" onclick="closeEmailMigration(); switchTab('account')">Add Email</button>
-    <button class="reset" style="margin-top:12px" onclick="closeEmailMigration()">Skip for now</button>
-  </div>
-</div>
-
 <input type="file" id="importFile" accept="application/json" style="display:none" onchange="handleImportFile(this)">
 
 <div id="viewBar" style="display:none;position:sticky;top:0;z-index:70;background:rgba(139,92,246,0.18);border-bottom:1px solid var(--violet);padding:10px 14px;text-align:center;font-family:'Orbitron';font-size:11px;letter-spacing:.06em;color:#c9b3ff"></div>
@@ -414,8 +398,7 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.0/firebase-app.js";
   import {
     getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
-    onAuthStateChanged, signOut, sendPasswordResetEmail, updatePassword, verifyBeforeUpdateEmail,
-    reauthenticateWithCredential, EmailAuthProvider, sendEmailVerification
+    onAuthStateChanged, signOut
   } from "https://www.gstatic.com/firebasejs/12.17.0/firebase-auth.js";
   import {
     initializeFirestore, doc, getDoc, setDoc, deleteDoc, collection, query, where, getDocs,
@@ -438,8 +421,7 @@
   window.fb = {
     auth, db,
     createUserWithEmailAndPassword, signInWithEmailAndPassword,
-    onAuthStateChanged, signOut, sendPasswordResetEmail, updatePassword, verifyBeforeUpdateEmail,
-    reauthenticateWithCredential, EmailAuthProvider, sendEmailVerification,
+    onAuthStateChanged, signOut,
     doc, getDoc, setDoc, deleteDoc, collection, query, where, getDocs,
     addDoc, onSnapshot, orderBy, limit, serverTimestamp
   };
@@ -798,36 +780,7 @@ function legacyScheduleFor(dateStr){
   const idx = ((offset % 7) + 7) % 7;
   return CYCLE[idx];
 }
-function todaysGate(){
-  if(S.customRoutineMode) return (S.customTrainingSlot||0)>=6 ? 'rest' : 'custom';
-  return CYCLE[S.cycleIndex];
-}
-
-/* ---------- Custom routine mode: up to 6 user-defined days. Two independent counters - a
-   training-slot position (0-5, always followed by Rest) and a day pointer that only advances
-   on training days and is never touched by Rest - so the day rotation keeps "jumping to the
-   next one" continuously even when it doesn't divide evenly into the 6-day block. ---------- */
-const MAX_CUSTOM_DAYS = 6;
-const DAY_COLORS = {
-  red:{hex:'#ff6b6b', rgb:'255,107,107'},
-  cyan:{hex:'#4da3ff', rgb:'77,163,255'},
-  violet:{hex:'#a855f7', rgb:'168,85,247'},
-  green:{hex:'#34d399', rgb:'52,211,153'},
-  gold:{hex:'#facc15', rgb:'250,204,21'},
-  orange:{hex:'#fb923c', rgb:'251,146,60'}
-};
-function todaysCustomDay(){
-  if(!S.customDays || !S.customDays.length) return null;
-  const ptr = (S.customDayPointer||0) % S.customDays.length;
-  return S.customDays[ptr];
-}
-function gateInfo(gateId){
-  if(gateId==='custom'){
-    const d = todaysCustomDay();
-    return d ? {id:'custom', name:d.name, icon:d.icon, color:d.color, sub:'Custom Day', wandererSub:null, gain:d.stat} : null;
-  }
-  return GATES[gateId];
-}
+function todaysGate(){ return CYCLE[S.cycleIndex]; }
 
 /* ---------- Rank-tiered gate content: T1 = rank E/D, T2 = C/B, T3 = A/S, with occasional next-tier trial previews ---------- */
 function gateTierIndex(level){ return level<30?0:(level<70?1:2); }
@@ -847,17 +800,9 @@ function effectiveGateTier(dateStr, gateId, level){
   return isTrialToday(dateStr, gateId, level) ? tierIdx+1 : tierIdx;
 }
 function effectiveGateExercises(dateStr, gateId, level){
-  if(gateId==='custom'){
-    const d = todaysCustomDay();
-    return d ? d.exercises : [];
-  }
   const g = GATES[gateId];
   const tiers = (S.wandererMode && g.wandererTiers) ? g.wandererTiers : g.tiers;
   return tiers[effectiveGateTier(dateStr, gateId, level)];
-}
-function requiredSetsFor(gateId, exerciseText, dateStr, level){
-  const base = parseSets(exerciseText);
-  return (gateId==='custom' && isTrialToday(dateStr, gateId, level)) ? base+1 : base;
 }
 
 /* ---------- State & cloud sync ---------- */
@@ -923,19 +868,13 @@ function yesterday(){ return ymd(new Date(Date.now()-864e5)); }
 function nextDay(dateStr){ return ymd(new Date(new Date(dateStr+'T00:00:00Z').getTime()+864e5)); }
 
 function deriveEmail(username){ return username.toLowerCase().trim()+'@ascension.local'; }
-function looksLikeEmail(s){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((s||'').trim()); }
-function isSyntheticEmail(email){ return (email||'').toLowerCase().endsWith('@ascension.local'); }
 function friendlyAuthError(err){
   const code = (err && err.code) || '';
-  if(code.includes('wrong-password') || code.includes('invalid-credential')) return 'Incorrect email/username or password.';
-  if(code.includes('user-not-found')) return 'No account with that email or username.';
-  if(code.includes('email-already-in-use')) return 'That email or username is already taken.';
-  if(code.includes('invalid-email')) return 'Enter a valid email address.';
+  if(code.includes('wrong-password') || code.includes('invalid-credential')) return 'Incorrect username or password.';
+  if(code.includes('user-not-found')) return 'No account with that username.';
+  if(code.includes('email-already-in-use')) return 'That username is already taken.';
   if(code.includes('weak-password')) return 'Password must be at least 6 characters.';
   if(code.includes('network-request-failed')) return 'Network error - check your connection.';
-  if(code.includes('requires-recent-login')) return 'Please log out and back in, then try again.';
-  if(code.includes('operation-not-allowed')) return 'That is not allowed for this account right now.';
-  if(code.includes('too-many-requests')) return 'Too many attempts - wait a bit and try again.';
   return 'Something went wrong. Try again.';
 }
 
@@ -985,27 +924,19 @@ async function onAuthReady(user){
 }
 
 async function doLogin(){
-  const u = (document.getElementById('auth-user').value||'').trim();
+  const u = (document.getElementById('auth-user').value||'').trim().toLowerCase();
   const p = document.getElementById('auth-pass').value||'';
-  if(!u||!p){ toast('Missing data','Enter your email/username and password.'); return; }
-  // Plain username always tries the old synthetic address. That only resolves for accounts
-  // that haven't verified a real email yet - once one does, it must log in with that email
-  // from then on (Firebase only allows one primary email per account, and looking up "what's
-  // this username's current email" safely would need a paid backend function, which this
-  // project intentionally doesn't have).
-  const email = looksLikeEmail(u) ? u.toLowerCase() : deriveEmail(u.toLowerCase());
+  if(!u||!p){ toast('Missing data','Enter username and password.'); return; }
   try{
-    await window.fb.signInWithEmailAndPassword(window.fb.auth, email, p);
+    await window.fb.signInWithEmailAndPassword(window.fb.auth, deriveEmail(u), p);
   }catch(err){
     toast('Login failed', friendlyAuthError(err));
   }
 }
 async function doSignup(){
   const u = (document.getElementById('auth-user').value||'').trim().toLowerCase();
-  const e = (document.getElementById('auth-email').value||'').trim().toLowerCase();
   const p = document.getElementById('auth-pass').value||'';
   if(!/^[a-z0-9_]{3,20}$/.test(u)){ toast('Invalid username','3-20 characters: lowercase letters, numbers, underscore only.'); return; }
-  if(!looksLikeEmail(e)){ toast('Invalid email','Enter a valid email address - it\'s how you\'ll recover your password.'); return; }
   if(!p || p.length<6){ toast('Weak password','Use at least 6 characters.'); return; }
   try{
     const q = window.fb.query(window.fb.collection(window.fb.db,'users'), window.fb.where('username','==',u));
@@ -1024,8 +955,7 @@ async function doSignup(){
   }
   pendingUsername = u;
   try{
-    const cred = await window.fb.createUserWithEmailAndPassword(window.fb.auth, e, p);
-    try{ await window.fb.sendEmailVerification(cred.user); }catch(e2){}
+    await window.fb.createUserWithEmailAndPassword(window.fb.auth, deriveEmail(u), p);
   }catch(err){
     pendingImport = null;
     toast('Sign up failed', friendlyAuthError(err));
@@ -1035,71 +965,9 @@ async function doLogout(){
   if(!confirm('Log out?')) return;
   try{ await window.fb.signOut(window.fb.auth); }catch(e){}
 }
-async function doForgotPassword(){
-  const e = (document.getElementById('auth-recover-email').value||'').trim().toLowerCase();
-  if(!looksLikeEmail(e)){ toast('Invalid email','Enter the real email you added to your account.'); return; }
-  try{
-    await window.fb.sendPasswordResetEmail(window.fb.auth, e);
-    toast('Check your email','If that email has an account with a password set, a reset link is on its way - check your spam folder if it does not show up soon.');
-    switchAuthView('login');
-  }catch(err){
-    toast('Could not send it', friendlyAuthError(err));
-  }
+function doForgotPassword(){
+  toast('Forgot password','Ask the admin to reset it for you from the Firebase console.');
 }
-let authView = 'login';
-function switchAuthView(view){ authView = view; renderAuthGate(); }
-let pendingPasswordReauth = null;
-async function changePassword(){
-  if(!currentUid) return;
-  const p1 = document.getElementById('newPass1').value||'';
-  const p2 = document.getElementById('newPass2').value||'';
-  if(!p1 || p1.length<6){ toast('Weak password','Use at least 6 characters.'); return; }
-  if(p1!==p2){ toast('Passwords do not match','Re-type the new password.'); return; }
-  try{
-    await window.fb.updatePassword(window.fb.auth.currentUser, p1);
-    document.getElementById('newPass1').value='';
-    document.getElementById('newPass2').value='';
-    toast('Password changed','Your password has been updated.');
-  }catch(err){
-    if((err&&err.code||'').includes('requires-recent-login')){
-      pendingPasswordReauth = p1;
-      render();
-      toast('Confirm your password','Firebase needs your current password once to confirm this change.');
-    } else {
-      toast('Could not change it', friendlyAuthError(err));
-    }
-  }
-}
-async function confirmPasswordReauth(){
-  const oldPass = document.getElementById('reauthPass1').value||'';
-  if(!oldPass){ toast('Missing password','Enter your current password.'); return; }
-  try{
-    const cred = window.fb.EmailAuthProvider.credential(window.fb.auth.currentUser.email, oldPass);
-    await window.fb.reauthenticateWithCredential(window.fb.auth.currentUser, cred);
-    await window.fb.updatePassword(window.fb.auth.currentUser, pendingPasswordReauth);
-    pendingPasswordReauth = null;
-    render();
-    toast('Password changed','Your password has been updated.');
-  }catch(err){
-    toast('Could not change it', friendlyAuthError(err));
-  }
-}
-let emailVerificationSentTo = null;
-async function addRealEmail(){
-  if(!currentUid) return;
-  const newEmail = (document.getElementById('newEmail').value||'').trim().toLowerCase();
-  if(!looksLikeEmail(newEmail)){ toast('Invalid email','Enter a valid email address.'); return; }
-  try{
-    await window.fb.verifyBeforeUpdateEmail(window.fb.auth.currentUser, newEmail);
-    emailVerificationSentTo = newEmail;
-    render();
-    toast('Check your inbox', 'Click the link we sent to '+newEmail+' to confirm it - check your spam folder if you do not see it soon.');
-    closeEmailMigration();
-  }catch(err){
-    toast('Could not add email', friendlyAuthError(err));
-  }
-}
-function closeEmailMigration(){ const el=document.getElementById('emailMigrationOverlay'); if(el) el.classList.remove('show'); }
 
 async function viewProfile(username){
   const uname = (username||'').trim().toLowerCase();
@@ -1305,7 +1173,7 @@ function switchTab(tab){
   render();
 }
 function renderTabNav(){
-  const tabs = [['home','Home'],['routine','Routine'],['progress','Progress'],['avatar','Avatar'],['social','Social']];
+  const tabs = [['home','Home'],['progress','Progress'],['avatar','Avatar'],['social','Social']];
   return `<div class="tabbar" id="tabbarSlot">${tabs.map(([id,label])=>
     `<div class="tab-btn" data-active="${currentTab===id?1:0}" onclick="switchTab('${id}')">${label}${(id==='social'&&(hasUnreadChat||hasUnreadRequest||hasUnreadDm))?'<span class="tab-dot"></span>':''}</div>`
   ).join('')}</div>`;
@@ -1531,47 +1399,22 @@ async function sendDmMessage(){
 function renderAuthGate(){
   app.classList.remove('view-only');
   const vb=document.getElementById('viewBar'); if(vb) vb.style.display='none';
-  const view = authView || 'login';
   app.innerHTML = `
     <div style="text-align:center;margin:24px 0 10px">
       <div class="eyebrow" style="justify-content:center">System Gate</div>
     </div>
     <section class="win">
-      ${view==='login' ? `
-        <div style="text-align:center;margin-bottom:14px">
-          <h1 class="title-xl">Identify Yourself</h1>
-          <p style="color:var(--muted);font-size:14px;margin-top:8px">Log in or create a Hunter account to begin.</p>
-        </div>
-        <label>Email or Username</label>
-        <input id="auth-user" placeholder="you@example.com or shadow_hunter" autocapitalize="none" autocomplete="username">
-        <label>Password</label>
-        <input id="auth-pass" type="password" placeholder="********" autocomplete="current-password" onkeydown="if(event.key==='Enter'){doLogin();}">
-        <button class="btn" onclick="doLogin()">Log In</button>
-        <button class="btn ghost" style="margin-top:10px" onclick="switchAuthView('signup')">Create New Account</button>
-        <button class="reset" style="margin-top:14px" onclick="switchAuthView('recover')">Forgot password?</button>
-      ` : view==='signup' ? `
-        <div style="text-align:center;margin-bottom:14px">
-          <h1 class="title-xl">Create Account</h1>
-          <p style="color:var(--muted);font-size:14px;margin-top:8px">Your username is your public name - your email is only used to recover your password.</p>
-        </div>
-        <label>Username</label>
-        <input id="auth-user" placeholder="e.g. shadow_hunter" autocapitalize="none" autocomplete="username">
-        <label>Email</label>
-        <input id="auth-email" type="email" placeholder="you@example.com" autocapitalize="none" autocomplete="email">
-        <label>Password</label>
-        <input id="auth-pass" type="password" placeholder="********" autocomplete="new-password" onkeydown="if(event.key==='Enter'){doSignup();}">
-        <button class="btn" onclick="doSignup()">Create Account</button>
-        <button class="reset" style="margin-top:14px" onclick="switchAuthView('login')">Back to log in</button>
-      ` : `
-        <div style="text-align:center;margin-bottom:14px">
-          <h1 class="title-xl">Recover Password</h1>
-          <p style="color:var(--muted);font-size:14px;margin-top:8px">Enter the email you added to your account and we'll send a reset link. Only works if you've already added a real email - if not, log in with your username and add one from the Account tab first.</p>
-        </div>
-        <label>Email</label>
-        <input id="auth-recover-email" type="email" placeholder="you@example.com" autocapitalize="none" autocomplete="email" onkeydown="if(event.key==='Enter'){doForgotPassword();}">
-        <button class="btn" onclick="doForgotPassword()">Send Reset Link</button>
-        <button class="reset" style="margin-top:14px" onclick="switchAuthView('login')">Back to log in</button>
-      `}
+      <div style="text-align:center;margin-bottom:14px">
+        <h1 class="title-xl">Identify Yourself</h1>
+        <p style="color:var(--muted);font-size:14px;margin-top:8px">Log in or create a Hunter account to begin.</p>
+      </div>
+      <label>Username</label>
+      <input id="auth-user" placeholder="e.g. shadow_hunter" autocapitalize="none" autocomplete="username">
+      <label>Password</label>
+      <input id="auth-pass" type="password" placeholder="********" autocomplete="current-password">
+      <button class="btn" onclick="doLogin()">Log In</button>
+      <button class="btn ghost" style="margin-top:10px" onclick="doSignup()">Create New Account</button>
+      <button class="reset" style="margin-top:14px" onclick="doForgotPassword()">Forgot password?</button>
     </section>
     <div class="foot">The system is watching.</div>
   `;
@@ -1602,11 +1445,6 @@ function render(){
   if(S.lastBoxStreak===undefined) S.lastBoxStreak = 0;
   if(S.penaltyToday===undefined) S.penaltyToday = false;
   if(S.wandererMode===undefined) S.wandererMode = false;
-  if(S.customRoutineMode===undefined) S.customRoutineMode = false;
-  if(!S.customDays) S.customDays = [];
-  if(S.customTrainingSlot===undefined) S.customTrainingSlot = 0;
-  if(S.customDayPointer===undefined) S.customDayPointer = 0;
-  if(S.emailMigrationLastPromptedDay===undefined) S.emailMigrationLastPromptedDay = null;
   if(!S.mysteryCycle || !Array.isArray(S.mysteryCycle.order) || S.mysteryCycle.order.length!==MYSTERY_QUESTS.length){
     S.mysteryCycle = makeCycle(MYSTERY_QUESTS.length, 'mystery');
   }
@@ -1632,17 +1470,7 @@ function render(){
     const questOnly = dayActive && !gateCleared;
 
     if(gateCleared){
-      if(S.customRoutineMode){
-        const wasRest = (S.customTrainingSlot||0) >= 6;
-        if(wasRest){
-          S.customTrainingSlot = 0;
-        } else {
-          S.customTrainingSlot = (S.customTrainingSlot||0) + 1;
-          S.customDayPointer = ((S.customDayPointer||0) + 1) % Math.max(1, (S.customDays||[]).length);
-        }
-      } else {
-        S.cycleIndex = (S.cycleIndex + 1) % CYCLE.length;
-      }
+      S.cycleIndex = (S.cycleIndex + 1) % CYCLE.length;
     }
     // else: stays frozen exactly where it is - Rest included, nothing advances it automatically
 
@@ -1679,8 +1507,7 @@ function render(){
   const rk = rankFor(info.lvl);
   const title = titleFor(info.lvl);
   const gateId = todaysGate();
-  const gate = gateInfo(gateId);
-  const curCustomDay = S.customRoutineMode ? todaysCustomDay() : null;
+  const gate = GATES[gateId];
   const goalPct = Math.max(0, Math.min(100, Math.round((S.weight - S.startW)/(S.goalW - S.startW)*100)));
   const proteinLo = Math.round(S.weight*1.6), proteinHi = Math.round(S.weight*2.2);
   const loggedToday = S.weightLog[S.day]!=null;
@@ -1693,19 +1520,12 @@ function render(){
   if(gateIsTrial && !S.gateDoneToday && !viewOnly && S.trialNotifiedDay!==S.day){
     S.trialNotifiedDay = S.day;
     save();
-    const trialBonusEffort = gateId==='custom';
-    document.getElementById('trial-title').textContent = trialBonusEffort ? 'BONUS EFFORT DAY' : 'TRIAL GATE';
-    document.getElementById('trial-body').textContent = trialBonusEffort
-      ? "Today's Gate asks for one extra set of everything - clear it for a +20 XP bonus."
-      : "Today's Gate is a harder challenge - clear it for a +20 XP bonus.";
     document.getElementById('trialOverlay').classList.add('show');
     trialAlertShownThisRender = true;
     if(('Notification' in window) && Notification.permission==='granted'){
       try{
         const n = new Notification('A Monster Has Appeared', {
-          body: trialBonusEffort
-            ? "Today's Gate is a Bonus Effort Day - one extra set of everything for a +20 XP bonus."
-            : "Today's Gate is a Trial Gate - clear it for a +20 XP bonus.",
+          body: "Today's Gate is a Trial Gate - clear it for a +20 XP bonus.",
           icon: 'icon-192.png',
           tag: 'trial-gate-'+S.day
         });
@@ -1717,12 +1537,11 @@ function render(){
   // alone, today the real Gate is mandatory again - give a heads-up instead of only finding
   // out after the streak is already gone at tomorrow's rollover.
   const questOnlyRisk = (S.questOnlyStreak||0)>=3 && S.streak>0 && !S.gateDoneToday && gateId!=='rest';
-  let gateWarningShownThisRender = false;
   if(questOnlyRisk && !viewOnly && S.gateWarningNotifiedDay!==S.day){
     S.gateWarningNotifiedDay = S.day;
     save();
     if(trialAlertShownThisRender){ pendingGateWarning = true; }
-    else { document.getElementById('gateWarningOverlay').classList.add('show'); gateWarningShownThisRender = true; }
+    else { document.getElementById('gateWarningOverlay').classList.add('show'); }
     if(('Notification' in window) && Notification.permission==='granted'){
       try{
         const n = new Notification('Streak At Risk', {
@@ -1734,16 +1553,8 @@ function render(){
       }catch(e){}
     }
   }
-  // Nag once a day (never blocking) if this account still has no real email attached, since
-  // that means password recovery is impossible for them right now.
-  if(!viewOnly && window.fb && window.fb.auth && window.fb.auth.currentUser && isSyntheticEmail(window.fb.auth.currentUser.email) && S.emailMigrationLastPromptedDay!==S.day){
-    S.emailMigrationLastPromptedDay = S.day;
-    save();
-    if(trialAlertShownThisRender || gateWarningShownThisRender){ pendingEmailMigration = true; }
-    else { document.getElementById('emailMigrationOverlay').classList.add('show'); }
-  }
   const gateExercises = gateId==='rest' ? null : effectiveGateExercises(S.day, gateId, info.lvl);
-  const gateExercisesDone = gateExercises!=null && gateExercises.every((e,i)=>(S.exSets[i]||0)>=requiredSetsFor(gateId, e.t, S.day, info.lvl));
+  const gateExercisesDone = gateExercises!=null && gateExercises.every((e,i)=>(S.exSets[i]||0)>=parseSets(e.t));
   const mysteryTask = MYSTERY_QUESTS[S.mysteryCycle.order[S.mysteryCycle.pos]];
   const mobilityRoutine = FLEXIBILITY_TIERS[S.flexCycle.tier][S.flexCycle.order[S.flexCycle.pos]];
   const monsterThreat = (S.questOnlyStreak||0) >= 3 && !S.gateDoneToday;
@@ -1760,13 +1571,11 @@ function render(){
     ${renderTabNav()}
 
     ${currentTab==='home' ? `
-    ${!S.customRoutineMode ? `
     <div class="wanderer-toggle${S.wandererMode?' on':''}" onclick="toggleWandererMode()">
       <span class="wt-icon">&#9992;</span>
       <span class="wt-label">Wanderer Mode</span>
       <span class="wt-state">${S.wandererMode?'ON - Calisthenics':'OFF'}</span>
     </div>
-    ` : ''}
     <section class="win">
       <div class="hunter-top">
         <div>
@@ -1809,16 +1618,9 @@ function render(){
       <div class="eyebrow">Quest - Today's Gate</div>
       ${monsterThreat?`<div class="penalty" style="margin-bottom:10px">👹 A monster has appeared - clear today's Gate or your streak breaks, daily quest alone won't save it now</div>`:''}
       <div class="gates">
-        ${S.customRoutineMode
-          ? (S.customDays||[]).map(d=>customDayChip(d, gateId==='custom' && curCustomDay && curCustomDay.id===d.id)).join('')
-          : `${gateBtn('push',gateId)}${gateBtn('pull',gateId)}${gateBtn('legs',gateId)}`}
+        ${gateBtn('push',gateId)}${gateBtn('pull',gateId)}${gateBtn('legs',gateId)}
       </div>
-      ${(S.customRoutineMode && !gate) ? `
-        <div style="text-align:center;padding:22px 10px 10px">
-          <div style="color:var(--muted);font-size:14px">You haven't set up any custom days yet.</div>
-          <button class="btn" style="margin-top:14px" onclick="switchTab('routine')">Go to Routine tab</button>
-        </div>
-      ` : gateId==='rest' ? `
+      ${gateId==='rest' ? `
         <div style="text-align:center;padding:22px 10px 10px">
           <div style="font-family:'Orbitron';font-size:15px;letter-spacing:.14em;color:var(--cyan-soft);margin-bottom:8px">RECOVERY PROTOCOL</div>
           <div style="color:var(--muted);font-size:14px">This is a rest day. Enjoy your temporary freedom, Hunter.</div>
@@ -1827,20 +1629,20 @@ function render(){
           ${S.gateDoneToday?'Rest day confirmed ✓':'Confirm Rest Day'}
         </button>
       ` : `
-        <div style="font-family:'Orbitron';font-size:12px;letter-spacing:.1em;color:${gateHeaderColor(gate.color)};margin-bottom:10px">
-          ${gate.icon} GATE - ${esc(gate.name)} <span style="display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:2px;border:1px solid ${RANK_COLORS[rk.r]};color:${RANK_COLORS[rk.r]};background:rgba(${RANK_RGB[rk.r]},0.15);box-shadow:0 0 10px rgba(${RANK_RGB[rk.r]},0.6);font-size:11px;font-weight:900;vertical-align:middle;margin:0 2px">${rk.r}</span> <span style="color:var(--muted);font-size:10px">${(S.wandererMode && gate.wandererSub) ? gate.wandererSub : gate.sub}</span>
+        <div style="font-family:'Orbitron';font-size:12px;letter-spacing:.1em;color:${gate.color==='red'?'#ff8080':gate.color==='violet'?'#b79cff':'var(--cyan-soft)'};margin-bottom:10px">
+          ${gate.icon} GATE - ${gate.name} <span style="display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:2px;border:1px solid ${RANK_COLORS[rk.r]};color:${RANK_COLORS[rk.r]};background:rgba(${RANK_RGB[rk.r]},0.15);box-shadow:0 0 10px rgba(${RANK_RGB[rk.r]},0.6);font-size:11px;font-weight:900;vertical-align:middle;margin:0 2px">${rk.r}</span> <span style="color:var(--muted);font-size:10px">${(S.wandererMode && gate.wandererSub) ? gate.wandererSub : gate.sub}</span>
         </div>
-        ${gateIsTrial?(gateId==='custom'?`<div class="tier-banner">⚡ BONUS EFFORT DAY - one extra set of everything today, clear it for a +20 XP bonus</div>`:`<div class="tier-banner">⚡ TRIAL GATE - a harder challenge today, clear it for a +20 XP bonus</div>`):''}
+        ${gateIsTrial?`<div class="tier-banner">⚡ TRIAL GATE - a harder challenge today, clear it for a +20 XP bonus</div>`:''}
         <ul class="ex">
           ${gateExercises.map((e,i)=>{
-            const max=requiredSetsFor(gateId, e.t, S.day, info.lvl);
+            const max=parseSets(e.t);
             const cnt=S.exSets[i]||0;
             const done=cnt>=max;
             return `
           <li class="${done?'done':''}" onclick="toggleEx(${i})">
             <span class="chk">${done?'✓':(cnt>0?cnt:'')}</span>
-            <span class="ex-nm">${esc(e.n)}${e.d?`<small>${esc(e.d)}</small>`:''}</span>
-            <span class="ex-tg">${cnt}/${max} sets - ${esc(e.t)}</span>
+            <span class="ex-nm">${e.n}<small>${e.d}</small></span>
+            <span class="ex-tg">${cnt}/${max} sets - ${e.t}</span>
           </li>`;}).join('')}
         </ul>
         ${!gateExercisesDone
@@ -1892,26 +1694,6 @@ function render(){
     </section>
     ` : ''}
 
-    ${currentTab==='routine' ? `
-    <section class="win">
-      <div class="eyebrow">Routine</div>
-      <p style="font-size:12px;color:var(--muted);margin:0 0 12px">Choose the default Push/Pull/Legs split or build your own fully custom training days. Daily Quest and Flexibility are unaffected either way.</p>
-      <div style="display:flex;gap:10px">
-        <button class="btn${!S.customRoutineMode?'':' ghost'} sm" style="flex:1" onclick="toggleCustomRoutineMode()" ${!S.customRoutineMode?'disabled':''}>Default (Push/Pull/Legs)</button>
-        <button class="btn${S.customRoutineMode?'':' ghost'} sm" style="flex:1" onclick="toggleCustomRoutineMode()" ${S.customRoutineMode?'disabled':''}>Custom Routine</button>
-      </div>
-    </section>
-
-    <section class="win">
-      <div class="eyebrow">Your Custom Days (${(S.customDays||[]).length}/${MAX_CUSTOM_DAYS})</div>
-      <p class="note" style="margin-bottom:10px">Build these anytime, whether or not Custom Routine is currently active above.</p>
-      ${(S.customDays&&S.customDays.length) ? S.customDays.map((d,i)=>customDayEditorHtml(d,i,S.customDays.length)).join('') : `<p class="note">No custom days yet - add one below.</p>`}
-      ${(S.customDays||[]).length < MAX_CUSTOM_DAYS
-        ? `<button class="btn ghost" style="margin-top:10px" onclick="addCustomDay()">+ Add Custom Day</button>`
-        : `<p class="note" style="margin-top:10px">Maximum of 6 custom days reached.</p>`}
-    </section>
-    ` : ''}
-
     ${currentTab==='progress' ? `
     <section class="win">
       <div class="eyebrow">Weight Trend</div>
@@ -1943,7 +1725,7 @@ function render(){
       <details class="guide" style="margin-top:10px">
         <summary>Log a past workout</summary>
         <div class="guide-body">
-          <p class="note" style="margin-bottom:10px">Adds an entry to your history log. XP is only awarded if you check the box below - use that for a day you genuinely trained but forgot to log live. Only backfills the default Push/Pull/Legs split - custom days aren't supported here yet.</p>
+          <p class="note" style="margin-bottom:10px">Adds an entry to your history log. XP is only awarded if you check the box below - use that for a day you genuinely trained but forgot to log live.</p>
           <label>Date</label>
           <input id="pastDate" type="date" max="${today()}">
           <label>Gate</label>
@@ -1970,8 +1752,7 @@ function render(){
           <p><b>Clear the Gate</b> (+100 XP): finish every set of your assigned Push/Pull/Legs workout. Also grants +1 to the gate's stat - Push: Endurance, Pull: Agility, Legs: Strength. Once per day.</p>
           <p><b>Trial Gate</b> (+120 XP): near a rank-up boundary, today's Gate occasionally gets swapped for a harder tier - you'll get a full-screen "a monster has appeared" alert the moment you open the app that day. Clear it for the bonus XP. Turn on browser notifications in the Account tab to also get a real system alert alongside it.</p>
           <p><b>The Gate waits for you.</b> If you don't clear today's assigned Gate (or confirm a scheduled Rest day), it does not move on - tomorrow (and every day after) still shows the same one, until you actually clear it or confirm it. Nothing advances automatically, including Rest days.</p>
-          <p><b>Wanderer Mode</b> (toggle at the top of Home): swaps Pull and Legs to calisthenics-only exercises for when you're traveling and don't have dumbbells - Push is already park-friendly, so it stays the same. Same XP, same stat gains, same rank tiers - only the exercises change. Flip it back off once you're home. Only available on the default Push/Pull/Legs split.</p>
-          <p><b>Custom Routine</b> (Routine tab): build your own training days instead of Push/Pull/Legs - any number from 1 to 6, each with its own name, icon, color, assigned stat, and exercise list. Custom days have no rank tiers (one flat list) and give the same +100 XP as any Gate. Rest still appears mandatorily every 7th day - if your day count doesn't divide evenly into 6, the rotation just keeps jumping to the next day in your list, even mid-cycle. Occasionally a "Bonus Effort Day" asks for one extra set of everything for +20 XP, using the same trigger as Trial Gates below. Switch back to Default anytime without losing your custom setup.</p>
+          <p><b>Wanderer Mode</b> (toggle at the top of Home): swaps Pull and Legs to calisthenics-only exercises for when you're traveling and don't have dumbbells - Push is already park-friendly, so it stays the same. Same XP, same stat gains, same rank tiers - only the exercises change. Flip it back off once you're home.</p>
           <p><b>Daily Quest</b> (+30 XP): check off both the grip-strengthener task and the mystery task. Grants Vitality +1. Once per day.</p>
           <p><b>Flexibility</b> (+20 XP): complete today's stretch routine, drawn from a curated pool of real static stretches (no mobility drills, no yoga flows) - deeper holds and PNF technique at higher tiers, working toward splits and pancake at the top tier, scaling with rank the same way the Gates do. Pure XP, no stat attached, available every day including Rest days - and doesn't count toward your streak.</p>
           <p><b>Log your weight</b> (+10 XP): only awarded if it moved the right direction for your goal (up if bulking, down if cutting) - it always logs either way, but XP only comes with real progress.</p>
@@ -2110,38 +1891,10 @@ function render(){
     </section>
 
     <section class="win">
-      <div class="eyebrow">Security</div>
-      ${(()=>{
-        const curEmail = (window.fb && window.fb.auth && window.fb.auth.currentUser) ? window.fb.auth.currentUser.email : '';
-        const synthetic = isSyntheticEmail(curEmail);
-        return synthetic ? `
-        <div class="penalty" style="margin-bottom:12px">⚠ No real email attached - you cannot recover your password if you forget it.</div>
-        <p class="note" style="margin-bottom:10px">One-way heads up: once you verify an email, this account switches to logging in with that email only - your username will no longer work to log in (it still shows everywhere else, this only affects the login screen).</p>
-        ${emailVerificationSentTo ? `<p class="note" style="margin-bottom:10px">Verification email sent to <b style="color:var(--cyan-soft)">${esc(emailVerificationSentTo)}</b> - click the link in it to finish. Check your spam folder if it doesn't show up soon. Didn't get it at all? You can send it again below.</p>` : ''}
-        <label>Add your email</label>
-        <input id="newEmail" type="email" placeholder="you@example.com" autocapitalize="none" ${viewOnly?'disabled':''}>
-        <button class="btn sm" style="margin-top:10px" onclick="addRealEmail()" ${viewOnly?'disabled':''}>${emailVerificationSentTo?'Resend Verification':'Add Email'}</button>
-        ` : `
-        <p style="font-size:12px;color:var(--muted);margin:0 0 12px">Recovery email: <b style="color:var(--cyan-soft)">${esc(curEmail)}</b></p>
-        `;
-      })()}
-      <label style="margin-top:16px">New password</label>
-      <input id="newPass1" type="password" placeholder="At least 6 characters" autocomplete="new-password" ${viewOnly?'disabled':''}>
-      <label>Confirm new password</label>
-      <input id="newPass2" type="password" placeholder="********" autocomplete="new-password" ${viewOnly?'disabled':''}>
-      <button class="btn ghost sm" style="margin-top:10px" onclick="changePassword()" ${viewOnly?'disabled':''}>Change Password</button>
-      ${pendingPasswordReauth ? `
-      <p class="note" style="margin-top:12px">One-time check: re-enter your current password to confirm the change.</p>
-      <input id="reauthPass1" type="password" placeholder="Current password" autocomplete="current-password" ${viewOnly?'disabled':''}>
-      <button class="btn ghost sm" style="margin-top:10px" onclick="confirmPasswordReauth()" ${viewOnly?'disabled':''}>Confirm</button>
-      ` : ''}
-    </section>
-
-    <section class="win">
-      <div class="eyebrow">Gate Alert Notifications</div>
-      <p style="font-size:12px;color:var(--muted);margin:0 0 12px">Get a real browser notification the moment a Trial Gate or Bonus Effort Day appears, or when your streak is at risk - on top of the full-screen alerts in the app.</p>
+      <div class="eyebrow">Trial Gate Notifications</div>
+      <p style="font-size:12px;color:var(--muted);margin:0 0 12px">Get a real browser notification the moment a Trial Gate appears, on top of the full-screen alert in the app.</p>
       <button class="btn${notifStatus==='granted'?' ghost':''} sm" onclick="enableTrialNotifications()" ${(notifStatus==='granted'||notifStatus==='unsupported')?'disabled':''}>
-        ${notifStatus==='granted'?'Notifications enabled ✓':notifStatus==='denied'?'Blocked by browser':notifStatus==='unsupported'?'Not supported here':'Enable Gate notifications'}
+        ${notifStatus==='granted'?'Notifications enabled ✓':notifStatus==='denied'?'Blocked by browser':notifStatus==='unsupported'?'Not supported here':'Enable Trial Gate notifications'}
       </button>
       ${notifStatus==='denied'?`<p class="note" style="margin-top:8px">Notifications are blocked for this site in your browser settings - re-enable them there if you want this.</p>`:''}
       ${isIOS?`<p class="note" style="margin-top:8px">On iPhone, this only works if the app is added to your Home Screen - Safari tabs don't support notifications.</p>`:''}
@@ -2188,28 +1941,20 @@ function gateBtn(id,activeId){
   return `<div class="gate" data-color="${g.color}" data-active="${activeId===id?1:0}">
     <div class="g-ic">${g.icon}</div><div class="g-nm">${g.name}</div><div class="g-sub">${sub.split(' - ')[0]}</div></div>`;
 }
-const GATE_HEADER_COLORS = {red:'#ff8080', cyan:'var(--cyan-soft)', violet:'#b79cff', green:'#6ee7b7', gold:'#fde68a', orange:'#fdba74'};
-function gateHeaderColor(color){ return GATE_HEADER_COLORS[color] || 'var(--cyan-soft)'; }
-function customDayChip(d,isActive){
-  const c = DAY_COLORS[d.color] || DAY_COLORS.cyan;
-  return `<div class="gate" style="${isActive?`border-color:${c.hex};background:rgba(${c.rgb},0.12);box-shadow:0 0 16px rgba(${c.rgb},0.35)`:''}">
-    <div class="g-ic">${d.icon}</div><div class="g-nm" style="${isActive?`color:${c.hex}`:''}">${esc(d.name).toUpperCase()}</div><div class="g-sub">CUSTOM</div></div>`;
-}
 
 function toggleEx(i){
   const gateId=todaysGate();
-  const g=gateInfo(gateId);
+  const g=GATES[gateId];
   if(!g) return;
-  const level = levelFromXp(S.xp).lvl;
-  const ex = effectiveGateExercises(S.day, gateId, level);
-  const max=requiredSetsFor(gateId, ex[i].t, S.day, level);
+  const ex = effectiveGateExercises(S.day, gateId, levelFromXp(S.xp).lvl);
+  const max=parseSets(ex[i].t);
   const cur=S.exSets[i]||0;
   S.exSets[i] = (cur+1)>max ? 0 : cur+1;
   save(); render();
 }
 function toggleDaily(k){ S.dailyDone[k]=!S.dailyDone[k]; save(); render(); }
 function toggleWandererMode(){
-  if(viewOnly || S.customRoutineMode) return;
+  if(viewOnly) return;
   S.wandererMode = !S.wandererMode;
   S.exSets = {}; // exercise list changes (Pull/Legs swap to calisthenics) - stale checkmarks would point at the wrong exercise
   save();
@@ -2218,149 +1963,16 @@ function toggleWandererMode(){
     S.wandererMode?'Pull and Legs now use calisthenics only. Push is unchanged.':'Back to the normal dumbbell routine.');
 }
 
-/* ---------- Custom routine editor ---------- */
-function statLabel(stat){ return {str:'Strength',vit:'Vitality',end:'Endurance',agi:'Agility'}[stat] || stat; }
-function makeCustomDayId(){ return 'cd_'+Date.now()+'_'+Math.floor(Math.random()*1000); }
-function findCustomDay(id){ return (S.customDays||[]).find(d=>d.id===id); }
-function customDayEditorHtml(d,i,total){
-  const c = DAY_COLORS[d.color] || DAY_COLORS.cyan;
-  return `
-    <details class="guide" style="margin-top:${i===0?'0':'10px'}">
-      <summary>${d.icon} ${esc(d.name)} <small style="color:${c.hex}">${statLabel(d.stat)}</small> - ${d.exercises.length} exercise${d.exercises.length===1?'':'s'}</summary>
-      <div class="guide-body">
-        <label>Day name</label>
-        <input id="cdname_${d.id}" value="${esc(d.name)}" maxlength="30">
-        <label>Icon (single emoji)</label>
-        <input id="cdicon_${d.id}" value="${esc(d.icon)}" maxlength="4">
-        <label>Color</label>
-        <select id="cdcolor_${d.id}">
-          ${Object.keys(DAY_COLORS).map(k=>`<option value="${k}" ${d.color===k?'selected':''}>${k[0].toUpperCase()+k.slice(1)}</option>`).join('')}
-        </select>
-        <label>Stat gained on completion</label>
-        <select id="cdstat_${d.id}">
-          <option value="str" ${d.stat==='str'?'selected':''}>Strength</option>
-          <option value="vit" ${d.stat==='vit'?'selected':''}>Vitality</option>
-          <option value="end" ${d.stat==='end'?'selected':''}>Endurance</option>
-          <option value="agi" ${d.stat==='agi'?'selected':''}>Agility</option>
-        </select>
-        <label style="margin-top:16px">Exercises</label>
-        ${d.exercises.map((ex,ei)=>`
-        <div class="inline-w" style="margin-bottom:8px">
-          <input id="cdexn_${d.id}_${ei}" placeholder="Exercise name" value="${esc(ex.n)}">
-          <input id="cdext_${d.id}_${ei}" placeholder="e.g. 4x8-12" value="${esc(ex.t)}" style="max-width:110px">
-          <button class="btn ghost sm" style="flex:0 0 auto;padding:6px 10px" onclick="removeCustomExercise('${d.id}',${ei})">✕</button>
-        </div>`).join('')}
-        <button class="btn ghost sm" onclick="addCustomExercise('${d.id}')">+ Add Exercise</button>
-        <div style="display:flex;gap:8px;margin-top:16px">
-          <button class="btn sm" style="flex:1" onclick="saveCustomDay('${d.id}')">Save Day</button>
-          <button class="btn ghost sm" style="flex:0 0 auto;padding:6px 12px" onclick="moveCustomDay('${d.id}',-1)" ${i===0?'disabled':''}>↑</button>
-          <button class="btn ghost sm" style="flex:0 0 auto;padding:6px 12px" onclick="moveCustomDay('${d.id}',1)" ${i===total-1?'disabled':''}>↓</button>
-          <button class="btn ghost sm" style="flex:0 0 auto;color:var(--red)" onclick="deleteCustomDay('${d.id}')">Delete</button>
-        </div>
-      </div>
-    </details>`;
-}
-function toggleCustomRoutineMode(){
-  if(viewOnly) return;
-  if(!S.customRoutineMode && (!S.customDays || !S.customDays.length)){
-    toast('Add a day first','Create at least one custom day below before switching to Custom Routine.');
-    return;
-  }
-  S.customRoutineMode = !S.customRoutineMode;
-  S.exSets = {};
-  save(); render();
-  toast(S.customRoutineMode?'Custom routine on':'Default routine on',
-    S.customRoutineMode?'Your custom days are now active.':'Back to the default Push/Pull/Legs split.');
-}
-function addCustomDay(){
-  if(viewOnly) return;
-  if(!S.customDays) S.customDays = [];
-  if(S.customDays.length >= MAX_CUSTOM_DAYS){ toast('Limit reached','You can have up to 6 custom days.'); return; }
-  S.customDays.push({ id: makeCustomDayId(), name:'New Day', icon:'💪', color:'cyan', stat:'str', exercises:[{n:'',t:'',d:''}] });
-  save(); render();
-}
-function saveCustomDay(id){
-  if(viewOnly) return;
-  const d = findCustomDay(id);
-  if(!d) return;
-  const nameEl = document.getElementById('cdname_'+id);
-  const name = (nameEl.value||'').trim();
-  if(!name){ toast('Missing name','Give this day a name.'); return; }
-  const icon = (document.getElementById('cdicon_'+id).value||'').trim() || '💪';
-  const color = document.getElementById('cdcolor_'+id).value;
-  const stat = document.getElementById('cdstat_'+id).value;
-  const exercises = [];
-  for(let i=0;i<d.exercises.length;i++){
-    const nEl = document.getElementById('cdexn_'+id+'_'+i);
-    const tEl = document.getElementById('cdext_'+id+'_'+i);
-    if(!nEl || !tEl) continue;
-    const n = nEl.value.trim(), t = tEl.value.trim();
-    if(!n && !t) continue;
-    exercises.push({n: n||'Exercise', t: t||'1x1', d:''});
-  }
-  if(!exercises.length){ toast('Add an exercise','A day needs at least one exercise.'); return; }
-  const wasToday = S.customRoutineMode && todaysGate()==='custom' && todaysCustomDay() && todaysCustomDay().id===id;
-  d.name=name; d.icon=icon; d.color=color; d.stat=stat; d.exercises=exercises;
-  if(wasToday) S.exSets = {};
-  save(); render();
-  toast('Saved', name+' updated.');
-}
-function addCustomExercise(dayId){
-  if(viewOnly) return;
-  const d = findCustomDay(dayId);
-  if(!d) return;
-  d.exercises.push({n:'',t:'',d:''});
-  save(); render();
-}
-function removeCustomExercise(dayId,index){
-  if(viewOnly) return;
-  const d = findCustomDay(dayId);
-  if(!d) return;
-  if(d.exercises.length<=1){ toast('Cannot remove','A day needs at least one exercise - edit it instead.'); return; }
-  const wasToday = S.customRoutineMode && todaysGate()==='custom' && todaysCustomDay() && todaysCustomDay().id===dayId;
-  d.exercises.splice(index,1);
-  if(wasToday) S.exSets = {};
-  save(); render();
-}
-function moveCustomDay(dayId,direction){
-  if(viewOnly) return;
-  const arr = S.customDays||[];
-  const idx = arr.findIndex(d=>d.id===dayId);
-  if(idx<0) return;
-  const newIdx = idx+direction;
-  if(newIdx<0 || newIdx>=arr.length) return;
-  const activeDay = S.customRoutineMode ? todaysCustomDay() : null;
-  const tmp = arr[idx]; arr[idx]=arr[newIdx]; arr[newIdx]=tmp;
-  if(activeDay){
-    const newPos = arr.findIndex(d=>d.id===activeDay.id);
-    if(newPos>=0) S.customDayPointer = newPos;
-  }
-  save(); render();
-}
-function deleteCustomDay(dayId){
-  if(viewOnly) return;
-  if(!confirm('Delete this custom day? Past history stays intact, but this cannot be undone.')) return;
-  const arr = S.customDays||[];
-  const idx = arr.findIndex(d=>d.id===dayId);
-  if(idx<0) return;
-  arr.splice(idx,1);
-  S.customDayPointer = arr.length ? (((S.customDayPointer||0) % arr.length) + arr.length) % arr.length : 0;
-  S.exSets = {};
-  save(); render();
-  toast('Deleted','Custom day removed.');
-}
-
 function allChecked(){
   const gateId=todaysGate();
-  const g=gateInfo(gateId);
+  const g=GATES[gateId];
   if(!g) return false;
-  const level = levelFromXp(S.xp).lvl;
-  const ex = effectiveGateExercises(S.day, gateId, level);
-  return ex.every((e,i)=>(S.exSets[i]||0)>=requiredSetsFor(gateId, e.t, S.day, level));
+  const ex = effectiveGateExercises(S.day, gateId, levelFromXp(S.xp).lvl);
+  return ex.every((e,i)=>(S.exSets[i]||0)>=parseSets(e.t));
 }
 function completeGate(){
   const gateId=todaysGate();
-  const g=gateInfo(gateId);
+  const g=GATES[gateId];
   if(!g || S.gateDoneToday) return;
   if(!allChecked()){
     toast('Quest incomplete','Complete every set to clear the Gate.');
@@ -2377,9 +1989,7 @@ function completeGate(){
   S.xp += xpGain;
   bumpStreak();
   S.gateDoneToday=true;
-  S.history[S.day] = (gateId==='custom')
-    ? {gate:'custom', xp:xpGain, trial:trial, customName:g.name, customIcon:g.icon, customColor:g.color}
-    : {gate:gateId, xp:xpGain, trial:trial};
+  S.history[S.day] = {gate:gateId, xp:xpGain, trial:trial};
   save();
   const after=levelFromXp(S.xp).lvl;
   render();
@@ -2387,7 +1997,7 @@ function completeGate(){
   const penaltyStat=S._lastPenaltyStat; S._lastPenaltyStat=null;
   const weakTag = weakened ? ' (weakened, halved)' : '';
   if(after>before){ showLevelUp(after,gained); }
-  else if(trial){ toast(gateId==='custom'?'Bonus effort cleared':'Trial Gate cleared','+'+xpGain+' XP'+weakTag+' - '+g.name+' complete.'); }
+  else if(trial){ toast('Trial Gate cleared','+'+xpGain+' XP'+weakTag+' - '+g.name+' complete.'); }
   else { toast('Gate cleared','+'+xpGain+' XP'+weakTag+' - '+g.name+' complete.'); }
   revealNewBox(after>before);
   if(penaltyXp || penaltyStat){
@@ -2451,9 +2061,8 @@ function buildHistory(){
       dayList.map(d=>{
         const h=S.history[d];
         const w=S.weightLog?S.weightLog[d]:null;
-        const dayLabel = h.gate==='custom' ? esc(h.customName||'Custom Day') : (h.gate==='rest' ? null : GATES[h.gate].name);
         let line = h.gate==='rest' ? 'Rest day confirmed'
-          : `${dayLabel} ${h.manual?'(logged manually)':'cleared (+'+h.xp+' XP)'}`;
+          : `${GATES[h.gate].name} ${h.manual?'(logged manually)':'cleared (+'+h.xp+' XP)'}`;
         if(w!=null) line+=` &middot; Weight ${fmt(w)} kg`;
         return `<p style="margin:0 0 8px;font-size:13px"><b style="color:var(--cyan-soft)">${d}</b> - ${line}</p>`;
       }).join('');
@@ -2689,7 +2298,6 @@ function closeLevelUp(){
 }
 let pendingBoxReveal = null;
 let pendingGateWarning = false;
-let pendingEmailMigration = false;
 let currentBoxItem = null;
 function showBoxReveal(item){
   currentBoxItem = item;
@@ -2715,12 +2323,8 @@ function closeBoxReveal(){ document.getElementById('boxOverlay').classList.remov
 function closeTrialAlert(){
   document.getElementById('trialOverlay').classList.remove('show');
   if(pendingGateWarning){ pendingGateWarning=false; document.getElementById('gateWarningOverlay').classList.add('show'); }
-  else if(pendingEmailMigration){ pendingEmailMigration=false; document.getElementById('emailMigrationOverlay').classList.add('show'); }
 }
-function closeGateWarning(){
-  document.getElementById('gateWarningOverlay').classList.remove('show');
-  if(pendingEmailMigration){ pendingEmailMigration=false; document.getElementById('emailMigrationOverlay').classList.add('show'); }
-}
+function closeGateWarning(){ document.getElementById('gateWarningOverlay').classList.remove('show'); }
 function enableTrialNotifications(){
   if(!('Notification' in window)){
     toast('Not supported','Your browser does not support notifications.');
@@ -2729,7 +2333,7 @@ function enableTrialNotifications(){
   if(Notification.permission==='granted'){ render(); return; }
   Notification.requestPermission().then(perm=>{
     if(perm==='granted'){
-      toast('Notifications enabled', "You'll get a browser alert for Trial Gates, Bonus Effort Days, and Streak At Risk warnings.");
+      toast('Notifications enabled', "You'll get a browser alert when a Trial Gate appears.");
     } else {
       toast('Not enabled','Notification permission was not granted.');
     }
