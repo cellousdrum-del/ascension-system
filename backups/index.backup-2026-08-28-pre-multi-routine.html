@@ -798,23 +798,16 @@ function legacyScheduleFor(dateStr){
   const idx = ((offset % 7) + 7) % 7;
   return CYCLE[idx];
 }
-function activeRoutine(){
-  return (S.customRoutines||[]).find(r=>r.id===S.activeRoutineId) || null;
-}
 function todaysGate(){
-  const r = activeRoutine();
-  if(r) return (S.customTrainingSlot||0)>=(r.restCycle||6) ? 'rest' : 'custom';
+  if(S.customRoutineMode) return (S.customTrainingSlot||0)>=6 ? 'rest' : 'custom';
   return CYCLE[S.cycleIndex];
 }
 
-/* ---------- Custom routines: up to 5 personalized routines, each with up to 6 user-defined
-   days and its own rest cycle (train 1-6 days, then a mandatory rest day - never more than 6
-   training days in a row). Two independent counters - a training-slot position (0..restCycle-1,
-   always followed by Rest) and a day pointer that only advances on training days and is never
-   touched by Rest - so the day rotation keeps "jumping to the next one" continuously even when
-   it doesn't divide evenly into the routine's cycle length. ---------- */
+/* ---------- Custom routine mode: up to 6 user-defined days. Two independent counters - a
+   training-slot position (0-5, always followed by Rest) and a day pointer that only advances
+   on training days and is never touched by Rest - so the day rotation keeps "jumping to the
+   next one" continuously even when it doesn't divide evenly into the 6-day block. ---------- */
 const MAX_CUSTOM_DAYS = 6;
-const MAX_ROUTINES = 5;
 const DAY_COLORS = {
   red:{hex:'#ff6b6b', rgb:'255,107,107'},
   cyan:{hex:'#4da3ff', rgb:'77,163,255'},
@@ -824,10 +817,9 @@ const DAY_COLORS = {
   orange:{hex:'#fb923c', rgb:'251,146,60'}
 };
 function todaysCustomDay(){
-  const r = activeRoutine();
-  if(!r || !r.days || !r.days.length) return null;
-  const ptr = (S.customDayPointer||0) % r.days.length;
-  return r.days[ptr];
+  if(!S.customDays || !S.customDays.length) return null;
+  const ptr = (S.customDayPointer||0) % S.customDays.length;
+  return S.customDays[ptr];
 }
 function gateInfo(gateId){
   if(gateId==='custom'){
@@ -882,8 +874,6 @@ let historyNav = {level:'years', year:null, month:null};
 let historyOpen = false;
 let currentTab = 'home';
 let preViewTab = null;
-let routineEditorId = null;
-let openCustomDayId = null;
 let chatMessages = [];
 let chatUnsub = null;
 let unreadUnsub = null;
@@ -1612,16 +1602,8 @@ function render(){
   if(S.lastBoxStreak===undefined) S.lastBoxStreak = 0;
   if(S.penaltyToday===undefined) S.penaltyToday = false;
   if(S.wandererMode===undefined) S.wandererMode = false;
-  if(!S.customRoutines) S.customRoutines = [];
-  if(S.activeRoutineId===undefined) S.activeRoutineId = null;
-  if(S.customDays && S.customDays.length){
-    // One-time migration from the old single-routine format to the multi-routine one.
-    const migrated = { id: makeCustomDayId(), name:'My Routine', restCycle:6, days:S.customDays };
-    S.customRoutines.push(migrated);
-    if(S.customRoutineMode) S.activeRoutineId = migrated.id;
-    delete S.customDays;
-  }
-  if(S.customRoutineMode!==undefined) delete S.customRoutineMode;
+  if(S.customRoutineMode===undefined) S.customRoutineMode = false;
+  if(!S.customDays) S.customDays = [];
   if(S.customTrainingSlot===undefined) S.customTrainingSlot = 0;
   if(S.customDayPointer===undefined) S.customDayPointer = 0;
   if(S.emailMigrationLastPromptedDay===undefined) S.emailMigrationLastPromptedDay = null;
@@ -1650,15 +1632,13 @@ function render(){
     const questOnly = dayActive && !gateCleared;
 
     if(gateCleared){
-      const rollRoutine = activeRoutine();
-      if(rollRoutine){
-        const cycle = rollRoutine.restCycle||6;
-        const wasRest = (S.customTrainingSlot||0) >= cycle;
+      if(S.customRoutineMode){
+        const wasRest = (S.customTrainingSlot||0) >= 6;
         if(wasRest){
           S.customTrainingSlot = 0;
         } else {
           S.customTrainingSlot = (S.customTrainingSlot||0) + 1;
-          S.customDayPointer = ((S.customDayPointer||0) + 1) % Math.max(1, (rollRoutine.days||[]).length);
+          S.customDayPointer = ((S.customDayPointer||0) + 1) % Math.max(1, (S.customDays||[]).length);
         }
       } else {
         S.cycleIndex = (S.cycleIndex + 1) % CYCLE.length;
@@ -1700,8 +1680,7 @@ function render(){
   const title = titleFor(info.lvl);
   const gateId = todaysGate();
   const gate = gateInfo(gateId);
-  const ar = activeRoutine();
-  const curCustomDay = ar ? todaysCustomDay() : null;
+  const curCustomDay = S.customRoutineMode ? todaysCustomDay() : null;
   const goalPct = Math.max(0, Math.min(100, Math.round((S.weight - S.startW)/(S.goalW - S.startW)*100)));
   const proteinLo = Math.round(S.weight*1.6), proteinHi = Math.round(S.weight*2.2);
   const loggedToday = S.weightLog[S.day]!=null;
@@ -1781,7 +1760,7 @@ function render(){
     ${renderTabNav()}
 
     ${currentTab==='home' ? `
-    ${!ar ? `
+    ${!S.customRoutineMode ? `
     <div class="wanderer-toggle${S.wandererMode?' on':''}" onclick="toggleWandererMode()">
       <span class="wt-icon">&#9992;</span>
       <span class="wt-label">Wanderer Mode</span>
@@ -1830,11 +1809,11 @@ function render(){
       <div class="eyebrow">Quest - Today's Gate</div>
       ${monsterThreat?`<div class="penalty" style="margin-bottom:10px">👹 A monster has appeared - clear today's Gate or your streak breaks, daily quest alone won't save it now</div>`:''}
       <div class="gates">
-        ${ar
-          ? (ar.days||[]).map(d=>customDayChip(d, gateId==='custom' && curCustomDay && curCustomDay.id===d.id)).join('')
+        ${S.customRoutineMode
+          ? (S.customDays||[]).map(d=>customDayChip(d, gateId==='custom' && curCustomDay && curCustomDay.id===d.id)).join('')
           : `${gateBtn('push',gateId)}${gateBtn('pull',gateId)}${gateBtn('legs',gateId)}`}
       </div>
-      ${(ar && !gate) ? `
+      ${(S.customRoutineMode && !gate) ? `
         <div style="text-align:center;padding:22px 10px 10px">
           <div style="color:var(--muted);font-size:14px">You haven't set up any custom days yet.</div>
           <button class="btn" style="margin-top:14px" onclick="switchTab('routine')">Go to Routine tab</button>
@@ -1916,9 +1895,21 @@ function render(){
     ${currentTab==='routine' ? `
     <section class="win">
       <div class="eyebrow">Routine</div>
-      <p style="font-size:12px;color:var(--muted);margin:0 0 12px">Choose the default Push/Pull/Legs split, or build and switch between several personalized routines. Daily Quest and Flexibility are unaffected either way.</p>
+      <p style="font-size:12px;color:var(--muted);margin:0 0 12px">Choose the default Push/Pull/Legs split or build your own fully custom training days. Daily Quest and Flexibility are unaffected either way.</p>
+      <div style="display:flex;gap:10px">
+        <button class="btn${!S.customRoutineMode?'':' ghost'} sm" style="flex:1" onclick="toggleCustomRoutineMode()" ${!S.customRoutineMode?'disabled':''}>Default (Push/Pull/Legs)</button>
+        <button class="btn${S.customRoutineMode?'':' ghost'} sm" style="flex:1" onclick="toggleCustomRoutineMode()" ${S.customRoutineMode?'disabled':''}>Custom Routine</button>
+      </div>
     </section>
-    ${routineEditorId ? renderRoutineEditor(routineEditorId) : renderRoutineList()}
+
+    <section class="win">
+      <div class="eyebrow">Your Custom Days (${(S.customDays||[]).length}/${MAX_CUSTOM_DAYS})</div>
+      <p class="note" style="margin-bottom:10px">Build these anytime, whether or not Custom Routine is currently active above.</p>
+      ${(S.customDays&&S.customDays.length) ? S.customDays.map((d,i)=>customDayEditorHtml(d,i,S.customDays.length)).join('') : `<p class="note">No custom days yet - add one below.</p>`}
+      ${(S.customDays||[]).length < MAX_CUSTOM_DAYS
+        ? `<button class="btn ghost" style="margin-top:10px" onclick="addCustomDay()">+ Add Custom Day</button>`
+        : `<p class="note" style="margin-top:10px">Maximum of 6 custom days reached.</p>`}
+    </section>
     ` : ''}
 
     ${currentTab==='progress' ? `
@@ -1980,7 +1971,7 @@ function render(){
           <p><b>Trial Gate</b> (+120 XP): near a rank-up boundary, today's Gate occasionally gets swapped for a harder tier - you'll get a full-screen "a monster has appeared" alert the moment you open the app that day. Clear it for the bonus XP. Turn on browser notifications in the Account tab to also get a real system alert alongside it.</p>
           <p><b>The Gate waits for you.</b> If you don't clear today's assigned Gate (or confirm a scheduled Rest day), it does not move on - tomorrow (and every day after) still shows the same one, until you actually clear it or confirm it. Nothing advances automatically, including Rest days.</p>
           <p><b>Wanderer Mode</b> (toggle at the top of Home): swaps Pull and Legs to calisthenics-only exercises for when you're traveling and don't have dumbbells - Push is already park-friendly, so it stays the same. Same XP, same stat gains, same rank tiers - only the exercises change. Flip it back off once you're home. Only available on the default Push/Pull/Legs split.</p>
-          <p><b>Personalized Routines</b> (Routine tab): build up to ${MAX_ROUTINES} of your own routines instead of Push/Pull/Legs, and switch between them (or back to Default) anytime without losing any of them. Each routine has its own name, its own rest cycle (train 1 to 6 days in a row before a mandatory rest day - never more than 6, for your own health), and up to 6 days, each with its own name, icon, color, assigned stat, and exercise list. A day needs at least one real exercise before its routine can be activated. Custom days have no rank tiers (one flat list) and give the same +100 XP as any Gate. If your day count doesn't divide evenly into the rest cycle, the rotation just keeps jumping to the next day in your list, even mid-cycle. Occasionally a "Bonus Effort Day" asks for one extra set of everything for +20 XP, using the same trigger as Trial Gates below.</p>
+          <p><b>Custom Routine</b> (Routine tab): build your own training days instead of Push/Pull/Legs - any number from 1 to 6, each with its own name, icon, color, assigned stat, and exercise list. Custom days have no rank tiers (one flat list) and give the same +100 XP as any Gate. Rest still appears mandatorily every 7th day - if your day count doesn't divide evenly into 6, the rotation just keeps jumping to the next day in your list, even mid-cycle. Occasionally a "Bonus Effort Day" asks for one extra set of everything for +20 XP, using the same trigger as Trial Gates below. Switch back to Default anytime without losing your custom setup.</p>
           <p><b>Daily Quest</b> (+30 XP): check off both the grip-strengthener task and the mystery task. Grants Vitality +1. Once per day.</p>
           <p><b>Flexibility</b> (+20 XP): complete today's stretch routine, drawn from a curated pool of real static stretches (no mobility drills, no yoga flows) - deeper holds and PNF technique at higher tiers, working toward splits and pancake at the top tier, scaling with rank the same way the Gates do. Pure XP, no stat attached, available every day including Rest days - and doesn't count toward your streak.</p>
           <p><b>Log your weight</b> (+10 XP): only awarded if it moved the right direction for your goal (up if bulking, down if cutting) - it always logs either way, but XP only comes with real progress.</p>
@@ -2218,7 +2209,7 @@ function toggleEx(i){
 }
 function toggleDaily(k){ S.dailyDone[k]=!S.dailyDone[k]; save(); render(); }
 function toggleWandererMode(){
-  if(viewOnly || activeRoutine()) return;
+  if(viewOnly || S.customRoutineMode) return;
   S.wandererMode = !S.wandererMode;
   S.exSets = {}; // exercise list changes (Pull/Legs swap to calisthenics) - stale checkmarks would point at the wrong exercise
   save();
@@ -2230,67 +2221,11 @@ function toggleWandererMode(){
 /* ---------- Custom routine editor ---------- */
 function statLabel(stat){ return {str:'Strength',vit:'Vitality',end:'Endurance',agi:'Agility'}[stat] || stat; }
 function makeCustomDayId(){ return 'cd_'+Date.now()+'_'+Math.floor(Math.random()*1000); }
-function findRoutine(routineId){ return (S.customRoutines||[]).find(r=>r.id===routineId); }
-function findCustomDay(routineId,dayId){ const r=findRoutine(routineId); return r ? (r.days||[]).find(d=>d.id===dayId) : null; }
-function onCustomDayToggle(id,isOpen){ if(isOpen) openCustomDayId=id; else if(openCustomDayId===id) openCustomDayId=null; }
-function renderRoutineList(){
-  const routines = S.customRoutines||[];
-  return `
-    <section class="win">
-      <div class="eyebrow">Choose Active Routine</div>
-      <div class="gates" style="margin-bottom:4px">
-        <div class="gate" data-active="${!S.activeRoutineId?1:0}" onclick="activateRoutine(null)">
-          <div class="g-ic">🔁</div><div class="g-nm">DEFAULT</div><div class="g-sub">PUSH/PULL/LEGS</div>
-        </div>
-      </div>
-      ${routines.length ? routines.map(r=>{
-        const active = S.activeRoutineId===r.id;
-        return `
-      <div style="display:flex;align-items:center;gap:8px;padding:12px;border:1px solid ${active?'var(--cyan)':'rgba(255,255,255,.1)'};border-radius:8px;margin-top:10px;${active?'background:rgba(77,163,255,.08);box-shadow:0 0 14px rgba(77,163,255,.2)':''}">
-        <div style="flex:1;min-width:0;cursor:pointer" onclick="openRoutineEditor('${r.id}')">
-          <div style="font-weight:700;${active?'color:var(--cyan-soft)':''}">${esc(r.name)}${active?' <small style="color:var(--green)">● ACTIVE</small>':''}</div>
-          <div class="note" style="margin:2px 0 0">${(r.days||[]).length} day${(r.days||[]).length===1?'':'s'} · rest every ${r.restCycle||6}</div>
-        </div>
-        ${!active ? `<button class="btn ghost sm" style="flex:0 0 auto" onclick="activateRoutine('${r.id}')">Activate</button>` : ''}
-        <button class="btn ghost sm" style="flex:0 0 auto" onclick="openRoutineEditor('${r.id}')">Edit</button>
-      </div>`;
-      }).join('') : `<p class="note" style="margin-top:10px">No personalized routines yet - create one below.</p>`}
-      ${routines.length < MAX_ROUTINES
-        ? `<button class="btn ghost" style="margin-top:12px" onclick="addRoutine()">+ New Routine</button>`
-        : `<p class="note" style="margin-top:12px">Maximum of ${MAX_ROUTINES} personalized routines reached.</p>`}
-    </section>`;
-}
-function renderRoutineEditor(routineId){
-  const r = findRoutine(routineId);
-  if(!r) return renderRoutineList();
-  return `
-    <section class="win">
-      <button class="btn ghost sm" onclick="closeRoutineEditor()">&larr; All Routines</button>
-      <div class="eyebrow" style="margin-top:14px">Routine Settings</div>
-      <label>Routine name</label>
-      <input id="rtname_${r.id}" value="${esc(r.name)}" maxlength="30" ${viewOnly?'disabled':''}>
-      <label>Rest cycle</label>
-      <select id="rtrest_${r.id}" ${viewOnly?'disabled':''}>
-        ${[1,2,3,4,5,6].map(n=>`<option value="${n}" ${((r.restCycle||6)===n)?'selected':''}>Train ${n} day${n===1?'':'s'}, then 1 rest day</option>`).join('')}
-      </select>
-      <div style="display:flex;gap:8px;margin-top:12px">
-        <button class="btn sm" style="flex:1" onclick="saveRoutineMeta('${r.id}')" ${viewOnly?'disabled':''}>Save Settings</button>
-        <button class="btn ghost sm" style="flex:0 0 auto;color:var(--red)" onclick="deleteRoutine('${r.id}')" ${viewOnly?'disabled':''}>Delete Routine</button>
-      </div>
-    </section>
-    <section class="win">
-      <div class="eyebrow">Days (${(r.days||[]).length}/${MAX_CUSTOM_DAYS})</div>
-      <p class="note" style="margin-bottom:10px">Every day needs at least one exercise before this routine can be activated.</p>
-      ${(r.days&&r.days.length) ? r.days.map((d,i)=>customDayEditorHtml(r.id,d,i,r.days.length)).join('') : `<p class="note">No days yet - add one below.</p>`}
-      ${(r.days||[]).length < MAX_CUSTOM_DAYS
-        ? `<button class="btn ghost" style="margin-top:10px" onclick="addCustomDay('${r.id}')" ${viewOnly?'disabled':''}>+ Add Day</button>`
-        : `<p class="note" style="margin-top:10px">Maximum of ${MAX_CUSTOM_DAYS} days reached.</p>`}
-    </section>`;
-}
-function customDayEditorHtml(routineId,d,i,total){
+function findCustomDay(id){ return (S.customDays||[]).find(d=>d.id===id); }
+function customDayEditorHtml(d,i,total){
   const c = DAY_COLORS[d.color] || DAY_COLORS.cyan;
   return `
-    <details class="guide" style="margin-top:${i===0?'0':'10px'}" ${openCustomDayId===d.id?'open':''} ontoggle="onCustomDayToggle('${d.id}',this.open)">
+    <details class="guide" style="margin-top:${i===0?'0':'10px'}">
       <summary>${d.icon} ${esc(d.name)} <small style="color:${c.hex}">${statLabel(d.stat)}</small> - ${d.exercises.length} exercise${d.exercises.length===1?'':'s'}</summary>
       <div class="guide-body">
         <label>Day name</label>
@@ -2313,87 +2248,40 @@ function customDayEditorHtml(routineId,d,i,total){
         <div class="inline-w" style="margin-bottom:8px">
           <input id="cdexn_${d.id}_${ei}" placeholder="Exercise name" value="${esc(ex.n)}">
           <input id="cdext_${d.id}_${ei}" placeholder="e.g. 4x8-12" value="${esc(ex.t)}" style="max-width:110px">
-          <button class="btn ghost sm" style="flex:0 0 auto;padding:6px 10px" onclick="removeCustomExercise('${routineId}','${d.id}',${ei})">✕</button>
+          <button class="btn ghost sm" style="flex:0 0 auto;padding:6px 10px" onclick="removeCustomExercise('${d.id}',${ei})">✕</button>
         </div>`).join('')}
-        <button class="btn ghost sm" onclick="addCustomExercise('${routineId}','${d.id}')">+ Add Exercise</button>
+        <button class="btn ghost sm" onclick="addCustomExercise('${d.id}')">+ Add Exercise</button>
         <div style="display:flex;gap:8px;margin-top:16px">
-          <button class="btn sm" style="flex:1" onclick="saveCustomDay('${routineId}','${d.id}')">Save Day</button>
-          <button class="btn ghost sm" style="flex:0 0 auto;padding:6px 12px" onclick="moveCustomDay('${routineId}','${d.id}',-1)" ${i===0?'disabled':''}>↑</button>
-          <button class="btn ghost sm" style="flex:0 0 auto;padding:6px 12px" onclick="moveCustomDay('${routineId}','${d.id}',1)" ${i===total-1?'disabled':''}>↓</button>
-          <button class="btn ghost sm" style="flex:0 0 auto;color:var(--red)" onclick="deleteCustomDay('${routineId}','${d.id}')">Delete</button>
+          <button class="btn sm" style="flex:1" onclick="saveCustomDay('${d.id}')">Save Day</button>
+          <button class="btn ghost sm" style="flex:0 0 auto;padding:6px 12px" onclick="moveCustomDay('${d.id}',-1)" ${i===0?'disabled':''}>↑</button>
+          <button class="btn ghost sm" style="flex:0 0 auto;padding:6px 12px" onclick="moveCustomDay('${d.id}',1)" ${i===total-1?'disabled':''}>↓</button>
+          <button class="btn ghost sm" style="flex:0 0 auto;color:var(--red)" onclick="deleteCustomDay('${d.id}')">Delete</button>
         </div>
       </div>
     </details>`;
 }
-function activateRoutine(routineId){
+function toggleCustomRoutineMode(){
   if(viewOnly) return;
-  if(routineId){
-    const r = findRoutine(routineId);
-    if(!r) return;
-    if(!r.days || !r.days.length){ toast('Add a day first','Create at least one day in this routine before activating it.'); return; }
-    const emptyDay = r.days.find(d=>!d.exercises || !d.exercises.some(ex=>ex.n && ex.n.trim()));
-    if(emptyDay){ toast('Finish this routine first', '"'+emptyDay.name+'" needs at least one exercise before '+r.name+' can be activated.'); return; }
+  if(!S.customRoutineMode && (!S.customDays || !S.customDays.length)){
+    toast('Add a day first','Create at least one custom day below before switching to Custom Routine.');
+    return;
   }
-  const activatedName = routineId ? findRoutine(routineId).name : null;
-  S.activeRoutineId = routineId;
-  S.customTrainingSlot = 0;
-  S.customDayPointer = 0;
+  S.customRoutineMode = !S.customRoutineMode;
   S.exSets = {};
   save(); render();
-  toast(routineId?'Routine activated':'Default routine on',
-    routineId ? (activatedName+' is now active.') : 'Back to the default Push/Pull/Legs split.');
+  toast(S.customRoutineMode?'Custom routine on':'Default routine on',
+    S.customRoutineMode?'Your custom days are now active.':'Back to the default Push/Pull/Legs split.');
 }
-function openRoutineEditor(routineId){ routineEditorId = routineId; render(); }
-function closeRoutineEditor(){ routineEditorId = null; render(); }
-function addRoutine(){
+function addCustomDay(){
   if(viewOnly) return;
-  if(!S.customRoutines) S.customRoutines = [];
-  if(S.customRoutines.length >= MAX_ROUTINES){ toast('Limit reached','You can have up to '+MAX_ROUTINES+' personalized routines.'); return; }
-  const r = { id: makeCustomDayId(), name:'New Routine', restCycle:6, days:[] };
-  S.customRoutines.push(r);
-  routineEditorId = r.id;
+  if(!S.customDays) S.customDays = [];
+  if(S.customDays.length >= MAX_CUSTOM_DAYS){ toast('Limit reached','You can have up to 6 custom days.'); return; }
+  S.customDays.push({ id: makeCustomDayId(), name:'New Day', icon:'💪', color:'cyan', stat:'str', exercises:[{n:'',t:'',d:''}] });
   save(); render();
 }
-function saveRoutineMeta(routineId){
+function saveCustomDay(id){
   if(viewOnly) return;
-  const r = findRoutine(routineId);
-  if(!r) return;
-  const name = (document.getElementById('rtname_'+routineId).value||'').trim();
-  if(!name){ toast('Missing name','Give this routine a name.'); return; }
-  const restCycle = Math.max(1, Math.min(6, parseInt(document.getElementById('rtrest_'+routineId).value,10) || 6));
-  r.name = name;
-  r.restCycle = restCycle;
-  if(S.activeRoutineId===routineId){ S.customTrainingSlot = 0; S.customDayPointer = 0; S.exSets = {}; }
-  save(); render();
-  toast('Routine saved', name+' updated.');
-}
-function deleteRoutine(routineId){
-  if(viewOnly) return;
-  if(!confirm('Delete this entire routine and all its days? Past history stays intact, but this cannot be undone.')) return;
-  const arr = S.customRoutines||[];
-  const idx = arr.findIndex(r=>r.id===routineId);
-  if(idx<0) return;
-  const wasActive = S.activeRoutineId===routineId;
-  arr.splice(idx,1);
-  if(wasActive){ S.activeRoutineId = null; S.customTrainingSlot = 0; S.customDayPointer = 0; S.exSets = {}; }
-  routineEditorId = null;
-  save(); render();
-  toast('Routine deleted','It has been removed.');
-}
-function addCustomDay(routineId){
-  if(viewOnly) return;
-  const r = findRoutine(routineId);
-  if(!r) return;
-  if(!r.days) r.days = [];
-  if(r.days.length >= MAX_CUSTOM_DAYS){ toast('Limit reached','You can have up to 6 days per routine.'); return; }
-  const newDay = { id: makeCustomDayId(), name:'New Day', icon:'💪', color:'cyan', stat:'str', exercises:[{n:'',t:'',d:''}] };
-  r.days.push(newDay);
-  openCustomDayId = newDay.id;
-  save(); render();
-}
-function saveCustomDay(routineId,id){
-  if(viewOnly) return;
-  const d = findCustomDay(routineId,id);
+  const d = findCustomDay(id);
   if(!d) return;
   const nameEl = document.getElementById('cdname_'+id);
   const name = (nameEl.value||'').trim();
@@ -2411,66 +2299,55 @@ function saveCustomDay(routineId,id){
     exercises.push({n: n||'Exercise', t: t||'1x1', d:''});
   }
   if(!exercises.length){ toast('Add an exercise','A day needs at least one exercise.'); return; }
-  const wasToday = S.activeRoutineId===routineId && todaysGate()==='custom' && todaysCustomDay() && todaysCustomDay().id===id;
+  const wasToday = S.customRoutineMode && todaysGate()==='custom' && todaysCustomDay() && todaysCustomDay().id===id;
   d.name=name; d.icon=icon; d.color=color; d.stat=stat; d.exercises=exercises;
   if(wasToday) S.exSets = {};
-  openCustomDayId = id;
   save(); render();
-  toast('Day saved', name+' updated.');
+  toast('Saved', name+' updated.');
 }
-function addCustomExercise(routineId,dayId){
+function addCustomExercise(dayId){
   if(viewOnly) return;
-  const d = findCustomDay(routineId,dayId);
+  const d = findCustomDay(dayId);
   if(!d) return;
   d.exercises.push({n:'',t:'',d:''});
-  openCustomDayId = dayId;
   save(); render();
 }
-function removeCustomExercise(routineId,dayId,index){
+function removeCustomExercise(dayId,index){
   if(viewOnly) return;
-  const d = findCustomDay(routineId,dayId);
+  const d = findCustomDay(dayId);
   if(!d) return;
   if(d.exercises.length<=1){ toast('Cannot remove','A day needs at least one exercise - edit it instead.'); return; }
-  const wasToday = S.activeRoutineId===routineId && todaysGate()==='custom' && todaysCustomDay() && todaysCustomDay().id===dayId;
+  const wasToday = S.customRoutineMode && todaysGate()==='custom' && todaysCustomDay() && todaysCustomDay().id===dayId;
   d.exercises.splice(index,1);
   if(wasToday) S.exSets = {};
-  openCustomDayId = dayId;
   save(); render();
 }
-function moveCustomDay(routineId,dayId,direction){
+function moveCustomDay(dayId,direction){
   if(viewOnly) return;
-  const r = findRoutine(routineId);
-  if(!r) return;
-  const arr = r.days||[];
+  const arr = S.customDays||[];
   const idx = arr.findIndex(d=>d.id===dayId);
   if(idx<0) return;
   const newIdx = idx+direction;
   if(newIdx<0 || newIdx>=arr.length) return;
-  const activeDay = S.activeRoutineId===routineId ? todaysCustomDay() : null;
+  const activeDay = S.customRoutineMode ? todaysCustomDay() : null;
   const tmp = arr[idx]; arr[idx]=arr[newIdx]; arr[newIdx]=tmp;
   if(activeDay){
     const newPos = arr.findIndex(d=>d.id===activeDay.id);
     if(newPos>=0) S.customDayPointer = newPos;
   }
-  openCustomDayId = dayId;
   save(); render();
 }
-function deleteCustomDay(routineId,dayId){
+function deleteCustomDay(dayId){
   if(viewOnly) return;
-  if(!confirm('Delete this day? Past history stays intact, but this cannot be undone.')) return;
-  const r = findRoutine(routineId);
-  if(!r) return;
-  const arr = r.days||[];
+  if(!confirm('Delete this custom day? Past history stays intact, but this cannot be undone.')) return;
+  const arr = S.customDays||[];
   const idx = arr.findIndex(d=>d.id===dayId);
   if(idx<0) return;
   arr.splice(idx,1);
-  if(S.activeRoutineId===routineId){
-    S.customDayPointer = arr.length ? (((S.customDayPointer||0) % arr.length) + arr.length) % arr.length : 0;
-    S.exSets = {};
-  }
-  if(openCustomDayId===dayId) openCustomDayId = null;
+  S.customDayPointer = arr.length ? (((S.customDayPointer||0) % arr.length) + arr.length) % arr.length : 0;
+  S.exSets = {};
   save(); render();
-  toast('Day deleted','It has been removed.');
+  toast('Deleted','Custom day removed.');
 }
 
 function allChecked(){
