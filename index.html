@@ -1040,6 +1040,8 @@ async function doForgotPassword(){
 }
 let authView = 'login';
 function switchAuthView(view){ authView = view; renderAuthGate(); }
+let pendingPasswordReauth = null;
+let pendingEmailReauth = null;
 async function changePassword(){
   if(!currentUid) return;
   const p1 = document.getElementById('newPass1').value||'';
@@ -1052,20 +1054,56 @@ async function changePassword(){
     document.getElementById('newPass2').value='';
     toast('Password changed','Your password has been updated.');
   }catch(err){
+    if((err&&err.code||'').includes('requires-recent-login')){
+      pendingPasswordReauth = p1;
+      render();
+      toast('Confirm your password','Firebase needs your current password once to confirm this change.');
+    } else {
+      toast('Could not change it', friendlyAuthError(err));
+    }
+  }
+}
+async function confirmPasswordReauth(){
+  const oldPass = document.getElementById('reauthPass1').value||'';
+  if(!oldPass){ toast('Missing password','Enter your current password.'); return; }
+  try{
+    const cred = window.fb.EmailAuthProvider.credential(window.fb.auth.currentUser.email, oldPass);
+    await window.fb.reauthenticateWithCredential(window.fb.auth.currentUser, cred);
+    await window.fb.updatePassword(window.fb.auth.currentUser, pendingPasswordReauth);
+    pendingPasswordReauth = null;
+    render();
+    toast('Password changed','Your password has been updated.');
+  }catch(err){
     toast('Could not change it', friendlyAuthError(err));
   }
 }
 async function addRealEmail(){
   if(!currentUid) return;
   const newEmail = (document.getElementById('newEmail').value||'').trim().toLowerCase();
-  const pass = document.getElementById('newEmailPass').value||'';
   if(!looksLikeEmail(newEmail)){ toast('Invalid email','Enter a valid email address.'); return; }
-  if(!pass){ toast('Missing password','Enter your current password to confirm.'); return; }
   try{
-    const cred = window.fb.EmailAuthProvider.credential(window.fb.auth.currentUser.email, pass);
-    await window.fb.reauthenticateWithCredential(window.fb.auth.currentUser, cred);
     await window.fb.updateEmail(window.fb.auth.currentUser, newEmail);
-    document.getElementById('newEmailPass').value='';
+    render();
+    toast('Email added','You can now log in and recover your password with this email.');
+    closeEmailMigration();
+  }catch(err){
+    if((err&&err.code||'').includes('requires-recent-login')){
+      pendingEmailReauth = newEmail;
+      render();
+      toast('Confirm your password','Firebase needs your current password once to confirm this change.');
+    } else {
+      toast('Could not add email', friendlyAuthError(err));
+    }
+  }
+}
+async function confirmEmailReauth(){
+  const oldPass = document.getElementById('reauthPass2').value||'';
+  if(!oldPass){ toast('Missing password','Enter your current password.'); return; }
+  try{
+    const cred = window.fb.EmailAuthProvider.credential(window.fb.auth.currentUser.email, oldPass);
+    await window.fb.reauthenticateWithCredential(window.fb.auth.currentUser, cred);
+    await window.fb.updateEmail(window.fb.auth.currentUser, pendingEmailReauth);
+    pendingEmailReauth = null;
     render();
     toast('Email added','You can now log in and recover your password with this email.');
     closeEmailMigration();
@@ -2092,9 +2130,12 @@ function render(){
         <div class="penalty" style="margin-bottom:12px">⚠ No real email attached - you cannot recover your password if you forget it.</div>
         <label>Add your email</label>
         <input id="newEmail" type="email" placeholder="you@example.com" autocapitalize="none" ${viewOnly?'disabled':''}>
-        <label>Confirm your current password</label>
-        <input id="newEmailPass" type="password" placeholder="********" autocomplete="current-password" ${viewOnly?'disabled':''}>
         <button class="btn sm" style="margin-top:10px" onclick="addRealEmail()" ${viewOnly?'disabled':''}>Add Email</button>
+        ${pendingEmailReauth ? `
+        <p class="note" style="margin-top:12px">One-time check: re-enter your current password to confirm adding <b style="color:var(--cyan-soft)">${esc(pendingEmailReauth)}</b>.</p>
+        <input id="reauthPass2" type="password" placeholder="Current password" autocomplete="current-password" ${viewOnly?'disabled':''}>
+        <button class="btn ghost sm" style="margin-top:10px" onclick="confirmEmailReauth()" ${viewOnly?'disabled':''}>Confirm</button>
+        ` : ''}
         ` : `
         <p style="font-size:12px;color:var(--muted);margin:0 0 12px">Recovery email: <b style="color:var(--cyan-soft)">${esc(curEmail)}</b></p>
         `;
@@ -2104,6 +2145,11 @@ function render(){
       <label>Confirm new password</label>
       <input id="newPass2" type="password" placeholder="********" autocomplete="new-password" ${viewOnly?'disabled':''}>
       <button class="btn ghost sm" style="margin-top:10px" onclick="changePassword()" ${viewOnly?'disabled':''}>Change Password</button>
+      ${pendingPasswordReauth ? `
+      <p class="note" style="margin-top:12px">One-time check: re-enter your current password to confirm the change.</p>
+      <input id="reauthPass1" type="password" placeholder="Current password" autocomplete="current-password" ${viewOnly?'disabled':''}>
+      <button class="btn ghost sm" style="margin-top:10px" onclick="confirmPasswordReauth()" ${viewOnly?'disabled':''}>Confirm</button>
+      ` : ''}
     </section>
 
     <section class="win">
