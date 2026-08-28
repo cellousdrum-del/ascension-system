@@ -415,7 +415,7 @@
   import {
     getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
     onAuthStateChanged, signOut, sendPasswordResetEmail, updatePassword, verifyBeforeUpdateEmail,
-    reauthenticateWithCredential, EmailAuthProvider, sendEmailVerification, reload
+    reauthenticateWithCredential, EmailAuthProvider, sendEmailVerification
   } from "https://www.gstatic.com/firebasejs/12.17.0/firebase-auth.js";
   import {
     initializeFirestore, doc, getDoc, setDoc, deleteDoc, collection, query, where, getDocs,
@@ -439,7 +439,7 @@
     auth, db,
     createUserWithEmailAndPassword, signInWithEmailAndPassword,
     onAuthStateChanged, signOut, sendPasswordResetEmail, updatePassword, verifyBeforeUpdateEmail,
-    reauthenticateWithCredential, EmailAuthProvider, sendEmailVerification, reload,
+    reauthenticateWithCredential, EmailAuthProvider, sendEmailVerification,
     doc, getDoc, setDoc, deleteDoc, collection, query, where, getDocs,
     addDoc, onSnapshot, orderBy, limit, serverTimestamp
   };
@@ -949,18 +949,9 @@ function friendlyAuthError(err){
   return 'Something went wrong. Try again.';
 }
 
-// Accounts created from this point on must verify their email before they can use the app.
-// Anyone who already had an account before this shipped keeps working exactly as before -
-// this only ever locks out brand-new signups, never retroactively.
-const EMAIL_VERIFICATION_CUTOFF_MS = Date.parse('2026-08-28T00:00:00Z');
 async function onAuthReady(user){
   if(user){
     currentUid = user.uid;
-    const createdAt = (user.metadata && user.metadata.creationTime) ? Date.parse(user.metadata.creationTime) : 0;
-    if(createdAt >= EMAIL_VERIFICATION_CUTOFF_MS && !user.emailVerified){
-      renderVerifyGate();
-      return;
-    }
     let data = null;
     try{
       const snap = await window.fb.getDoc(window.fb.doc(window.fb.db,'users',currentUid));
@@ -1048,27 +1039,6 @@ async function doSignup(){
   }catch(err){
     pendingImport = null;
     toast('Sign up failed', friendlyAuthError(err));
-  }
-}
-async function resendVerification(){
-  const u = window.fb.auth.currentUser;
-  if(!u) return;
-  try{
-    await window.fb.sendEmailVerification(u);
-    toast('Sent', 'Verification email sent to '+u.email+' - check your spam folder if you do not see it soon.');
-  }catch(err){
-    toast('Could not send it', friendlyAuthError(err));
-  }
-}
-async function checkVerified(){
-  const u = window.fb.auth.currentUser;
-  if(!u) return;
-  try{
-    await window.fb.reload(u);
-    if(u.emailVerified){ onAuthReady(u); }
-    else{ toast('Not verified yet', "Click the link in the email first, then try again - check spam if you don't see it."); }
-  }catch(err){
-    toast('Could not check', friendlyAuthError(err));
   }
 }
 async function doLogout(){
@@ -1592,7 +1562,7 @@ function renderAuthGate(){
       ` : view==='signup' ? `
         <div style="text-align:center;margin-bottom:14px">
           <h1 class="title-xl">Create Account</h1>
-          <p style="color:var(--muted);font-size:14px;margin-top:8px">Your username is your public name. You'll need to confirm your email with a link before you can get in, and it's also how you recover your password.</p>
+          <p style="color:var(--muted);font-size:14px;margin-top:8px">Your username is your public name - your email is only used to recover your password.</p>
         </div>
         <label>Username</label>
         <input id="auth-user" placeholder="e.g. shadow_hunter" autocapitalize="none" autocomplete="username">
@@ -1612,26 +1582,6 @@ function renderAuthGate(){
         <button class="btn" onclick="doForgotPassword()">Send Reset Link</button>
         <button class="reset" style="margin-top:14px" onclick="switchAuthView('login')">Back to log in</button>
       `}
-    </section>
-    <div class="foot">The system is watching.</div>
-  `;
-}
-function renderVerifyGate(){
-  app.classList.remove('view-only');
-  const vb=document.getElementById('viewBar'); if(vb) vb.style.display='none';
-  const email = (window.fb.auth.currentUser && window.fb.auth.currentUser.email) || 'your email';
-  app.innerHTML = `
-    <div style="text-align:center;margin:24px 0 10px">
-      <div class="eyebrow" style="justify-content:center">System Gate</div>
-    </div>
-    <section class="win">
-      <div style="text-align:center;margin-bottom:14px">
-        <h1 class="title-xl">Verify Your Email</h1>
-        <p style="color:var(--muted);font-size:14px;margin-top:8px">We sent a confirmation link to <b style="color:var(--cyan-soft)">${esc(email)}</b>. Click it, then come back here - check your spam folder if you don't see it soon.</p>
-      </div>
-      <button class="btn" onclick="checkVerified()">I've verified - continue</button>
-      <button class="btn ghost" style="margin-top:10px" onclick="resendVerification()">Resend verification email</button>
-      <button class="reset" style="margin-top:14px" onclick="doLogout()">Log out</button>
     </section>
     <div class="foot">The system is watching.</div>
   `;
