@@ -421,6 +421,9 @@
     initializeFirestore, doc, getDoc, setDoc, deleteDoc, collection, query, where, getDocs,
     addDoc, onSnapshot, orderBy, limit, serverTimestamp
   } from "https://www.gstatic.com/firebasejs/12.17.0/firebase-firestore.js";
+  import {
+    getFunctions, httpsCallable
+  } from "https://www.gstatic.com/firebasejs/12.17.0/firebase-functions.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyBH_7qOpJur2pnZKfD-NTcijGhmUKCvldM",
@@ -434,12 +437,15 @@
   const fbApp = initializeApp(firebaseConfig);
   const auth = getAuth(fbApp);
   const db = initializeFirestore(fbApp, { ignoreUndefinedProperties: true });
+  const fns = getFunctions(fbApp);
+  const resolveLoginEmailFn = httpsCallable(fns, 'resolveLoginEmail');
 
   window.fb = {
     auth, db,
     createUserWithEmailAndPassword, signInWithEmailAndPassword,
     onAuthStateChanged, signOut, sendPasswordResetEmail, updatePassword, verifyBeforeUpdateEmail,
     reauthenticateWithCredential, EmailAuthProvider, sendEmailVerification,
+    resolveLoginEmail: (username) => resolveLoginEmailFn({ username }),
     doc, getDoc, setDoc, deleteDoc, collection, query, where, getDocs,
     addDoc, onSnapshot, orderBy, limit, serverTimestamp
   };
@@ -988,7 +994,16 @@ async function doLogin(){
   const u = (document.getElementById('auth-user').value||'').trim();
   const p = document.getElementById('auth-pass').value||'';
   if(!u||!p){ toast('Missing data','Enter your email/username and password.'); return; }
-  const email = looksLikeEmail(u) ? u.toLowerCase() : deriveEmail(u.toLowerCase());
+  let email = looksLikeEmail(u) ? u.toLowerCase() : deriveEmail(u.toLowerCase());
+  if(!looksLikeEmail(u)){
+    // Plain username - ask the backend what email currently signs it in (handles both
+    // never-migrated accounts and ones that have since verified a real email), falling
+    // back to the old synthetic pattern if that lookup is ever unreachable.
+    try{
+      const res = await window.fb.resolveLoginEmail(u.toLowerCase());
+      if(res && res.data && res.data.email) email = res.data.email;
+    }catch(e){}
+  }
   try{
     await window.fb.signInWithEmailAndPassword(window.fb.auth, email, p);
   }catch(err){
@@ -1035,7 +1050,7 @@ async function doForgotPassword(){
   if(!looksLikeEmail(e)){ toast('Invalid email','Enter the real email you added to your account.'); return; }
   try{
     await window.fb.sendPasswordResetEmail(window.fb.auth, e);
-    toast('Check your email','If that email has an account with a password set, a reset link is on its way.');
+    toast('Check your email','If that email has an account with a password set, a reset link is on its way - check your spam folder if it does not show up soon.');
     switchAuthView('login');
   }catch(err){
     toast('Could not send it', friendlyAuthError(err));
@@ -1044,7 +1059,6 @@ async function doForgotPassword(){
 let authView = 'login';
 function switchAuthView(view){ authView = view; renderAuthGate(); }
 let pendingPasswordReauth = null;
-let pendingEmailReauth = null;
 async function changePassword(){
   if(!currentUid) return;
   const p1 = document.getElementById('newPass1').value||'';
@@ -1089,29 +1103,7 @@ async function addRealEmail(){
     await window.fb.verifyBeforeUpdateEmail(window.fb.auth.currentUser, newEmail);
     emailVerificationSentTo = newEmail;
     render();
-    toast('Check your inbox', 'Click the link we sent to '+newEmail+' to confirm it - your account switches over once you do.');
-    closeEmailMigration();
-  }catch(err){
-    if((err&&err.code||'').includes('requires-recent-login')){
-      pendingEmailReauth = newEmail;
-      render();
-      toast('Confirm your password','Firebase needs your current password once to confirm this change.');
-    } else {
-      toast('Could not add email', friendlyAuthError(err));
-    }
-  }
-}
-async function confirmEmailReauth(){
-  const oldPass = document.getElementById('reauthPass2').value||'';
-  if(!oldPass){ toast('Missing password','Enter your current password.'); return; }
-  try{
-    const cred = window.fb.EmailAuthProvider.credential(window.fb.auth.currentUser.email, oldPass);
-    await window.fb.reauthenticateWithCredential(window.fb.auth.currentUser, cred);
-    await window.fb.verifyBeforeUpdateEmail(window.fb.auth.currentUser, pendingEmailReauth);
-    emailVerificationSentTo = pendingEmailReauth;
-    pendingEmailReauth = null;
-    render();
-    toast('Check your inbox', 'Click the link we sent to '+emailVerificationSentTo+' to confirm it - your account switches over once you do.');
+    toast('Check your inbox', 'Click the link we sent to '+newEmail+' to confirm it - check your spam folder if you do not see it soon.');
     closeEmailMigration();
   }catch(err){
     toast('Could not add email', friendlyAuthError(err));
@@ -2134,15 +2126,10 @@ function render(){
         const synthetic = isSyntheticEmail(curEmail);
         return synthetic ? `
         <div class="penalty" style="margin-bottom:12px">⚠ No real email attached - you cannot recover your password if you forget it.</div>
-        ${emailVerificationSentTo ? `<p class="note" style="margin-bottom:10px">Verification email sent to <b style="color:var(--cyan-soft)">${esc(emailVerificationSentTo)}</b> - click the link in it to finish. Didn't get it? You can send it again below.</p>` : ''}
+        ${emailVerificationSentTo ? `<p class="note" style="margin-bottom:10px">Verification email sent to <b style="color:var(--cyan-soft)">${esc(emailVerificationSentTo)}</b> - click the link in it to finish. Check your spam folder if it doesn't show up soon. Didn't get it at all? You can send it again below.</p>` : ''}
         <label>Add your email</label>
         <input id="newEmail" type="email" placeholder="you@example.com" autocapitalize="none" ${viewOnly?'disabled':''}>
         <button class="btn sm" style="margin-top:10px" onclick="addRealEmail()" ${viewOnly?'disabled':''}>${emailVerificationSentTo?'Resend Verification':'Add Email'}</button>
-        ${pendingEmailReauth ? `
-        <p class="note" style="margin-top:12px">One-time check: re-enter your current password to confirm adding <b style="color:var(--cyan-soft)">${esc(pendingEmailReauth)}</b>.</p>
-        <input id="reauthPass2" type="password" placeholder="Current password" autocomplete="current-password" ${viewOnly?'disabled':''}>
-        <button class="btn ghost sm" style="margin-top:10px" onclick="confirmEmailReauth()" ${viewOnly?'disabled':''}>Confirm</button>
-        ` : ''}
         ` : `
         <p style="font-size:12px;color:var(--muted);margin:0 0 12px">Recovery email: <b style="color:var(--cyan-soft)">${esc(curEmail)}</b></p>
         `;
