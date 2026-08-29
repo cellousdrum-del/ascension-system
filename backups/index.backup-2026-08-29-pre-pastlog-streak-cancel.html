@@ -1717,30 +1717,14 @@ function render(){
     // else: stays frozen exactly where it is - Rest included, nothing advances it automatically
 
     S.penaltyToday = false;
-    const gapBreak = (!dayActive && S.streak>0) || (fullySkippedDays>0 && S.streak>0);
-    let brokeStreak = gapBreak;
+    let brokeStreak = (!dayActive && S.streak>0) || (fullySkippedDays>0 && S.streak>0);
     if(gateCleared){ S.questOnlyStreak = 0; }
     if(questOnly){
       if((S.questOnlyStreak||0) >= 3 && S.streak>0) brokeStreak = true;
       S.questOnlyStreak = (S.questOnlyStreak||0) + 1;
     }
     if(brokeStreak){
-      // Only a genuine missing-day gap (not the quest-only grace period expiring) is ever
-      // recoverable by backfilling - there's nothing to "fill in" for a grace-period break
-      // since that day was already active.
-      if(gapBreak){
-        S.lastBreakGapFrom = dayActive ? nextDay(S.day) : S.day;
-        S.lastBreakGapTo = yesterday();
-        S.lastBreakStreakBefore = S.streak;
-      } else {
-        S.lastBreakGapFrom = null;
-        S.lastBreakGapTo = null;
-      }
       applyStreakPenalty();
-      if(gapBreak){
-        S.lastBreakRefundXp = S._lastPenaltyXp;
-        S.lastBreakRefundStat = S._lastPenaltyStat;
-      }
       S.streak = 0;
       S.questOnlyStreak = 0;
     }
@@ -2018,25 +2002,18 @@ function render(){
       <details class="guide" style="margin-top:10px">
         <summary>Log a past workout</summary>
         <div class="guide-body">
-          <p class="note" style="margin-bottom:10px">Adds an entry to your history log. Check whichever of these you actually did that day - XP is only awarded for what's checked. Gate or Daily Quest can cancel a streak break if backfilling closes the exact gap that caused it; Flexibility alone can't, since it doesn't count toward the streak live either.</p>
+          <p class="note" style="margin-bottom:10px">Adds an entry to your history log. XP is only awarded if you check the box below - use that for a day you genuinely trained but forgot to log live. Only backfills the default Push/Pull/Legs split - custom days aren't supported here yet.</p>
           <label>Date</label>
           <input id="pastDate" type="date" max="${today()}">
-          <label style="display:flex;align-items:center;gap:8px;margin:14px 0 6px;cursor:pointer;text-transform:none;letter-spacing:normal;color:var(--ink);font-size:13px;font-weight:400">
-            <input type="checkbox" id="pastGateDone" style="width:auto;margin:0">
-            Gate cleared (+100 XP, +1 stat)
-          </label>
+          <label>Gate</label>
           <select id="pastGate">
-            ${ar
-              ? (ar.days||[]).map(d=>`<option value="custom:${d.id}">${esc(d.name)}</option>`).join('')
-              : `<option value="push">Push</option><option value="pull">Pull</option><option value="legs">Legs</option>`}
+            <option value="push">Push</option>
+            <option value="pull">Pull</option>
+            <option value="legs">Legs</option>
           </select>
           <label style="display:flex;align-items:center;gap:8px;margin:14px 0 6px;cursor:pointer;text-transform:none;letter-spacing:normal;color:var(--ink);font-size:13px;font-weight:400">
-            <input type="checkbox" id="pastDailyDone" style="width:auto;margin:0">
-            Daily Quest done (+30 XP, +1 Vitality)
-          </label>
-          <label style="display:flex;align-items:center;gap:8px;margin:14px 0 6px;cursor:pointer;text-transform:none;letter-spacing:normal;color:var(--ink);font-size:13px;font-weight:400">
-            <input type="checkbox" id="pastFlexDone" style="width:auto;margin:0">
-            Flexibility done (+20 XP)
+            <input type="checkbox" id="pastAwardXp" style="width:auto;margin:0">
+            Award XP for this day (Gate +100, Daily Quest +30)
           </label>
           <label>Weight logged that day (optional, kg) - adds +10 XP</label>
           <input id="pastWeight" type="number" inputmode="decimal" step="0.1" placeholder="Leave blank to skip">
@@ -2491,30 +2468,10 @@ function saveCustomDay(routineId,id){
   save(); render();
   toast('Day saved', name+' updated.');
 }
-// Add/remove-exercise re-renders the day editor immediately (see addCustomDay), which rebuilds
-// every input's value from this data - so anything typed but not yet saved via "Save Day" has
-// to be pulled out of the live DOM first, or it gets clobbered by the re-render.
-function syncCustomDayInputs(d){
-  const nameEl = document.getElementById('cdname_'+d.id);
-  const iconEl = document.getElementById('cdicon_'+d.id);
-  const colorEl = document.getElementById('cdcolor_'+d.id);
-  const statEl = document.getElementById('cdstat_'+d.id);
-  if(nameEl) d.name = nameEl.value;
-  if(iconEl) d.icon = iconEl.value;
-  if(colorEl) d.color = colorEl.value;
-  if(statEl) d.stat = statEl.value;
-  d.exercises.forEach((ex,i)=>{
-    const nEl = document.getElementById('cdexn_'+d.id+'_'+i);
-    const tEl = document.getElementById('cdext_'+d.id+'_'+i);
-    if(nEl) ex.n = nEl.value;
-    if(tEl) ex.t = tEl.value;
-  });
-}
 function addCustomExercise(routineId,dayId){
   if(viewOnly) return;
   const d = findCustomDay(routineId,dayId);
   if(!d) return;
-  syncCustomDayInputs(d);
   d.exercises.push({n:'',t:'',d:''});
   openCustomDayId = dayId;
   save(); render();
@@ -2524,7 +2481,6 @@ function removeCustomExercise(routineId,dayId,index){
   const d = findCustomDay(routineId,dayId);
   if(!d) return;
   if(d.exercises.length<=1){ toast('Cannot remove','A day needs at least one exercise - edit it instead.'); return; }
-  syncCustomDayInputs(d);
   const wasToday = S.activeRoutineId===routineId && todaysGate()==='custom' && todaysCustomDay() && todaysCustomDay().id===dayId;
   d.exercises.splice(index,1);
   if(wasToday) S.exSets = {};
@@ -2668,19 +2624,9 @@ function buildHistory(){
       dayList.map(d=>{
         const h=S.history[d];
         const w=S.weightLog?S.weightLog[d]:null;
-        let line;
-        if(!h.manual){
-          const dayLabel = h.gate==='custom' ? esc(h.customName||'Custom Day') : (h.gate==='rest' ? null : GATES[h.gate].name);
-          line = h.gate==='rest' ? 'Rest day confirmed' : `${dayLabel} cleared (+${h.xp} XP)`;
-        } else {
-          const parts = [];
-          if(h.gate==='custom') parts.push(esc(h.customName||'Custom Day')+' cleared');
-          else if(h.gate) parts.push(GATES[h.gate].name+' cleared');
-          if(h.dailyDone) parts.push('Daily Quest');
-          if(h.flexDone) parts.push('Flexibility');
-          line = (parts.length ? parts.join(' + ') : 'Logged') + ' (logged manually';
-          line += h.xp ? `, +${h.xp} XP total)` : ')';
-        }
+        const dayLabel = h.gate==='custom' ? esc(h.customName||'Custom Day') : (h.gate==='rest' ? null : GATES[h.gate].name);
+        let line = h.gate==='rest' ? 'Rest day confirmed'
+          : `${dayLabel} ${h.manual?'(logged manually)':'cleared (+'+h.xp+' XP)'}`;
         if(w!=null) line+=` &middot; Weight ${fmt(w)} kg`;
         return `<p style="margin:0 0 8px;font-size:13px"><b style="color:var(--cyan-soft)">${d}</b> - ${line}</p>`;
       }).join('');
@@ -2689,122 +2635,54 @@ function buildHistory(){
 function logPastWorkout(){
   if(viewOnly) return;
   const d = document.getElementById('pastDate').value;
+  const g = document.getElementById('pastGate').value;
+  const awardXp = document.getElementById('pastAwardXp').checked;
+  const wRaw = document.getElementById('pastWeight').value;
   if(!d){ toast('Missing date','Pick a date first.'); return; }
   if(d > today()){ toast('Invalid date','Cannot log a future date.'); return; }
-
-  const gateDone = document.getElementById('pastGateDone').checked;
-  const gSel = document.getElementById('pastGate').value;
-  const dailyDone = document.getElementById('pastDailyDone').checked;
-  const flexDone = document.getElementById('pastFlexDone').checked;
-  const wRaw = document.getElementById('pastWeight').value;
-  const w = parseFloat(wRaw);
-  const weightOk = !isNaN(w) && w>=30 && w<=250;
-
-  if(!gateDone && !dailyDone && !flexDone && !weightOk){
-    toast('Nothing to log','Check at least one box above or enter a valid weight.');
-    return;
-  }
-
   const existing = S.history[d];
-  if(existing && !confirm('This date already has an entry. Add to it?')) return;
-
-  const gateAlreadyAwarded = !!(existing && (existing.gateAwarded!==undefined ? existing.gateAwarded : existing.xpAwarded));
-  const dailyAlreadyAwarded = !!(existing && existing.dailyAwarded);
-  const flexAlreadyAwarded = !!(existing && existing.flexAwarded);
-  const weightAlreadyLogged = S.weightLog[d]!=null;
+  if(existing && !confirm('This date already has an entry. Overwrite it?')) return;
+  const alreadyAwarded = !!(existing && existing.xpAwarded);
+  const willAward = awardXp && !alreadyAwarded;
 
   const beforeLvl = levelFromXp(S.xp).lvl;
-  const gains = {};
-  const addedLabels = [];
   let xpGain = 0;
-  const entry = Object.assign({manual:true}, existing);
-
-  if(gateDone && !gateAlreadyAwarded){
-    let statKey, gateName;
-    if(gSel.indexOf('custom:')===0){
-      const dayId = gSel.slice(7);
-      const routine = activeRoutine();
-      const day = routine ? (routine.days||[]).find(x=>x.id===dayId) : null;
-      if(!day){ toast('Pick a day','Select which custom day you did - your active routine may have changed.'); return; }
-      statKey = day.stat;
-      entry.gate = 'custom'; entry.customName = day.name; entry.customIcon = day.icon; entry.customColor = day.color;
-      gateName = day.name;
-    } else {
-      statKey = GATES[gSel].gain;
-      entry.gate = gSel;
-      delete entry.customName; delete entry.customIcon; delete entry.customColor;
-      gateName = GATES[gSel].name;
-    }
-    S.stats[statKey] = (S.stats[statKey]||0)+1; gains[statKey] = (gains[statKey]||0)+1;
-    xpGain += 100;
-    entry.gateAwarded = true;
-    addedLabels.push(gateName+' cleared');
+  const gains = {};
+  if(willAward){
+    const gate = GATES[g];
+    S.stats[gate.gain]=(S.stats[gate.gain]||0)+1; gains[gate.gain]=(gains[gate.gain]||0)+1;
+    S.stats.vit=(S.stats.vit||0)+1; gains.vit=(gains.vit||0)+1;
+    xpGain += 130;
   }
-  if(dailyDone && !dailyAlreadyAwarded){
-    S.stats.vit = (S.stats.vit||0)+1; gains.vit = (gains.vit||0)+1;
-    xpGain += 30;
-    entry.dailyDone = true;
-    entry.dailyAwarded = true;
-    addedLabels.push('Daily Quest');
-  }
-  if(flexDone && !flexAlreadyAwarded){
-    xpGain += 20;
-    entry.flexDone = true;
-    entry.flexAwarded = true;
-    addedLabels.push('Flexibility');
-  }
-  if(weightOk && !weightAlreadyLogged){
+  const w = parseFloat(wRaw);
+  const weightOk = !isNaN(w) && w>=30 && w<=250;
+  if(willAward && weightOk){
     S.weightLog[d] = w;
     xpGain += 10;
-    addedLabels.push('weight');
   }
-
-  entry.xp = ((existing && existing.xp) || 0) + xpGain;
   S.xp += xpGain;
-  S.history[d] = entry;
+  S.history[d] = {gate:g, xp:xpGain, manual:true, xpAwarded:willAward};
 
-  // Streak follows the same rule as live play: only Gate or Daily Quest count. If this
-  // backfill fully closes the exact gap that caused the most recent break, the break is
-  // cancelled - XP and the stat point it cost are refunded, and the streak continues instead
-  // of having restarted from 0.
-  let cancelResult = null;
   let streakUpdated = false;
-  const inPendingGap = !!(S.lastBreakGapFrom && d >= S.lastBreakGapFrom && d <= S.lastBreakGapTo);
-  if(dayCountsForStreak(entry)){
-    cancelResult = tryCancelStreakBreak(d);
-    if(cancelResult && cancelResult.refundStat){
-      gains[cancelResult.refundStat] = (gains[cancelResult.refundStat]||0)+1;
-    }
-    // A day still inside an unclosed gap doesn't extend the streak on its own - that would
-    // double-count it once the gap later gets fully covered and the break is cancelled below.
-    if(!cancelResult && !inPendingGap && (S.lastActive==null || d===nextDay(S.lastActive))){
-      S.streak = (S.lastActive==null) ? 1 : S.streak+1;
-      S.lastActive = d;
-      streakUpdated = true;
-    }
+  if(S.lastActive==null || d===nextDay(S.lastActive)){
+    S.streak = (S.lastActive==null) ? 1 : S.streak+1;
+    S.lastActive = d;
+    streakUpdated = true;
   }
-
-  if(Object.keys(gains).length) S._upStats = gains;
+  if(willAward) S._upStats = gains;
   save();
   const afterLvl = levelFromXp(S.xp).lvl;
   render();
   if(afterLvl>beforeLvl){
     showLevelUp(afterLvl, gains);
-  } else if(!addedLabels.length){
-    toast('Nothing new','Everything checked was already logged for this date.');
   } else {
-    let msg = addedLabels.join(', ')+' added for '+d+(xpGain?' (+'+xpGain+' XP)':'')+'.';
-    if(cancelResult){
-      const bits = [];
-      if(cancelResult.refundXp) bits.push('+'+cancelResult.refundXp+' XP');
-      if(cancelResult.refundStat) bits.push('+1 '+PENALTY_STAT_LABEL[cancelResult.refundStat]);
-      msg += ' Streak break cancelled'+(bits.length?' - '+bits.join(' and ')+' refunded':'')+' - streak restored to '+S.streak+'.';
-    } else if(streakUpdated){
-      msg += ' Streak updated.';
-    }
+    let msg = GATES[g].name+' added to your history for '+d+'.';
+    if(willAward) msg = '+'+xpGain+' XP - '+msg;
+    else if(awardXp && alreadyAwarded) msg += ' XP was already awarded for this date previously.';
+    if(streakUpdated) msg += ' Streak updated.';
     toast('Logged', msg);
   }
-  if(Object.keys(gains).length) setTimeout(()=>{ S._upStats=null; },1800);
+  if(willAward) setTimeout(()=>{ S._upStats=null; },1800);
 }
 function claimDaily(){
   if(S.dailyClaimed) return;
@@ -2907,14 +2785,7 @@ function bumpStreak(){
   if(S.lastActive===today()) return;
   const y=yesterday();
   const broke = S.lastActive!=null && S.lastActive!==y && S.streak>0;
-  if(broke){
-    S.lastBreakGapFrom = nextDay(S.lastActive);
-    S.lastBreakGapTo = y;
-    S.lastBreakStreakBefore = S.streak;
-    applyStreakPenalty();
-    S.lastBreakRefundXp = S._lastPenaltyXp;
-    S.lastBreakRefundStat = S._lastPenaltyStat;
-  }
+  if(broke) applyStreakPenalty();
   S.streak = (S.lastActive===y) ? S.streak+1 : 1;
   S.lastActive=today();
   if(S.streak>0 && S.streak%7===0 && S.streak>(S.lastBoxStreak||0)){
@@ -2959,36 +2830,6 @@ function applyStreakPenalty(){
   S.penaltyToday = true;
   S._lastPenaltyXp = actualLoss;
   S._lastPenaltyStat = topKey;
-}
-// A day counts toward closing a streak gap the same way it does live: Gate cleared or
-// Daily Quest done. Flexibility is intentionally excluded - it never counts toward the
-// streak live either, so backfilling it alone can't cancel a break.
-function dayCountsForStreak(h){ return !!(h && (h.gate || h.dailyDone)); }
-function isGapFullyCovered(from, to){
-  let d = from;
-  while(d <= to){
-    if(!dayCountsForStreak(S.history[d])) return false;
-    d = nextDay(d);
-  }
-  return true;
-}
-function tryCancelStreakBreak(d){
-  if(!S.lastBreakGapFrom || !S.lastBreakGapTo) return null;
-  if(d < S.lastBreakGapFrom || d > S.lastBreakGapTo) return null;
-  if(!isGapFullyCovered(S.lastBreakGapFrom, S.lastBreakGapTo)) return null;
-  const gapDays = daysBetween(S.lastBreakGapFrom, S.lastBreakGapTo) + 1;
-  const refundXp = S.lastBreakRefundXp || 0;
-  const refundStat = S.lastBreakRefundStat;
-  S.xp += refundXp;
-  if(refundStat) S.stats[refundStat] = (S.stats[refundStat]||0) + 1;
-  S.streak = (S.lastBreakStreakBefore||0) + gapDays + (S.streak||0);
-  if(!S.lastActive || S.lastActive < S.lastBreakGapTo) S.lastActive = S.lastBreakGapTo;
-  S.lastBreakGapFrom = null;
-  S.lastBreakGapTo = null;
-  S.lastBreakStreakBefore = null;
-  S.lastBreakRefundXp = null;
-  S.lastBreakRefundStat = null;
-  return {refundXp, refundStat, gapDays};
 }
 const PENALTY_STAT_LABEL = {str:'Strength',vit:'Vitality',end:'Endurance',agi:'Agility'};
 function buildPenaltyMsg(xpLoss, statKey){
