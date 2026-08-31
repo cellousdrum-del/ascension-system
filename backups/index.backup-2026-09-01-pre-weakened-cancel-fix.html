@@ -2799,7 +2799,6 @@ function logPastWorkout(){
       if(cancelResult.refundXp) bits.push('+'+cancelResult.refundXp+' XP');
       if(cancelResult.refundStat) bits.push('+1 '+PENALTY_STAT_LABEL[cancelResult.refundStat]);
       msg += ' Streak break cancelled'+(bits.length?' - '+bits.join(' and ')+' refunded':'')+' - streak restored to '+S.streak+'.';
-      if(cancelResult.wasWeakened) msg += ' No longer weakened today.';
     } else if(streakUpdated){
       msg += ' Streak updated.';
     }
@@ -2980,20 +2979,16 @@ function tryCancelStreakBreak(d){
   const gapDays = daysBetween(S.lastBreakGapFrom, S.lastBreakGapTo) + 1;
   const refundXp = S.lastBreakRefundXp || 0;
   const refundStat = S.lastBreakRefundStat;
-  const wasWeakened = !!S.penaltyToday;
   S.xp += refundXp;
   if(refundStat) S.stats[refundStat] = (S.stats[refundStat]||0) + 1;
   S.streak = (S.lastBreakStreakBefore||0) + gapDays + (S.streak||0);
   if(!S.lastActive || S.lastActive < S.lastBreakGapTo) S.lastActive = S.lastBreakGapTo;
-  // Weakened (halved XP) and the doubled grip Penalty Quest are the SAME break's fallout for
-  // today - cancelling the break has to lift those too, or "cancelled" wouldn't be true.
-  S.penaltyToday = false;
   S.lastBreakGapFrom = null;
   S.lastBreakGapTo = null;
   S.lastBreakStreakBefore = null;
   S.lastBreakRefundXp = null;
   S.lastBreakRefundStat = null;
-  return {refundXp, refundStat, gapDays, wasWeakened};
+  return {refundXp, refundStat, gapDays};
 }
 const PENALTY_STAT_LABEL = {str:'Strength',vit:'Vitality',end:'Endurance',agi:'Agility'};
 function buildPenaltyMsg(xpLoss, statKey){
