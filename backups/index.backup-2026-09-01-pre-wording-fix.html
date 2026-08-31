@@ -1872,7 +1872,7 @@ function render(){
         ${statBox('Endurance',S.stats.end,'end')}
         ${statBox('Agility',S.stats.agi,'agi')}
       </div>
-      ${S.penaltyToday?`<div class="penalty" style="margin-top:10px">⚠ WEAKENED - streak broken. Half XP and doubled grip reps until tomorrow. <span style="text-decoration:underline;cursor:pointer" onclick="clearWeakenedManually()">Already made up for it? Clear it</span></div>`:''}
+      ${S.penaltyToday?`<div class="penalty" style="margin-top:10px">⚠ WEAKENED - streak broken. Half XP and doubled grip reps until tomorrow. <span style="text-decoration:underline;cursor:pointer" onclick="clearWeakenedManually()">Stuck from a bug? Clear it</span></div>`:''}
     </section>
 
     <section class="win">
@@ -3001,7 +3001,7 @@ function tryCancelStreakBreak(d){
 function clearWeakenedManually(){
   if(viewOnly) return;
   if(!S.penaltyToday) return;
-  if(!confirm("Clear the Weakened penalty for today? Only do this if you've already made up for whatever caused it (e.g. right after cancelling a streak break) - not to skip a penalty you actually earned today.")) return;
+  if(!confirm("Clear the Weakened penalty for today? Only do this if it's stuck from a bug (e.g. right after cancelling a streak break) - not to skip a penalty you actually earned today.")) return;
   S.penaltyToday = false;
   save(); render();
   toast('Weakened cleared', 'Back to normal XP and grip reps for the rest of today.');
