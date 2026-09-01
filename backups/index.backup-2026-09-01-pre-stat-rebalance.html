@@ -1685,17 +1685,6 @@ function render(){
     }
   }
   if(!S.tzMigrated){ S.tzMigrated = true; S.day = today(); save(); }
-  if(!S.statsRebalanced2026 && !viewOnly){
-    // One-time rebalance: Daily Quest used to always feed Vitality regardless of what day it
-    // was, so long-time players ended up with Vitality far ahead of the other three. Averaging
-    // preserves total invested effort instead of erasing it (matching lowest) or handing out a
-    // free boost (matching highest). Never runs again after this - going forward, stat gains
-    // are already balanced by design (see distributeStats).
-    S.statsRebalanced2026 = true;
-    const avg = Math.round(((S.stats.str||0)+(S.stats.vit||0)+(S.stats.end||0)+(S.stats.agi||0))/4);
-    S.stats.str = avg; S.stats.vit = avg; S.stats.end = avg; S.stats.agi = avg;
-    save();
-  }
   if(S.cycleIndex===undefined){
     const seedIdx = CYCLE.indexOf(legacyScheduleFor(S.day||today()));
     S.cycleIndex = seedIdx>=0 ? seedIdx : 0;
@@ -2060,18 +2049,19 @@ function render(){
       <details class="guide">
         <summary>How XP Works</summary>
         <div class="guide-body">
-          <p><b>Clear the Gate</b> (+100 XP): finish every set of your assigned Push/Pull/Legs workout. Also splits 4 stat points across Strength/Vitality/Endurance/Agility - not evenly every time, but always weighted toward whichever stat is currently lowest, so they stay paired over time instead of one running away with it. Once per day.</p>
+          <p><b>Clear the Gate</b> (+100 XP): finish every set of your assigned Push/Pull/Legs workout. Also grants +1 to the gate's stat - Push: Endurance, Pull: Agility, Legs: Strength. Once per day.</p>
           <p><b>Trial Gate</b> (+120 XP): near a rank-up boundary, today's Gate occasionally gets swapped for a harder tier - you'll get a full-screen "a monster has appeared" alert the moment you open the app that day. Clear it for the bonus XP. Turn on browser notifications in the Account tab to also get a real system alert alongside it.</p>
           <p><b>The Gate waits for you.</b> If you don't clear today's assigned Gate (or confirm a scheduled Rest day), it does not move on - tomorrow (and every day after) still shows the same one, until you actually clear it or confirm it. Nothing advances automatically, including Rest days.</p>
           <p><b>Wanderer Mode</b> (toggle at the top of Home): swaps Pull and Legs to calisthenics-only exercises for when you're traveling and don't have dumbbells - Push is already park-friendly, so it stays the same. Same XP, same stat gains, same rank tiers - only the exercises change. Flip it back off once you're home. Only available on the default Push/Pull/Legs split.</p>
           <p><b>Personalized Routines</b> (Routine tab): build up to ${MAX_ROUTINES} of your own routines instead of Push/Pull/Legs, and switch between them (or back to Default) anytime without losing any of them. Each routine has its own name, its own rest cycle (train 1 to 6 days in a row before a mandatory rest day - never more than 6, for your own health), and up to 6 days, each with its own name, icon, color, assigned stat, and exercise list. A day needs at least one real exercise before its routine can be activated. Custom days have no rank tiers (one flat list) and give the same +100 XP as any Gate. If your day count doesn't divide evenly into the rest cycle, the rotation just keeps jumping to the next day in your list, even mid-cycle. Occasionally a "Bonus Effort Day" asks for one extra set of everything for +20 XP, using the same trigger as Trial Gates below.</p>
-          <p><b>Daily Quest</b> (+30 XP): check off both the grip-strengthener task and the mystery task. Splits 4 stat points across all four stats the same weighted way the Gate does. Once per day.</p>
+          <p><b>Daily Quest</b> (+30 XP): check off both the grip-strengthener task and the mystery task. Grants Vitality +1. Once per day.</p>
           <p><b>Flexibility</b> (+20 XP): complete today's stretch routine, drawn from a curated pool of real static stretches (no mobility drills, no yoga flows) - deeper holds and PNF technique at higher tiers, working toward splits and pancake at the top tier, scaling with rank the same way the Gates do. Pure XP, no stat attached, available every day including Rest days - and doesn't count toward your streak.</p>
           <p><b>Log your weight</b> (+10 XP): only awarded if it moved the right direction for your goal (up if bulking, down if cutting) - it always logs either way, but XP only comes with real progress.</p>
           <p><b>Streak:</b> clearing the Gate, claiming the Daily Quest, or confirming a Rest day all keep it alive - you only need one of those per day.</p>
           <p><b>Quest-only grace period.</b> Leaning on the Daily Quest alone (instead of the Gate) only carries the streak for 3 days in a row - on the 4th, the Gate becomes mandatory again and the Daily Quest alone will no longer save it. You'll get a full-screen "Streak At Risk" warning (and a browser notification, if enabled) on that critical day, before the streak actually breaks - not just after. Clearing the Gate (or confirming Rest) any time resets this clock. This is unrelated to Trial Gates above.</p>
           <p><b>Breaking your streak has real consequences</b> - and simply not opening the app doesn't protect it; the moment you do open it again, however many days passed, the break is detected and applied. Everything below happens together, all at once:</p>
           <p>&bull; <b>XP loss</b> - 20% of the XP needed to clear your current level (e.g. level 8 needs 285 XP to clear, so breaking there costs 57 XP). It can drop you a level, but never below the XP floor of your current rank.</p>
+          <p>&bull; <b>Stat rollback</b> - your highest stat permanently drops by 1 (never below 1).</p>
           <p>&bull; <b>Weakened</b> - every XP reward is halved for the rest of that day.</p>
           <p>&bull; <b>Penalty Quest</b> - the grip-strengthener task doubles to 80 reps for the day.</p>
           <p>&bull; <b>Box progress reset</b> - your streak resets to 0, wiping any progress toward the next mystery box with it.</p>
@@ -2585,28 +2575,6 @@ function allChecked(){
   const ex = effectiveGateExercises(S.day, gateId, level);
   return ex.every((e,i)=>(S.exSets[i]||0)>=requiredSetsFor(gateId, e.t, S.day, level));
 }
-// Default-routine and Daily Quest stat gains split 4 points across all 4 stats every action,
-// so no single stat (Vitality, historically) can run away from the rest just by being the one
-// thing you can do every day. The split isn't flat +1 each - it's a deterministic (date+action
-// hashed, same no-Math.random pattern as Trial Gates/mystery quests) pick from a few uneven
-// shapes, always handed out most-behind-stat-first, so any gap that opens up actively closes
-// instead of just averaging out eventually. Custom-routine days keep granting only their own
-// assigned stat, since that split is the user's deliberate choice, not something to balance.
-const ALL_STATS = ['str','vit','end','agi'];
-const STAT_SPLIT_SHAPES = [[4,0,0,0],[3,1,0,0],[2,2,0,0],[2,1,1,0],[1,1,1,1]];
-function distributeStats(seed, gains){
-  const order = ALL_STATS.slice().sort((a,b)=>(S.stats[a]||0)-(S.stats[b]||0));
-  let h=0;
-  for(let i=0;i<seed.length;i++){ h=(h*41+seed.charCodeAt(i))>>>0; }
-  const shape = STAT_SPLIT_SHAPES[h % STAT_SPLIT_SHAPES.length];
-  order.forEach((k,i)=>{
-    const amt = shape[i];
-    if(amt>0){
-      S.stats[k] = (S.stats[k]||0) + amt;
-      if(gains) gains[k] = (gains[k]||0) + amt;
-    }
-  });
-}
 function completeGate(){
   const gateId=todaysGate();
   const g=gateInfo(gateId);
@@ -2618,9 +2586,8 @@ function completeGate(){
   const weakened = !!S.penaltyToday;
   const before=levelFromXp(S.xp).lvl;
   const trial = isTrialToday(S.day, gateId, levelFromXp(S.xp).lvl);
-  const gained={};
-  if(gateId==='custom'){ gained[g.gain]=1; S.stats[g.gain]=(S.stats[g.gain]||0)+1; }
-  else { distributeStats(S.day+'_gate', gained); }
+  const gained={}; gained[g.gain]=1;
+  S.stats[g.gain]+=1;
   S._upStats=gained;
   const baseXp = trial ? 120 : 100;
   const xpGain = weakened ? Math.round(baseXp/2) : baseXp;
@@ -2753,27 +2720,28 @@ function logPastWorkout(){
   const entry = Object.assign({manual:true}, existing);
 
   if(gateDone && !gateAlreadyAwarded){
-    let gateName;
+    let statKey, gateName;
     if(gSel.indexOf('custom:')===0){
       const dayId = gSel.slice(7);
       const routine = activeRoutine();
       const day = routine ? (routine.days||[]).find(x=>x.id===dayId) : null;
       if(!day){ toast('Pick a day','Select which custom day you did - your active routine may have changed.'); return; }
+      statKey = day.stat;
       entry.gate = 'custom'; entry.customName = day.name; entry.customIcon = day.icon; entry.customColor = day.color;
       gateName = day.name;
-      S.stats[day.stat] = (S.stats[day.stat]||0)+1; gains[day.stat] = (gains[day.stat]||0)+1;
     } else {
+      statKey = GATES[gSel].gain;
       entry.gate = gSel;
       delete entry.customName; delete entry.customIcon; delete entry.customColor;
       gateName = GATES[gSel].name;
-      distributeStats(d+'_gate', gains);
     }
+    S.stats[statKey] = (S.stats[statKey]||0)+1; gains[statKey] = (gains[statKey]||0)+1;
     xpGain += 100;
     entry.gateAwarded = true;
     addedLabels.push(gateName+' cleared');
   }
   if(dailyDone && !dailyAlreadyAwarded){
-    distributeStats(d+'_daily', gains);
+    S.stats.vit = (S.stats.vit||0)+1; gains.vit = (gains.vit||0)+1;
     xpGain += 30;
     entry.dailyDone = true;
     entry.dailyAwarded = true;
@@ -2849,9 +2817,7 @@ function claimDaily(){
   const before=levelFromXp(S.xp).lvl;
   const xpGain = weakened ? Math.round(30/2) : 30;
   S.xp+=xpGain; S.dailyClaimed=true;
-  const gained={};
-  distributeStats(S.day+'_daily', gained);
-  S._upStats=gained;
+  S.stats.vit+=1; S._upStats={vit:1};
   bumpStreak();
   save();
   const after=levelFromXp(S.xp).lvl;
@@ -2977,8 +2943,12 @@ function applyStreakPenalty(){
   const actualLoss = Math.max(0, S.xp - targetXp);
   S.xp = targetXp;
 
-  // Stats are never permanently docked by a break - that would fight the point of building
-  // them up in the first place. The deterrent is XP loss (above) plus today's Weakened debuff.
+  // Real stat rollback: your highest stat (the one you have leaned on most) permanently
+  // drops by 1, floored at 1 so it can never hit zero.
+  const statKeys = ['str','vit','end','agi'];
+  let topKey = statKeys[0];
+  statKeys.forEach(k=>{ if((S.stats[k]||0) > (S.stats[topKey]||0)) topKey = k; });
+  S.stats[topKey] = Math.max(1, (S.stats[topKey]||0) - 1);
 
   // Box-progress setback is free: the caller resets S.streak to 0 right after this call,
   // and box eligibility is measured purely as streak % 7, so any partial progress toward
@@ -2989,6 +2959,7 @@ function applyStreakPenalty(){
   // and cleared automatically at the next day rollover.
   S.penaltyToday = true;
   S._lastPenaltyXp = actualLoss;
+  S._lastPenaltyStat = topKey;
 }
 // A day counts toward closing a streak gap the same way it does live: Gate cleared or
 // Daily Quest done. Flexibility is intentionally excluded - it never counts toward the
@@ -3153,7 +3124,7 @@ function startGame(){
   S={
     name, startW:w, weight:w, goalW:g,
     xp:0, stats:{str:10,vit:10,end:10,agi:10},
-    startDate:today(), cycleIndex:0, exSets:{}, gateDoneToday:false, tzMigrated:true, statsRebalanced2026:true,
+    startDate:today(), cycleIndex:0, exSets:{}, gateDoneToday:false, tzMigrated:true,
     dailyDone:{grip:false,mystery:false}, dailyClaimed:false,
     mobilityDone:false, mobilityClaimed:false,
     streak:0, questOnlyStreak:0, avatarItems:[], lastBoxStreak:0, lastActive:null, day:today(),
