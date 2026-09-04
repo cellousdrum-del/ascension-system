@@ -2155,7 +2155,13 @@ function render(){
             const border = ac ? `border:2px solid ${ac};` : '';
             return `<div class="avatar-body" title="${armor?esc(armor.name):''}" style="${border}box-shadow:0 0 18px ${RANK_COLORS[rk.r]}, 0 0 ${10+Math.min(S.streak,60)}px ${RANK_COLORS[rk.r]}${ac?`, inset 0 0 12px ${ac}`:''}"></div>`;
           })()}
-          ${equipVisualsHtml()}
+          ${EQUIP_BADGE_POS.map(([kind,posStyle])=>{
+            const id = S.equipped && S.equipped[kind];
+            const it = id ? AVATAR_ITEMS.find(a=>a.id===id) : null;
+            if(!it) return '';
+            const rc = RANK_COLORS[it.rank] || RANK_COLORS.E;
+            return `<span title="${esc(it.name)}" style="position:absolute;${posStyle}font-size:17px;z-index:3;filter:drop-shadow(0 0 5px ${rc})">${it.icon}</span>`;
+          }).join('')}
         </div>
       </div>
       <div style="text-align:center;font-family:'Orbitron';font-size:13px;letter-spacing:.1em;color:${RANK_COLORS[rk.r]}">${esc(title.t.toUpperCase())}</div>
@@ -2190,15 +2196,7 @@ function render(){
           <p><b>Rank odds:</b> the item inside is drawn from your current hunter rank's item pool 90% of the time. The other 10% it's bumped up to the pool one rank above (S-rank can never bump further).</p>
           <p><b>No duplicates until you've seen it all:</b> each box first tries to give you an item of the chosen rank you don't already own. Only once every item at that rank is unlocked can it start repeating.</p>
           <p><b>Breaking your streak</b> resets it to 0, so any progress toward your next box resets too - see "How XP Works" on the Home tab for the full streak-break penalty.</p>
-        </div>
-      </details>
-      <details class="guide" style="margin-top:10px">
-        <summary>How Equipping Works</summary>
-        <div class="guide-body">
-          <p><b>One at a time, per kind:</b> you can have at most one Weapon, one Armor, one Relic, one Companion, and one Regalia equipped simultaneously - five slots total, each independent of the others.</p>
-          <p><b>Only from what you own:</b> you can only equip an item you've actually unlocked from a mystery box - equipping never grants or requires anything new.</p>
-          <p><b>Tap to toggle:</b> tap an eligible item in Unlocked Items to equip it into its slot, replacing whatever was there before. Tap the same item again to put it away with nothing equipped in that slot.</p>
-          <p><b>Where it shows:</b> each equipped item changes your Avatar above - a Weapon glints by the hand, a Relic pulses beside you, a Companion appears as a small second figure, Regalia glows as a ring above the head, and Armor recolors the outline of the body itself.</p>
+          <p><b>Equipping:</b> one Weapon, Armor, Relic, Companion, and Regalia can each be equipped at a time from whatever you've unlocked - equipped items show right on your Avatar above.</p>
         </div>
       </details>
     </section>
@@ -2227,17 +2225,6 @@ function render(){
         <input id="chatInput" placeholder="Message..." onkeydown="if(event.key==='Enter'){sendChatMessage();}" ${viewOnly?'disabled':''}>
         <button class="btn sm" onclick="sendChatMessage()" ${viewOnly?'disabled':''}>Send</button>
       </div>
-    </section>
-    <section class="win">
-      <details class="guide">
-        <summary>How Friends &amp; Chat Work</summary>
-        <div class="guide-body">
-          <p><b>Adding a friend:</b> there's no search box - find someone in Hunter Chat below (the shared chat everyone sees) and tap "+ FRIEND" next to one of their messages to send a request.</p>
-          <p><b>Requests:</b> a pending request shows "Requested" until they respond; if someone sends you one, it shows up in a Friend Requests section above your Friends list with Accept/Decline.</p>
-          <p><b>Friends list:</b> shows each friend's trained days and streak at a glance. Tap a friend's name or "Message" to open a private DM thread with them - separate from Hunter Chat, which everyone can read.</p>
-          <p><b>Unread dots:</b> a dot on the Social tab means an unread Hunter Chat message, friend request, or DM; a small dot next to a friend's name means an unread DM from them specifically.</p>
-        </div>
-      </details>
     </section>
     `}</div>` : ''}
 
@@ -3161,41 +3148,15 @@ function closeBoxReveal(){ document.getElementById('boxOverlay').classList.remov
 // Aura is deliberately not equippable here - it's earned by rank (the silhouette's glow color
 // already IS your current rank's aura), not something picked from the box drops.
 const EQUIP_KINDS = ['Weapon','Armor','Relic','Companion','Regalia'];
-function equippedItem(kind){
-  const id = S.equipped && S.equipped[kind];
-  return id ? AVATAR_ITEMS.find(a=>a.id===id) : null;
-}
-// Abstract glowing shapes in the app's existing geometric visual language, not emoji - each
-// kind gets its own bespoke shape rather than a generic badge slot. Armor isn't here; it
-// recolors the avatar-body outline directly (see the avatar-body render above) since "what
-// you're wearing" reads better as a change to the figure itself than an accessory beside it.
-function equipVisualsHtml(){
-  const parts = [];
-  const w = equippedItem('Weapon');
-  if(w){
-    const c = RANK_COLORS[w.rank]||RANK_COLORS.E;
-    parts.push(`<div title="${esc(w.name)}" style="position:absolute;bottom:16px;right:-4px;width:5px;height:34px;border-radius:3px;background:linear-gradient(180deg,${c},transparent);transform:rotate(30deg);transform-origin:bottom center;box-shadow:0 0 8px ${c},0 0 14px ${c};z-index:3"></div>`);
-  }
-  const rel = equippedItem('Relic');
-  if(rel){
-    const c = RANK_COLORS[rel.rank]||RANK_COLORS.E;
-    parts.push(`<div title="${esc(rel.name)}" style="position:absolute;top:46%;left:-14px;width:10px;height:10px;border-radius:50%;background:${c};box-shadow:0 0 8px ${c},0 0 16px ${c};animation:circle-pulse 2.4s ease-in-out infinite;z-index:3"></div>`);
-  }
-  const comp = equippedItem('Companion');
-  if(comp){
-    const c = RANK_COLORS[comp.rank]||RANK_COLORS.E;
-    parts.push(`<div title="${esc(comp.name)}" style="position:absolute;bottom:0;left:-28px;transform:scale(0.42);transform-origin:bottom left;z-index:1">
-      <div class="avatar-head" style="box-shadow:0 0 8px ${c}"><span class="avatar-eye left" style="background:${c};box-shadow:0 0 6px ${c}"></span><span class="avatar-eye right" style="background:${c};box-shadow:0 0 6px ${c}"></span></div>
-      <div class="avatar-body" style="box-shadow:0 0 8px ${c}"></div>
-    </div>`);
-  }
-  const reg = equippedItem('Regalia');
-  if(reg){
-    const c = RANK_COLORS[reg.rank]||RANK_COLORS.E;
-    parts.push(`<div title="${esc(reg.name)}" style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);width:34px;height:10px;border-radius:50%;border:2px solid ${c};box-shadow:0 0 8px ${c},0 0 14px ${c};z-index:3"></div>`);
-  }
-  return parts.join('');
-}
+// Armor deliberately isn't in here - it recolors the avatar-body outline directly instead of
+// floating as a badge, since "what you're wearing" reads better as a change to the figure
+// itself than as an accessory hovering next to it.
+const EQUIP_BADGE_POS = [
+  ['Regalia', 'top:-16px;left:50%;transform:translateX(-50%);'],
+  ['Weapon', 'bottom:8px;right:-18px;'],
+  ['Companion', 'top:40%;left:-24px;'],
+  ['Relic', 'top:40%;right:-24px;']
+];
 function equipItem(itemId){
   if(viewOnly) return;
   const it = AVATAR_ITEMS.find(a=>a.id===itemId);
