@@ -1663,15 +1663,9 @@ function render(){
   // Catches up any mystery box that should have been granted but wasn't - specifically, a
   // streak restored by cancelling a break used to skip box-granting entirely. Safe to run on
   // every render: a no-op once you're caught up, since it only ever grants what's still owed.
-  // lastBoxStreak used to never reset when a streak broke, so it could sit above your current
-  // (rebuilt) streak forever, permanently blocking box eligibility for the new run - if that's
-  // happened, the current run has definitely not been rewarded yet, so clamp it back down.
-  if(!viewOnly){
-    if(S.lastBoxStreak > (S.streak||0)) S.lastBoxStreak = 0;
-    if(Math.floor((S.streak||0)/7) > Math.floor((S.lastBoxStreak||0)/7)){
-      grantBoxIfEarned();
-      save();
-    }
+  if(!viewOnly && Math.floor((S.streak||0)/7) > Math.floor((S.lastBoxStreak||0)/7)){
+    grantBoxIfEarned();
+    save();
   }
   if(S.penaltyToday===undefined) S.penaltyToday = false;
   if(S.wandererMode===undefined) S.wandererMode = false;
@@ -1767,7 +1761,6 @@ function render(){
       }
       S.streak = 0;
       S.questOnlyStreak = 0;
-      S.lastBoxStreak = 0;
     }
 
     S.mysteryCycle = advanceCycle(S.mysteryCycle, MYSTERY_QUESTS.length, 'mystery');
@@ -2965,7 +2958,6 @@ function bumpStreak(){
     applyStreakPenalty();
     S.lastBreakRefundXp = S._lastPenaltyXp;
     S.lastBreakRefundStat = S._lastPenaltyStat;
-    S.lastBoxStreak = 0;
   }
   S.streak = (S.lastActive===y) ? S.streak+1 : 1;
   S.lastActive=today();
