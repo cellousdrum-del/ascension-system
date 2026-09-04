@@ -2148,13 +2148,7 @@ function render(){
             <span class="avatar-eye left"></span>
             <span class="avatar-eye right"></span>
           </div>
-          ${(()=>{
-            const armorId = S.equipped && S.equipped.Armor;
-            const armor = armorId ? AVATAR_ITEMS.find(a=>a.id===armorId) : null;
-            const ac = armor ? (RANK_COLORS[armor.rank]||RANK_COLORS.E) : null;
-            const border = ac ? `border:2px solid ${ac};` : '';
-            return `<div class="avatar-body" title="${armor?esc(armor.name):''}" style="${border}box-shadow:0 0 18px ${RANK_COLORS[rk.r]}, 0 0 ${10+Math.min(S.streak,60)}px ${RANK_COLORS[rk.r]}${ac?`, inset 0 0 12px ${ac}`:''}"></div>`;
-          })()}
+          <div class="avatar-body" style="box-shadow:0 0 18px ${RANK_COLORS[rk.r]}, 0 0 ${10+Math.min(S.streak,60)}px ${RANK_COLORS[rk.r]}"></div>
           ${EQUIP_BADGE_POS.map(([kind,posStyle])=>{
             const id = S.equipped && S.equipped[kind];
             const it = id ? AVATAR_ITEMS.find(a=>a.id===id) : null;
@@ -2188,7 +2182,7 @@ function render(){
           </div>`;
         }).join('')}
       </div>
-      <p class="note" style="margin-top:10px">Tap a Weapon, Armor, Relic, Companion, or Regalia to equip it on your Avatar above - tap it again to put it away.</p>` : `<p class="note">No items yet - maintain a 7-day streak to open your first mystery box.</p>`}
+      <p class="note" style="margin-top:10px">Tap a Weapon, Armor, Relic, Companion, or Regalia to equip it on your Avatar above - tap it again to put it away. Aura isn't equippable, it's tied to your rank.</p>` : `<p class="note">No items yet - maintain a 7-day streak to open your first mystery box.</p>`}
       <details class="guide" style="margin-top:12px">
         <summary>How Mystery Boxes Work</summary>
         <div class="guide-body">
@@ -2196,7 +2190,7 @@ function render(){
           <p><b>Rank odds:</b> the item inside is drawn from your current hunter rank's item pool 90% of the time. The other 10% it's bumped up to the pool one rank above (S-rank can never bump further).</p>
           <p><b>No duplicates until you've seen it all:</b> each box first tries to give you an item of the chosen rank you don't already own. Only once every item at that rank is unlocked can it start repeating.</p>
           <p><b>Breaking your streak</b> resets it to 0, so any progress toward your next box resets too - see "How XP Works" on the Home tab for the full streak-break penalty.</p>
-          <p><b>Equipping:</b> one Weapon, Armor, Relic, Companion, and Regalia can each be equipped at a time from whatever you've unlocked - equipped items show right on your Avatar above.</p>
+          <p><b>Equipping:</b> one Weapon, Armor, Relic, Companion, and Regalia can each be equipped at a time from whatever you've unlocked - equipped items show as small icons around your Avatar above. Aura can't be equipped this way - the silhouette's glow color is already your rank's aura.</p>
         </div>
       </details>
     </section>
@@ -3148,12 +3142,10 @@ function closeBoxReveal(){ document.getElementById('boxOverlay').classList.remov
 // Aura is deliberately not equippable here - it's earned by rank (the silhouette's glow color
 // already IS your current rank's aura), not something picked from the box drops.
 const EQUIP_KINDS = ['Weapon','Armor','Relic','Companion','Regalia'];
-// Armor deliberately isn't in here - it recolors the avatar-body outline directly instead of
-// floating as a badge, since "what you're wearing" reads better as a change to the figure
-// itself than as an accessory hovering next to it.
 const EQUIP_BADGE_POS = [
   ['Regalia', 'top:-16px;left:50%;transform:translateX(-50%);'],
   ['Weapon', 'bottom:8px;right:-18px;'],
+  ['Armor', 'bottom:8px;left:-18px;'],
   ['Companion', 'top:40%;left:-24px;'],
   ['Relic', 'top:40%;right:-24px;']
 ];
