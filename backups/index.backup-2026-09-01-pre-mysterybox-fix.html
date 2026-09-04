@@ -1660,13 +1660,6 @@ function render(){
   if(S.questOnlyStreak===undefined) S.questOnlyStreak = 0;
   if(!S.avatarItems) S.avatarItems = [];
   if(S.lastBoxStreak===undefined) S.lastBoxStreak = 0;
-  // Catches up any mystery box that should have been granted but wasn't - specifically, a
-  // streak restored by cancelling a break used to skip box-granting entirely. Safe to run on
-  // every render: a no-op once you're caught up, since it only ever grants what's still owed.
-  if(!viewOnly && Math.floor((S.streak||0)/7) > Math.floor((S.lastBoxStreak||0)/7)){
-    grantBoxIfEarned();
-    save();
-  }
   if(S.penaltyToday===undefined) S.penaltyToday = false;
   if(S.wandererMode===undefined) S.wandererMode = false;
   if(!S.customRoutines) S.customRoutines = [];
@@ -2820,7 +2813,6 @@ function logPastWorkout(){
       S.streak = (S.lastActive==null) ? 1 : S.streak+1;
       S.lastActive = d;
       streakUpdated = true;
-      grantBoxIfEarned();
     }
   }
 
@@ -2828,7 +2820,6 @@ function logPastWorkout(){
   save();
   const afterLvl = levelFromXp(S.xp).lvl;
   render();
-  revealNewBox(afterLvl>beforeLvl);
   if(afterLvl>beforeLvl){
     showLevelUp(afterLvl, gains);
   } else if(!addedLabels.length){
@@ -2961,28 +2952,14 @@ function bumpStreak(){
   }
   S.streak = (S.lastActive===y) ? S.streak+1 : 1;
   S.lastActive=today();
-  grantBoxIfEarned();
-}
-// Shared by bumpStreak() (streak always +1 here, so at most one milestone) and
-// tryCancelStreakBreak() (streak can jump by more than 1 when a cancelled break restores
-// several days at once) - counts every 7-multiple crossed between the last-rewarded streak
-// and the current one, not just whether the current value happens to be divisible by 7, so a
-// jump from e.g. 5 to 15 still grants the boxes for both 7 and 14. Only the highest-milestone
-// item shows in the reveal popup; any earlier ones from the same jump are added silently
-// (still visible in the Avatar tab) rather than queuing a multi-box reveal for a rare edge case.
-function grantBoxIfEarned(){
-  const already = Math.floor((S.lastBoxStreak||0)/7);
-  const earned = Math.floor((S.streak||0)/7);
-  if(earned<=already) return;
-  const playerRank = rankFor(levelFromXp(S.xp).lvl).r;
-  if(!S.avatarItems) S.avatarItems=[];
-  let item = null;
-  for(let milestone=(already+1)*7; milestone<=earned*7; milestone+=7){
-    item = pickBoxItem(milestone, S.day, playerRank);
+  if(S.streak>0 && S.streak%7===0 && S.streak>(S.lastBoxStreak||0)){
+    const playerRank = rankFor(levelFromXp(S.xp).lvl).r;
+    const item = pickBoxItem(S.streak, S.day, playerRank);
+    if(!S.avatarItems) S.avatarItems=[];
     S.avatarItems.push(item.id);
+    S.lastBoxStreak = S.streak;
+    S._newBoxItem = item;
   }
-  S.lastBoxStreak = earned*7;
-  S._newBoxItem = item;
 }
 function applyStreakPenalty(){
   const beforeLvl = levelFromXp(S.xp).lvl;
@@ -3037,7 +3014,6 @@ function tryCancelStreakBreak(d){
   if(refundStat) S.stats[refundStat] = (S.stats[refundStat]||0) + 1;
   S.streak = (S.lastBreakStreakBefore||0) + gapDays + (S.streak||0);
   if(!S.lastActive || S.lastActive < S.lastBreakGapTo) S.lastActive = S.lastBreakGapTo;
-  grantBoxIfEarned();
   // Weakened (halved XP) and the doubled grip Penalty Quest are the SAME break's fallout for
   // today - cancelling the break has to lift those too, or "cancelled" wouldn't be true.
   S.penaltyToday = false;
