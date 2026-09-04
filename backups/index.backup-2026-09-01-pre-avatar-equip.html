@@ -1342,11 +1342,6 @@ function buildFriendsSectionsHtml(){
 function switchTab(tab){
   currentTab = tab;
   if(tab==='social') hasUnreadChat = false;
-  if(tab==='avatar' && S && !S.equipFeatureSeen && !viewOnly){
-    S.equipFeatureSeen = true;
-    save();
-    toast('New: Equip Your Gear', "Tap any Weapon, Armor, Relic, Companion, or Regalia you own to equip it - it'll show right on your Avatar.");
-  }
   render();
 }
 function renderTabNav(){
@@ -1664,8 +1659,6 @@ function render(){
   if(S.mobilityClaimed===undefined) S.mobilityClaimed = false;
   if(S.questOnlyStreak===undefined) S.questOnlyStreak = 0;
   if(!S.avatarItems) S.avatarItems = [];
-  if(!S.equipped) S.equipped = {};
-  if(S.equipFeatureSeen===undefined) S.equipFeatureSeen = false;
   if(S.lastBoxStreak===undefined) S.lastBoxStreak = 0;
   // Catches up any mystery box that should have been granted but wasn't - specifically, a
   // streak restored by cancelling a break used to skip box-granting entirely. Safe to run on
@@ -2149,13 +2142,6 @@ function render(){
             <span class="avatar-eye right"></span>
           </div>
           <div class="avatar-body" style="box-shadow:0 0 18px ${RANK_COLORS[rk.r]}, 0 0 ${10+Math.min(S.streak,60)}px ${RANK_COLORS[rk.r]}"></div>
-          ${EQUIP_BADGE_POS.map(([kind,posStyle])=>{
-            const id = S.equipped && S.equipped[kind];
-            const it = id ? AVATAR_ITEMS.find(a=>a.id===id) : null;
-            if(!it) return '';
-            const rc = RANK_COLORS[it.rank] || RANK_COLORS.E;
-            return `<span title="${esc(it.name)}" style="position:absolute;${posStyle}font-size:17px;z-index:3;filter:drop-shadow(0 0 5px ${rc})">${it.icon}</span>`;
-          }).join('')}
         </div>
       </div>
       <div style="text-align:center;font-family:'Orbitron';font-size:13px;letter-spacing:.1em;color:${RANK_COLORS[rk.r]}">${esc(title.t.toUpperCase())}</div>
@@ -2171,18 +2157,15 @@ function render(){
           const it = AVATAR_ITEMS.find(a=>a.id===id);
           if(!it) return '';
           const rc = RANK_COLORS[it.rank] || RANK_COLORS.E;
-          const equippable = EQUIP_KINDS.includes(it.kind);
-          const isEquipped = equippable && S.equipped && S.equipped[it.kind]===id;
-          return `<div class="stat" style="justify-content:flex-start;gap:10px;border-left:2px solid ${rc};${equippable&&!viewOnly?'cursor:pointer;':''}${isEquipped?`background:rgba(${RANK_RGB[it.rank]||RANK_RGB.E},0.1);`:''}" ${equippable&&!viewOnly?`onclick="equipItem('${id}')"`:''}>
+          return `<div class="stat" style="justify-content:flex-start;gap:10px;border-left:2px solid ${rc}">
             <span style="font-size:20px;filter:drop-shadow(0 0 6px ${rc})">${it.icon}</span>
             <span style="display:flex;flex-direction:column">
-              <span style="color:${rc};font-size:12px;letter-spacing:.02em;text-shadow:0 0 8px ${rc}66">${esc(it.name)}${isEquipped?' <small style="color:var(--green)">● EQUIPPED</small>':''}</span>
-              <span class="k" style="font-size:10px">${esc(it.kind)} &middot; <span style="color:${rc}">${it.rank}-Rank</span>${it.kind==='Aura'?' &middot; earned by rank':''}</span>
+              <span style="color:${rc};font-size:12px;letter-spacing:.02em;text-shadow:0 0 8px ${rc}66">${esc(it.name)}</span>
+              <span class="k" style="font-size:10px">${esc(it.kind)} &middot; <span style="color:${rc}">${it.rank}-Rank</span></span>
             </span>
           </div>`;
         }).join('')}
-      </div>
-      <p class="note" style="margin-top:10px">Tap a Weapon, Armor, Relic, Companion, or Regalia to equip it on your Avatar above - tap it again to put it away. Aura isn't equippable, it's tied to your rank.</p>` : `<p class="note">No items yet - maintain a 7-day streak to open your first mystery box.</p>`}
+      </div>` : `<p class="note">No items yet - maintain a 7-day streak to open your first mystery box.</p>`}
       <details class="guide" style="margin-top:12px">
         <summary>How Mystery Boxes Work</summary>
         <div class="guide-body">
@@ -2190,7 +2173,6 @@ function render(){
           <p><b>Rank odds:</b> the item inside is drawn from your current hunter rank's item pool 90% of the time. The other 10% it's bumped up to the pool one rank above (S-rank can never bump further).</p>
           <p><b>No duplicates until you've seen it all:</b> each box first tries to give you an item of the chosen rank you don't already own. Only once every item at that rank is unlocked can it start repeating.</p>
           <p><b>Breaking your streak</b> resets it to 0, so any progress toward your next box resets too - see "How XP Works" on the Home tab for the full streak-break penalty.</p>
-          <p><b>Equipping:</b> one Weapon, Armor, Relic, Companion, and Regalia can each be equipped at a time from whatever you've unlocked - equipped items show as small icons around your Avatar above. Aura can't be equipped this way - the silhouette's glow color is already your rank's aura.</p>
         </div>
       </details>
     </section>
@@ -3139,32 +3121,6 @@ function revealBoxItem(){
   document.getElementById('box-step2').style.display='';
 }
 function closeBoxReveal(){ document.getElementById('boxOverlay').classList.remove('show'); currentBoxItem=null; render(); }
-// Aura is deliberately not equippable here - it's earned by rank (the silhouette's glow color
-// already IS your current rank's aura), not something picked from the box drops.
-const EQUIP_KINDS = ['Weapon','Armor','Relic','Companion','Regalia'];
-const EQUIP_BADGE_POS = [
-  ['Regalia', 'top:-16px;left:50%;transform:translateX(-50%);'],
-  ['Weapon', 'bottom:8px;right:-18px;'],
-  ['Armor', 'bottom:8px;left:-18px;'],
-  ['Companion', 'top:40%;left:-24px;'],
-  ['Relic', 'top:40%;right:-24px;']
-];
-function equipItem(itemId){
-  if(viewOnly) return;
-  const it = AVATAR_ITEMS.find(a=>a.id===itemId);
-  if(!it || !EQUIP_KINDS.includes(it.kind)) return;
-  if(!(S.avatarItems||[]).includes(itemId)) return;
-  if(!S.equipped) S.equipped = {};
-  if(S.equipped[it.kind]===itemId){
-    S.equipped[it.kind] = null;
-    save(); render();
-    toast('Unequipped', it.name+' put away.');
-  } else {
-    S.equipped[it.kind] = itemId;
-    save(); render();
-    toast('Equipped', it.name+' now shows on your Avatar.');
-  }
-}
 function closeTrialAlert(){
   document.getElementById('trialOverlay').classList.remove('show');
   if(pendingGateWarning){ pendingGateWarning=false; document.getElementById('gateWarningOverlay').classList.add('show'); }
