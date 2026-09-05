@@ -462,13 +462,12 @@ const store = (()=>{
 })();
 const LEGACY_KEY='ascension_v1';
 
-/* ---------- Gate data (your real split), one tier per rank (E/D/C/B/A/S) - every rank-up
-   changes the actual exercises, not just the badge color ---------- */
+/* ---------- Gate data (your real split), tiered by rank: T1 = E/D, T2 = C/B, T3 = A/S ---------- */
 const GATES = {
   push:{ name:'PUSH', sub:'Park - Calisthenics', icon:'\ud83d\udd34', color:'red',
     gain:'end',
     tiers:[
-      [ // E
+      [
         {n:'Parallel bar dips', t:'4x8-12', d:'Chest and triceps. Controlled tempo.'},
         {n:'Pull-ups', t:'4x max', d:'You are at the park - go for max clean reps.'},
         {n:'Hanging leg raises', t:'3x10-12', d:'Core.'},
@@ -476,15 +475,7 @@ const GATES = {
         {n:'Push-ups (variations)', t:'4x10-15', d:'Alternate standard, diamond and wide grip.'},
         {n:'Pseudo-planche push-ups', t:'3x8', d:'Hands by hips, torso leaning. Shoulders.'}
       ],
-      [ // D
-        {n:'Parallel bar dips (controlled)', t:'4x10-12', d:'Chest and triceps. 2s pause at the bottom.'},
-        {n:'Pull-ups (strict form)', t:'4x max', d:'No kipping, full dead hang each rep.'},
-        {n:'Hanging leg raises (paused)', t:'3x12-15', d:'Brief pause at the top. Core.'},
-        {n:'Decline push-ups', t:'4x10-12', d:'Feet on a low bench or step. Shoulders.'},
-        {n:'Push-ups (variations)', t:'4x12-15', d:'Alternate standard, diamond and wide grip.'},
-        {n:'Pseudo-planche push-ups', t:'3x9', d:'Hands by hips, torso leaning a bit further. Shoulders.'}
-      ],
-      [ // C
+      [
         {n:'Parallel bar dips (slow negative)', t:'4x10-15', d:'Chest and triceps. 3s down on every rep.'},
         {n:'Archer pull-ups', t:'3x5-8 /side', d:'Shift weight fully to one arm each rep. Back.'},
         {n:'Hanging leg raises (slow, paused)', t:'4x12-15', d:'Pause at the top. Core.'},
@@ -492,209 +483,109 @@ const GATES = {
         {n:'Push-ups (variations)', t:'4x15-20', d:'Alternate standard, diamond and wide grip.'},
         {n:'Pseudo-planche push-ups (deep lean)', t:'3x10', d:'2s pause at the bottom. Shoulders.'}
       ],
-      [ // B
-        {n:'Parallel bar dips (slow negative)', t:'4x12-15', d:'Chest and triceps. Add weight if it feels easy.'},
-        {n:'Archer pull-ups', t:'4x6-8 /side', d:'Full range, minimal assistance. Back.'},
-        {n:'Hanging leg raises (toes-to-bar attempt)', t:'4x14-16', d:'Reach as high as you can. Core.'},
-        {n:'Pike push-ups (feet elevated higher)', t:'4x10-14', d:'Steeper angle. Shoulders.'},
-        {n:'Push-ups (variations)', t:'5x15-18', d:'Alternate standard, diamond and wide grip.'},
-        {n:'Pseudo-planche push-ups (deeper lean)', t:'4x10', d:'3s pause at the bottom. Shoulders.'}
-      ],
-      [ // A
+      [
         {n:'L-sit parallel bar dips', t:'4x8-12', d:'Legs held straight out through the whole set. Chest, triceps, core.'},
         {n:'Muscle-ups', t:'3x3-6', d:'Pull-up into a dip transition. The full skill.'},
         {n:'Hanging leg raises (slow, full control)', t:'4x15-18', d:'Pause at the top. Core.'},
         {n:'Wall handstand push-ups', t:'3x5-8', d:'Feet against a wall or tree, as vertical as you can control. Shoulders.'},
         {n:'Push-ups (variations)', t:'5x15-20', d:'Alternate standard, diamond and wide grip.'},
         {n:'Pseudo-planche push-ups (max lean)', t:'4x10', d:'Slow tempo, hold the lean. Shoulders.'}
-      ],
-      [ // S
-        {n:'Weighted L-sit parallel bar dips', t:'5x8-12', d:'Add weight in the backpack. Chest, triceps, core.'},
-        {n:'Weighted or max-rep muscle-ups', t:'4x4-8', d:'Add weight if bodyweight reps are no longer a struggle.'},
-        {n:'Dragon flag', t:'4x8-12', d:'Full-body core control, hips off the ground.'},
-        {n:'Wall handstand push-ups (deficit)', t:'4x6-10', d:'Hands elevated on blocks for extra range. Shoulders.'},
-        {n:'Push-ups (variations, weighted)', t:'5x18-22', d:'Add weight in the backpack.'},
-        {n:'Pseudo-planche push-ups (full lean, weighted)', t:'4x12', d:'Hold the deepest lean you can control.'}
       ]
     ]},
   pull:{ name:'PULL', sub:'Dumbbells - Home', wandererSub:'Park - Calisthenics', icon:'\ud83d\udd35', color:'cyan',
     gain:'agi',
     tiers:[
-      [ // E
+      [
         {n:'One-arm dumbbell row', t:'4x8-12', d:'Back - go heavy (up to 20 kg).'},
         {n:'Dumbbell biceps curl', t:'3x10-12', d:'Control the descent 2-3 s.'},
         {n:'Hammer curl', t:'3x10-12', d:'Brachialis and forearm.'},
         {n:'Rear-delt raises', t:'3x12-15', d:'Light weight, clean form.'},
         {n:'Shrugs', t:'3x12-15', d:'Traps.'}
       ],
-      [ // D
-        {n:'One-arm dumbbell row', t:'4x10-12', d:'Back - heavier than last tier.'},
-        {n:'Dumbbell biceps curl', t:'4x10-12', d:'Slower negative, 2-3 s down.'},
-        {n:'Hammer curl', t:'3x12-15', d:'Brachialis and forearm.'},
-        {n:'Rear-delt raises (slower tempo)', t:'4x12-15', d:'Light weight, 1s pause at the top.'},
-        {n:'Shrugs', t:'4x12-15', d:'Traps.'}
-      ],
-      [ // C
+      [
         {n:'One-arm dumbbell row', t:'4x10-15', d:'Back - heavier than last tier.'},
         {n:'Dumbbell biceps curl', t:'4x10-12', d:'Slow negative, 3-4 s down.'},
         {n:'Hammer curl', t:'4x12-15', d:'Brachialis and forearm.'},
         {n:'Single-arm rear-delt raises', t:'3x12-15 /side', d:'Strict form, one side at a time.'},
         {n:'Weighted shrugs', t:'4x12-15', d:'Pause 1s at the top.'}
       ],
-      [ // B
-        {n:'One-arm dumbbell row', t:'4x12-15', d:'Back - heavier, slower tempo.'},
-        {n:'Curl to press', t:'3x10-12', d:'Curl into a strict press. Combo movement.'},
-        {n:'Cross-body hammer curl', t:'3x12-15', d:'Brachialis and forearm.'},
-        {n:'Single-arm rear-delt raises (paused)', t:'4x12-15 /side', d:'1s pause at the top, one side at a time.'},
-        {n:'Weighted shrugs', t:'4x15', d:'Heavier, longer hold at the top.'}
-      ],
-      [ // A
+      [
         {n:'One-arm dumbbell row', t:'5x10-15', d:'Max weight, slow controlled tempo.'},
         {n:'Curl to press', t:'4x10-12', d:'Curl into a strict press. Combo movement.'},
         {n:'Cross-body hammer curl', t:'4x12-15', d:'Brachialis and forearm.'},
         {n:'Single-arm rear-delt raise + row combo', t:'4x10-12 /side', d:'Raise then row without resetting.'},
         {n:'Weighted shrugs', t:'4x12-15', d:'Heavy, 2s hold at the top.'}
-      ],
-      [ // S
-        {n:'One-arm dumbbell row (paused)', t:'5x12-15', d:'Heaviest weight, 1s pause at the top.'},
-        {n:'Curl to press', t:'5x10-12', d:'Heaviest weight, strict form.'},
-        {n:'Cross-body hammer curl (slow negative)', t:'5x12-15', d:'3-4s down on every rep.'},
-        {n:'Single-arm rear-delt raise + row combo', t:'5x10-12 /side', d:'Heavier, slower tempo throughout.'},
-        {n:'Weighted shrugs', t:'5x15', d:'Heaviest weight, 3s hold at the top.'}
       ]
     ],
     wandererTiers:[
-      [ // E
+      [
         {n:'Pull-ups', t:'4x5-8', d:'Back and biceps. Negatives if you cannot yet do a full rep.'},
         {n:'Inverted rows', t:'4x8-12', d:'Low bar or two sturdy chairs. Adjust body angle for difficulty.'},
         {n:'Chin-ups', t:'3x5-8', d:'Underhand grip. Biceps and back.'},
         {n:'Towel or pole rows', t:'3x10-12', d:'Rear delts and upper back.'},
         {n:'Dead hang', t:'3x20-30s', d:'Grip and shoulder health.'}
       ],
-      [ // D
-        {n:'Pull-ups', t:'4x6-10', d:'Back and biceps. Full dead hang each rep.'},
-        {n:'Inverted rows (feet elevated slightly)', t:'4x10-12', d:'A step or low ledge under the heels.'},
-        {n:'Chin-ups', t:'4x6-8', d:'Underhand grip. Biceps and back.'},
-        {n:'Towel or pole rows', t:'4x10-12', d:'Rear delts and upper back.'},
-        {n:'Dead hang', t:'3x25-35s', d:'Grip and shoulder health.'}
-      ],
-      [ // C
+      [
         {n:'Pull-ups', t:'4x8-12', d:'Strict form, full range.'},
         {n:'Archer pull-ups (assisted)', t:'3x4-6 /side', d:'Shift weight to one arm each rep.'},
         {n:'Inverted rows (feet elevated)', t:'4x10-15', d:'Feet up on a bench or ledge for a harder angle.'},
         {n:'Chin-ups (slow negative)', t:'4x6-10', d:'3-4s controlled descent.'},
         {n:'Towel or rope rows', t:'4x12-15', d:'Rear delts and upper back.'}
       ],
-      [ // B
-        {n:'Pull-ups (paused at the top)', t:'4x10-14', d:'1s pause at the top of every rep.'},
-        {n:'Archer pull-ups (assisted)', t:'4x5-7 /side', d:'Shift weight to one arm each rep.'},
-        {n:'Inverted rows (feet elevated, slow)', t:'5x12-15', d:'3s controlled tempo each way.'},
-        {n:'Chin-ups (slow negative)', t:'4x8-10', d:'4-5s controlled descent.'},
-        {n:'Towel or rope rows', t:'5x12-15', d:'Rear delts and upper back.'}
-      ],
-      [ // A
+      [
         {n:'Weighted or max-rep pull-ups', t:'5x8-12', d:'Add weight in the backpack if bodyweight feels easy.'},
         {n:'Archer pull-ups', t:'4x6-8 /side', d:'Full range, minimal assistance.'},
         {n:'One-arm-assisted pull-up', t:'4x4-6 /side', d:'Support wrist with the other hand.'},
         {n:'Typewriter pull-ups', t:'3x6-8', d:'Pull up, shift side to side at the top.'},
         {n:'L-sit pull-ups', t:'3x5-8', d:'Legs held straight out during the pull.'}
-      ],
-      [ // S
-        {n:'Weighted pull-ups', t:'5x8-12', d:'Max weight in the backpack you can control.'},
-        {n:'Archer pull-ups (weighted)', t:'5x6-8 /side', d:'Full range, added weight if possible.'},
-        {n:'One-arm-assisted pull-up', t:'5x5-7 /side', d:'Minimal support from the free hand.'},
-        {n:'Typewriter pull-ups (slow)', t:'4x8-10', d:'Slow controlled shift side to side at the top.'},
-        {n:'L-sit pull-ups (weighted)', t:'4x6-8', d:'Legs straight out, added weight if possible.'}
       ]
     ]},
   legs:{ name:'LEGS', sub:'Dumbbells - Home', wandererSub:'Park - Calisthenics', icon:'\ud83d\udfe3', color:'violet',
     gain:'str',
     tiers:[
-      [ // E
+      [
         {n:'Goblet squat', t:'4x10-12', d:'One dumbbell at the chest. Deep and controlled.'},
         {n:'Bulgarian split squat', t:'3x8-10 /leg', d:'Dumbbells in hands. Gold with light weight.'},
         {n:'Romanian deadlift', t:'4x10-12', d:'Hips back, hamstrings and glutes.'},
         {n:'Walking lunges', t:'3x10 /leg', d:'With dumbbells.'},
         {n:'Calf raises', t:'4x15-20', d:'One dumbbell, full range.'}
       ],
-      [ // D
-        {n:'Goblet squat', t:'4x11-14', d:'Heavier, controlled tempo.'},
-        {n:'Bulgarian split squat', t:'4x9-11 /leg', d:'Dumbbells in hands, heavier than last tier.'},
-        {n:'Romanian deadlift', t:'4x11-14', d:'Heavier, hips back, hamstrings and glutes.'},
-        {n:'Walking lunges', t:'4x10 /leg', d:'With dumbbells, heavier.'},
-        {n:'Calf raises', t:'4x18-22', d:'One dumbbell, full range.'}
-      ],
-      [ // C
+      [
         {n:'Goblet squat', t:'4x12-15', d:'Heavier, pause 1-2s at the bottom.'},
         {n:'Bulgarian split squat (deficit)', t:'4x8-10 /leg', d:'Rear foot elevated higher. Dumbbells in hands.'},
         {n:'Romanian deadlift', t:'4x12-15', d:'Heavier, slow controlled tempo.'},
         {n:'Weighted walking lunges', t:'4x10 /leg', d:'Heavier dumbbells, longer stride.'},
         {n:'Single-leg calf raises', t:'4x15-20 /leg', d:'One dumbbell, full range.'}
       ],
-      [ // B
-        {n:'Goblet squat (paused)', t:'5x12-15', d:'Heavier, 2s pause at the bottom.'},
-        {n:'Bulgarian split squat (deficit)', t:'4x9-11 /leg', d:'Heavier, rear foot elevated.'},
-        {n:'Romanian deadlift (slow)', t:'4x13-16', d:'Heavier, 3s controlled descent.'},
-        {n:'Weighted walking lunges', t:'4x11 /leg', d:'Heavier dumbbells, longer stride.'},
-        {n:'Single-leg calf raises', t:'4x17-20 /leg', d:'One dumbbell, full range.'}
-      ],
-      [ // A
+      [
         {n:'Goblet squat', t:'5x12-15', d:'Max weight, 3s pause at the bottom.'},
         {n:'Bulgarian split squat (deficit)', t:'4x10-12 /leg', d:'Heavy, rear foot elevated.'},
         {n:'Single-leg Romanian deadlift', t:'4x10-12 /leg', d:'Balance and hamstring/glute control.'},
         {n:'Weighted walking lunges', t:'4x12 /leg', d:'Heavy dumbbells.'},
         {n:'Single-leg calf raises (weighted)', t:'4x15-20 /leg', d:'Added dumbbell weight.'}
-      ],
-      [ // S
-        {n:'Goblet squat (heaviest, paused)', t:'5x14-16', d:'Max weight, 3-4s pause at the bottom.'},
-        {n:'Bulgarian split squat (deficit)', t:'5x10-12 /leg', d:'Heaviest weight, rear foot elevated.'},
-        {n:'Single-leg Romanian deadlift', t:'5x10-12 /leg', d:'Heaviest weight, strict balance control.'},
-        {n:'Weighted walking lunges', t:'5x12 /leg', d:'Heaviest dumbbells, long stride.'},
-        {n:'Single-leg calf raises (weighted, slow)', t:'5x18-20 /leg', d:'Added weight, 2s pause at the top.'}
       ]
     ],
     wandererTiers:[
-      [ // E
+      [
         {n:'Bodyweight squats', t:'4x15-20', d:'Full depth, controlled tempo.'},
         {n:'Split squat (rear foot elevated)', t:'3x10-12 /leg', d:'Bench or ledge behind you. Bodyweight Bulgarian split squat.'},
         {n:'Single-leg Romanian deadlift', t:'4x10-12 /leg', d:'Bodyweight. Balance and hamstring control.'},
         {n:'Walking lunges', t:'3x12 /leg', d:'Bodyweight, full stride.'},
         {n:'Calf raises (step edge)', t:'4x20-25', d:'Full range, pause at the top.'}
       ],
-      [ // D
-        {n:'Bodyweight squats (paused)', t:'4x18-22', d:'Full depth, 1s pause at the bottom.'},
-        {n:'Split squat (rear foot elevated)', t:'4x11-13 /leg', d:'Bench or ledge behind you, slower tempo.'},
-        {n:'Single-leg Romanian deadlift', t:'4x11-13 /leg', d:'Bodyweight, slower and more controlled.'},
-        {n:'Walking lunges', t:'4x13 /leg', d:'Bodyweight, longer stride.'},
-        {n:'Calf raises (step edge, slower)', t:'4x22-26', d:'Full range, 2s pause at the top.'}
-      ],
-      [ // C
+      [
         {n:'Jump squats', t:'4x12-15', d:'Explosive, soft landing.'},
         {n:'Bulgarian split squat (deficit)', t:'4x10-12 /leg', d:'Front foot elevated too, for extra range.'},
         {n:'Single-leg Romanian deadlift (slow)', t:'4x12-15 /leg', d:'3s down, controlled.'},
         {n:'Weighted walking lunges', t:'4x12 /leg', d:'Add weight in the backpack.'},
         {n:'Single-leg calf raises', t:'4x15-20 /leg', d:'Step edge, full range.'}
       ],
-      [ // B
-        {n:'Jump squats (higher volume)', t:'4x14-16', d:'Explosive, soft landing.'},
-        {n:'Bulgarian split squat (deficit)', t:'4x11-13 /leg', d:'Front and rear foot both elevated.'},
-        {n:'Single-leg Romanian deadlift (slow, paused)', t:'4x13-15 /leg', d:'3s down, 1s pause at the bottom.'},
-        {n:'Weighted walking lunges', t:'4x13 /leg', d:'Heavier backpack.'},
-        {n:'Single-leg calf raises (slower)', t:'4x17-20 /leg', d:'Step edge, 2s pause at the top.'}
-      ],
-      [ // A
+      [
         {n:'Pistol squat progression', t:'4x5-8 /leg', d:'Assisted (hold a post) or full pistol if ready.'},
         {n:'Jump lunges', t:'4x10 /leg', d:'Explosive, alternate legs each rep.'},
         {n:'Shrimp squats', t:'3x5-8 /leg', d:'Advanced single-leg squat, back knee stays low.'},
         {n:'Weighted walking lunges', t:'4x14 /leg', d:'Heavy backpack, long stride.'},
         {n:'Single-leg calf raises (weighted)', t:'4x20 /leg', d:'Added backpack weight.'}
-      ],
-      [ // S
-        {n:'Pistol squats', t:'4x6-9 /leg', d:'Full unassisted range where possible.'},
-        {n:'Jump lunges (weighted)', t:'5x10 /leg', d:'Explosive, weight in the backpack.'},
-        {n:'Shrimp squats (deeper, slower)', t:'4x6-9 /leg', d:'Advanced single-leg squat, slow controlled tempo.'},
-        {n:'Weighted walking lunges', t:'5x14 /leg', d:'Heaviest backpack, long stride.'},
-        {n:'Single-leg calf raises (weighted, slow)', t:'5x20 /leg', d:'Added backpack weight, 2s pause at the top.'}
       ]
     ]}
 };
@@ -948,26 +839,13 @@ function gateInfo(gateId){
   return GATES[gateId];
 }
 
-/* ---------- Rank-tiered gate content: one tier per rank (E/D/C/B/A/S), each with its own
-   exercises - so every single rank-up changes the actual training, not just the badge/color.
-   Occasional next-tier trial previews still apply at every boundary except the top (S). ---------- */
-const GATE_TIER_BOUNDARIES = [15,30,50,70,90];
-function gateTierIndex(level){
-  if(level<15) return 0;
-  if(level<30) return 1;
-  if(level<50) return 2;
-  if(level<70) return 3;
-  if(level<90) return 4;
-  return 5;
-}
-// Flexibility keeps its own coarser 3-tier scale (unaffected by the gate-tier expansion above -
-// its stretch routines aren't what this was about, and it has its own tier arrays sized for 3).
-function flexTierIndex(level){ return level<30?0:(level<70?1:2); }
+/* ---------- Rank-tiered gate content: T1 = rank E/D, T2 = C/B, T3 = A/S, with occasional next-tier trial previews ---------- */
+function gateTierIndex(level){ return level<30?0:(level<70?1:2); }
 function isTrialToday(dateStr, gateId, level){
   if(gateId==='rest') return false;
   const tierIdx = gateTierIndex(level);
-  if(tierIdx>=5) return false;
-  const boundary = GATE_TIER_BOUNDARIES[tierIdx];
+  if(tierIdx>=2) return false;
+  const boundary = tierIdx===0 ? 30 : 70;
   if(boundary - level > 5) return false;
   let h=0;
   const key = dateStr+gateId;
@@ -1823,7 +1701,7 @@ function render(){
     S.mysteryCycle = makeCycle(MYSTERY_QUESTS.length, 'mystery');
   }
   { // Flexibility cycle is per-tier - a fresh shuffle starts the first time you reach a tier.
-    const flexTierNow = flexTierIndex(levelFromXp(S.xp).lvl);
+    const flexTierNow = gateTierIndex(levelFromXp(S.xp).lvl);
     if(!S.flexCycle || S.flexCycle.tier!==flexTierNow || !Array.isArray(S.flexCycle.order) || S.flexCycle.order.length!==FLEXIBILITY_TIERS[flexTierNow].length){
       S.flexCycle = makeCycle(FLEXIBILITY_TIERS[flexTierNow].length, 'flex_'+flexTierNow, {tier:flexTierNow});
     }
@@ -1902,7 +1780,7 @@ function render(){
     }
 
     S.mysteryCycle = advanceCycle(S.mysteryCycle, MYSTERY_QUESTS.length, 'mystery');
-    const flexTierForAdvance = flexTierIndex(levelFromXp(S.xp).lvl);
+    const flexTierForAdvance = gateTierIndex(levelFromXp(S.xp).lvl);
     if(S.flexCycle && S.flexCycle.tier===flexTierForAdvance){
       S.flexCycle = advanceCycle(S.flexCycle, FLEXIBILITY_TIERS[flexTierForAdvance].length, 'flex_'+flexTierForAdvance);
     }
@@ -2028,7 +1906,7 @@ function render(){
         ${statBox('Endurance',S.stats.end,'end')}
         ${statBox('Agility',S.stats.agi,'agi')}
       </div>
-      ${S.penaltyToday?`<div class="penalty" style="margin-top:10px">⚠ WEAKENED - streak broken. Half XP and doubled grip reps until tomorrow. <span style="text-decoration:underline;cursor:pointer" onclick="clearWeakenedManually()">Forgot a day and already backfilled it? Clear it</span></div>`:''}
+      ${S.penaltyToday?`<div class="penalty" style="margin-top:10px">⚠ WEAKENED - streak broken. Half XP and doubled grip reps until tomorrow. <span style="text-decoration:underline;cursor:pointer" onclick="clearWeakenedManually()">Already made up for it? Clear it</span></div>`:''}
     </section>
 
     <section class="win">
@@ -3220,15 +3098,13 @@ function tryCancelStreakBreak(d){
   S.lastBreakRefundStat = null;
   return {refundXp, refundStat, gapDays, wasWeakened};
 }
-// Manual escape hatch, narrowly scoped: only for a break caused by forgetting to log a
-// training day where the gap has since been backfilled (e.g. the pending gap had already been
-// consumed by an older version of the cancellation logic before it correctly cleared Weakened).
-// Explicitly NOT for "I did extra training today to make up for it" - only backfilling the
-// specific missed day undoes a break, so the confirm() spells this out plainly.
+// Manual escape hatch for the one-time case where cancelling a break didn't clear Weakened
+// because the pending gap had already been consumed by an older version of that logic - not
+// a way to skip a penalty actually earned today, hence the confirm() making that explicit.
 function clearWeakenedManually(){
   if(viewOnly) return;
   if(!S.penaltyToday) return;
-  if(!confirm("Only use this if your streak broke because you forgot to log a training day AND you've already backfilled that exact day via Progress > Log a past workout. This is NOT for \"I trained extra today to make up for it\" - extra training today doesn't undo a break, only backfilling the specific missed day does. If that's not your situation, cancel here - the penalty is intentional and lifts on its own tomorrow.\n\nClear the Weakened penalty now?")) return;
+  if(!confirm("Clear the Weakened penalty for today? Only do this if you've already made up for whatever caused it (e.g. right after cancelling a streak break) - not to skip a penalty you actually earned today.")) return;
   S.penaltyToday = false;
   save(); render();
   toast('Weakened cleared', 'Back to normal XP and grip reps for the rest of today.');
