@@ -1489,11 +1489,10 @@ async function loadFriendsData(){
         const snap = await window.fb.getDoc(window.fb.doc(window.fb.db,'users',f.uid));
         if(snap.exists()){
           const u = snap.data();
-          const lvl = levelFromXp(u.xp||0).lvl;
-          return Object.assign({}, f, { trainedDays: Object.keys(u.history||{}).length, streak: u.streak||0, level: lvl, rank: rankFor(lvl).r });
+          return Object.assign({}, f, { trainedDays: Object.keys(u.history||{}).length, streak: u.streak||0 });
         }
       }catch(e){}
-      return Object.assign({}, f, { trainedDays: 0, streak: 0, level: 1, rank: 'E' });
+      return Object.assign({}, f, { trainedDays: 0, streak: 0 });
     }));
     stats.sort((a,b)=>a.username.localeCompare(b.username));
     friendsList = stats;
@@ -1524,23 +1523,17 @@ function buildFriendsSectionsHtml(){
   html += `
     <section class="win">
       <div class="eyebrow">Friends</div>
-      ${friendsList.length ? friendsList.map(f=>{
-        const rc = RANK_COLORS[f.rank] || RANK_COLORS.E;
-        return `
+      ${friendsList.length ? friendsList.map(f=>`
         <div class="hist-row" style="cursor:default">
-          <span onclick="openDm('${f.uid}','${esc(f.username)}')" style="cursor:pointer;display:flex;flex-direction:column;flex:1;gap:2px;min-width:0">
-            <span style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-              <span class="hr-n">${esc(f.username)}${isDmThreadUnread(dmThreadId(currentUid,f.uid))?'<span class="tab-dot" style="position:static;display:inline-block;margin-left:6px;vertical-align:middle"></span>':''}</span>
-              <span style="font-family:'Orbitron';font-size:12px;font-weight:700;color:${rc};text-shadow:0 0 8px ${rc}66;flex:0 0 auto">${f.rank}</span>
-            </span>
-            <span class="hr-c">Lv ${f.level} &middot; ${f.trainedDays}d trained &middot; ${f.streak}d streak</span>
+          <span onclick="openDm('${f.uid}','${esc(f.username)}')" style="cursor:pointer;display:flex;flex:1;justify-content:space-between;align-items:center;gap:8px">
+            <span class="hr-n">${esc(f.username)}${isDmThreadUnread(dmThreadId(currentUid,f.uid))?'<span class="tab-dot" style="position:static;display:inline-block;margin-left:6px;vertical-align:middle"></span>':''}</span>
+            <span class="hr-c">${f.trainedDays}d trained - ${f.streak}d streak</span>
           </span>
           <span style="display:flex;gap:8px;flex:0 0 auto;margin-left:10px">
             <button class="btn ghost sm" style="margin:0;padding:6px 10px" onclick="openDm('${f.uid}','${esc(f.username)}')">Message</button>
             <button class="btn ghost sm" style="margin:0;padding:6px 10px" onclick="removeFriend('${f.reqId}','${f.uid}','${esc(f.username)}')">Remove</button>
           </span>
-        </div>`;
-      }).join('') : '<p class="note">No friends yet - add someone from the chat below.</p>'}
+        </div>`).join('') : '<p class="note">No friends yet - add someone from the chat below.</p>'}
     </section>`;
   return html;
 }
