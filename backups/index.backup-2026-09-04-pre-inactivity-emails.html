@@ -413,12 +413,6 @@
 
 <div id="viewBar" style="display:none;position:sticky;top:0;z-index:70;background:rgba(139,92,246,0.18);border-bottom:1px solid var(--violet);padding:10px 14px;text-align:center;font-family:'Orbitron';font-size:11px;letter-spacing:.06em;color:#c9b3ff"></div>
 
-<!-- Sends the inactivity re-engagement emails - free tier, no backend. Fill in your own IDs
-     from emailjs.com (Account > General for the public key, Email Services for the service ID,
-     Email Templates for the template ID - one generic template with {{subject}} and {{message}}
-     fields is enough for both emails). -->
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.0/firebase-app.js";
   import {
@@ -1188,14 +1182,6 @@ async function onAuthReady(user){
     pendingImport = null;
     S = data;
     if(S){ saveLocalCloud(); pushCloud(); }
-    // Keep a copy of a real (non-synthetic) email in a separate, admin-read-only collection -
-    // the public users/{uid} doc can't hold it (fully public read, powers the leaderboard), and
-    // there's no client-side way to read another account's Auth email otherwise. Safe to write
-    // on every login: idempotent, and only ever the account's own current email.
-    if(!isSyntheticEmail(user.email)){
-      window.fb.setDoc(window.fb.doc(window.fb.db,'contactEmails',currentUid), {email:user.email}, {merge:true}).catch(()=>{});
-    }
-    if(myIsAdmin) checkInactivityEmails();
     startUnreadWatcher();
     startRequestWatcher();
     startDmUnreadWatcher();
@@ -1406,73 +1392,6 @@ function exitViewOnly(){
   startUnreadWatcher();
   startRequestWatcher();
   startDmUnreadWatcher();
-}
-/* ---------- Inactivity re-engagement emails - free tier, admin-triggered, no backend.
-   Fill these three in from your emailjs.com dashboard before this can actually send. Runs at
-   most once per admin login session (see inactivityCheckDone), scanning every account for
-   whoever's gone 2 or 5+ days without clearing a Gate, claiming the Daily Quest, or confirming
-   Rest - the same rule that already keeps the streak alive. Tracking lives on the admin's own
-   S.inactivityTracking (not the target account's doc, since dive-in is deliberately read-only
-   for everyone else's data) and resets per user whenever their lastActive moves, so a later
-   break can trigger the same two emails again. ---------- */
-const EMAILJS_PUBLIC_KEY = 'YOUR_EMAILJS_PUBLIC_KEY';
-const EMAILJS_SERVICE_ID = 'YOUR_EMAILJS_SERVICE_ID';
-const EMAILJS_TEMPLATE_ID = 'YOUR_EMAILJS_TEMPLATE_ID';
-const ASCENSION_URL = 'https://solo-leveling-fdd0f.web.app';
-const INACTIVITY_EMAILS = {
-  2: {
-    subject: (name)=>`The Gate is still waiting for you, ${name}`,
-    body: (name)=>`Hunter ${name},\n\nTwo days have passed with no Gate cleared, no Daily Quest claimed and the System has noticed the silence.\n\nYour streak broke, but nothing else has to. Every Hunter stumbles; what matters is stepping back in before the trail goes cold.\n\nClear today's Gate or claim your Daily Quest - any one of them puts you back on the path.\n\nOpen Ascension System: ${ASCENSION_URL}\n\nThe System is still watching.`
-  },
-  5: {
-    subject: (name)=>`5 days of silence, ${name}`,
-    body: (name)=>`Hunter ${name},\n\nFive days without a single Gate or quest - the longest silence the System has recorded from you, and the longest you can afford.\n\nFive days is about where momentum really starts to slip. One cleared Gate is all it takes to turn that around.\n\nOpen Ascension System: ${ASCENSION_URL}\n\nYou were selected as a Player for a reason.`
-  }
-};
-let inactivityCheckDone = false;
-async function sendInactivityEmail(toEmail, username, milestone){
-  if(typeof emailjs==='undefined' || EMAILJS_PUBLIC_KEY.indexOf('YOUR_')===0) return;
-  const tpl = INACTIVITY_EMAILS[milestone];
-  try{
-    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-      to_email: toEmail,
-      subject: tpl.subject(username),
-      message: tpl.body(username)
-    }, EMAILJS_PUBLIC_KEY);
-  }catch(e){}
-}
-async function checkInactivityEmails(){
-  if(inactivityCheckDone) return;
-  inactivityCheckDone = true;
-  try{
-    const usersSnap = await window.fb.getDocs(window.fb.collection(window.fb.db,'users'));
-    const targets = [];
-    usersSnap.forEach(d=>{
-      const u = d.data();
-      if(u.banned || !u.lastActive) return;
-      const daysInactive = daysBetween(u.lastActive, today());
-      if(daysInactive>=2) targets.push({uid:d.id, username:u.username||d.id, lastActive:u.lastActive, daysInactive});
-    });
-    if(!targets.length) return;
-    if(!S.inactivityTracking) S.inactivityTracking = {};
-    let changed = false;
-    for(const t of targets){
-      let track = S.inactivityTracking[t.uid];
-      if(!track || track.baseline!==t.lastActive) track = {baseline:t.lastActive, sent2:false, sent5:false};
-      let emailSnap = null;
-      if((t.daysInactive>=2 && !track.sent2) || (t.daysInactive>=5 && !track.sent5)){
-        try{ emailSnap = await window.fb.getDoc(window.fb.doc(window.fb.db,'contactEmails',t.uid)); }catch(e){}
-      }
-      const toEmail = (emailSnap && emailSnap.exists()) ? emailSnap.data().email : null;
-      if(toEmail){
-        if(t.daysInactive>=2 && !track.sent2){ await sendInactivityEmail(toEmail, t.username, 2); track.sent2 = true; }
-        if(t.daysInactive>=5 && !track.sent5){ await sendInactivityEmail(toEmail, t.username, 5); track.sent5 = true; }
-      }
-      S.inactivityTracking[t.uid] = track;
-      changed = true;
-    }
-    if(changed) save();
-  }catch(e){}
 }
 async function loadAdminList(){
   const el = document.getElementById('adminList');
