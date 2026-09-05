@@ -403,7 +403,7 @@
     <div class="lu-k">System Notice</div>
     <div class="trial-ic">✉️</div>
     <div class="lu-t">SECURE YOUR ACCOUNT</div>
-    <p class="note" style="margin-top:8px">Your account has no real email attached. Without one: there's no way to recover your password if you forget it, and you won't get a reminder if you ever go quiet for a few days and could use a nudge back in. Add one now from the Account tab.</p>
+    <p class="note" style="margin-top:8px">Your account has no real email attached, so if you ever forget your password, there's no way to recover it. Add one now from the Account tab to enable password recovery.</p>
     <button class="btn" style="margin-top:18px" onclick="closeEmailMigration(); switchTab('account')">Add Email</button>
     <button class="reset" style="margin-top:12px" onclick="closeEmailMigration()">Skip for now</button>
   </div>
@@ -2548,7 +2548,7 @@ function render(){
         const curEmail = (window.fb && window.fb.auth && window.fb.auth.currentUser) ? window.fb.auth.currentUser.email : '';
         const synthetic = isSyntheticEmail(curEmail);
         return synthetic ? `
-        <div class="penalty" style="margin-bottom:12px">⚠ No real email attached - you cannot recover your password if you forget it, and you won't get a reminder if you ever go quiet for a few days.</div>
+        <div class="penalty" style="margin-bottom:12px">⚠ No real email attached - you cannot recover your password if you forget it.</div>
         <p class="note" style="margin-bottom:10px">One-way heads up: once you verify an email, this account switches to logging in with that email only - your username will no longer work to log in (it still shows everywhere else, this only affects the login screen).</p>
         ${emailVerificationSentTo ? `<p class="note" style="margin-bottom:10px">Verification email sent to <b style="color:var(--cyan-soft)">${esc(emailVerificationSentTo)}</b> - click the link in it to finish. Check your spam folder if it doesn't show up soon. Didn't get it at all? You can send it again below.</p>` : ''}
         <label>Add your email</label>
