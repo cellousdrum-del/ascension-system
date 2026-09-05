@@ -274,7 +274,6 @@
   @keyframes circle-pulse{0%,100%{opacity:.55}50%{opacity:1}}
   @keyframes shard-flicker{0%,19%,21%,54%,56%,100%{opacity:1}20%,55%{opacity:.35}}
   @keyframes frost-shimmer{0%,100%{filter:brightness(1)}50%{filter:brightness(1.4)}}
-  @keyframes bead-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
   .levelup{max-width:360px;width:100%;text-align:center;border:1px solid var(--cyan);border-radius:3px;
     background:rgba(9,16,33,0.9);padding:28px 22px;box-shadow:0 0 40px rgba(77,163,255,0.5);
     animation:pop .4s cubic-bezier(.2,1.2,.3,1)}
@@ -852,106 +851,32 @@ const FLEXIBILITY_TIERS = [
 
 /* ---------- Avatar mystery-box item pool ---------- */
 const AVATAR_ITEMS = [
-  // E-Rank - common dungeon drops, the kind any low-level hunter clears out first (7)
+  // E-Rank - common dungeon drops, the kind any low-level hunter clears out first
   {id:'rusted_goblin_fang', icon:'🦴', name:'Rusted Goblin Fang', kind:'Weapon', rank:'E'},
   {id:'tattered_scout_wrap', icon:'🧣', name:'Tattered Scout Wrap', kind:'Armor', rank:'E'},
-  {id:'cracked_leather_strap', icon:'🥾', name:'Cracked Leather Strap', kind:'Armor', rank:'E'},
   {id:'flickering_mana_shard', icon:'💠', name:'Flickering Mana Shard', kind:'Relic', rank:'E'},
-  {id:'stray_pup_charm', icon:'🐾', name:'Stray Pup Charm', kind:'Companion', rank:'E'},
-  {id:'copper_hunter_band', icon:'⭕', name:'Copper Hunter Band', kind:'Regalia', rank:'E'},
-  {id:'faint_ember_glow', icon:'✨', name:'Faint Ember Glow', kind:'Aura', rank:'E'},
-  // D-Rank - hardier beast-kin drops (11)
+  // D-Rank - hardier beast-kin drops
   {id:'ironjaw_kobold_tusk', icon:'🦷', name:'Ironjaw Kobold Tusk', kind:'Weapon', rank:'D'},
-  {id:'serrated_boar_cleaver', icon:'🔪', name:'Serrated Boar Cleaver', kind:'Weapon', rank:'D'},
-  {id:'splintered_ash_club', icon:'🏏', name:'Splintered Ash Club', kind:'Weapon', rank:'D'},
   {id:'hardened_carapace_plate', icon:'🪨', name:'Hardened Carapace Plate', kind:'Armor', rank:'D'},
-  {id:'chitin_shoulder_guard', icon:'🦴', name:'Chitin Shoulder Guard', kind:'Armor', rank:'D'},
-  {id:'boiled_hide_vest', icon:'🎽', name:'Boiled Hide Vest', kind:'Armor', rank:'D'},
   {id:'ashen_ember_core', icon:'🔥', name:'Ashen Ember Core', kind:'Relic', rank:'D'},
-  {id:'cracked_spirit_lens', icon:'🔍', name:'Cracked Spirit Lens', kind:'Relic', rank:'D'},
-  {id:'timid_shade_kit', icon:'🐈‍⬛', name:'Timid Shade Kit', kind:'Companion', rank:'D'},
-  {id:'tarnished_watch_ring', icon:'🔘', name:'Tarnished Watch Ring', kind:'Regalia', rank:'D'},
-  {id:'dim_hunters_glimmer', icon:'🌫️', name:"Dim Hunter's Glimmer", kind:'Aura', rank:'D'},
-  // C-Rank (16)
+  // C-Rank
   {id:'voidstep_dagger', icon:'🔪', name:'Voidstep Dagger', kind:'Weapon', rank:'C'},
-  {id:'twin_fang_kris', icon:'🗡️', name:'Twin Fang Kris', kind:'Weapon', rank:'C'},
-  {id:'ravens_beak_hatchet', icon:'🪓', name:"Raven's Beak Hatchet", kind:'Weapon', rank:'C'},
-  {id:'gloomsteel_rapier', icon:'⚔️', name:'Gloomsteel Rapier', kind:'Weapon', rank:'C'},
   {id:'nightveil_shroud', icon:'🥋', name:'Nightveil Shroud', kind:'Armor', rank:'C'},
-  {id:'ashveil_hauberk', icon:'🎽', name:'Ashveil Hauberk', kind:'Armor', rank:'C'},
-  {id:'thornbound_greaves', icon:'🥾', name:'Thornbound Greaves', kind:'Armor', rank:'C'},
-  {id:'hollowreed_flask', icon:'🧪', name:'Hollowreed Flask', kind:'Relic', rank:'C'},
-  {id:'murmuring_soul_bead', icon:'📿', name:'Murmuring Soul Bead', kind:'Relic', rank:'C'},
   {id:'grimshade_wolf_sigil', icon:'🐺', name:'Grimshade Wolf Sigil', kind:'Companion', rank:'C'},
-  {id:'sable_hawk_talon', icon:'🦅', name:'Sable Hawk Talon', kind:'Companion', rank:'C'},
-  {id:'quiet_marsh_serpent', icon:'🐍', name:'Quiet Marsh Serpent', kind:'Companion', rank:'C'},
-  {id:'dented_captains_seal', icon:'🔱', name:"Dented Captain's Seal", kind:'Regalia', rank:'C'},
-  {id:'graycoil_pendant', icon:'🔗', name:'Graycoil Pendant', kind:'Regalia', rank:'C'},
   {id:'starless_aura', icon:'🌑', name:'Starless Aura', kind:'Aura', rank:'C'},
-  {id:'muted_frostlight', icon:'❄️', name:'Muted Frostlight', kind:'Aura', rank:'C'},
-  // B-Rank (20)
+  // B-Rank
   {id:'duskfang_sabre', icon:'⚔️', name:'Duskfang Sabre', kind:'Weapon', rank:'B'},
-  {id:'ebonfang_kunai_set', icon:'🔪', name:'Ebonfang Kunai Set', kind:'Weapon', rank:'B'},
-  {id:'stormcleft_axe', icon:'🪓', name:'Stormcleft Axe', kind:'Weapon', rank:'B'},
-  {id:'nightforged_estoc', icon:'🗡️', name:'Nightforged Estoc', kind:'Weapon', rank:'B'},
-  {id:'grave_iron_warhammer', icon:'🔨', name:'Grave Iron Warhammer', kind:'Weapon', rank:'B'},
   {id:'frostbound_gauntlet', icon:'🧤', name:'Frostbound Gauntlet', kind:'Armor', rank:'B'},
   {id:'wraithguard_cloak', icon:'🧥', name:'Wraithguard Cloak', kind:'Armor', rank:'B'},
-  {id:'sableplate_pauldrons', icon:'🥋', name:'Sableplate Pauldrons', kind:'Armor', rank:'B'},
-  {id:'duskwoven_mantle', icon:'🧣', name:'Duskwoven Mantle', kind:'Armor', rank:'B'},
-  {id:'thornscale_greaves', icon:'🥾', name:'Thornscale Greaves', kind:'Armor', rank:'B'},
-  {id:'binding_hex_shard', icon:'🔮', name:'Binding Hex Shard', kind:'Relic', rank:'B'},
-  {id:'echoing_war_drum', icon:'🥁', name:'Echoing War Drum', kind:'Relic', rank:'B'},
-  {id:'frayed_star_compass', icon:'🧭', name:'Frayed Star Compass', kind:'Relic', rank:'B'},
   {id:'ironclad_bulwark_emblem', icon:'🛡️', name:'Ironclad Bulwark Emblem', kind:'Companion', rank:'B'},
-  {id:'moonlit_direwolf_fang', icon:'🐺', name:'Moonlit Direwolf Fang', kind:'Companion', rank:'B'},
-  {id:'iron_falcon_crest', icon:'🦅', name:'Iron Falcon Crest', kind:'Companion', rank:'B'},
-  {id:'hollow_sentinel_mark', icon:'🗿', name:'Hollow Sentinel Mark', kind:'Companion', rank:'B'},
-  {id:'shattered_baron_crown', icon:'👑', name:'Shattered Baron Crown', kind:'Regalia', rank:'B'},
-  {id:'graven_oath_ring', icon:'💍', name:'Graven Oath Ring', kind:'Regalia', rank:'B'},
-  {id:'veiled_moonlight_glow', icon:'🌙', name:'Veiled Moonlight Glow', kind:'Aura', rank:'B'},
-  // A-Rank - national-hunter-tier artifacts (24)
+  // A-Rank - national-hunter-tier artifacts
   {id:'cinderreaper_scythe', icon:'🪓', name:'Cinderreaper Scythe', kind:'Weapon', rank:'A'},
-  {id:'duskrend_glaive', icon:'🔱', name:'Duskrend Glaive', kind:'Weapon', rank:'A'},
-  {id:'obsidian_fang_blade', icon:'🗡️', name:'Obsidian Fang Blade', kind:'Weapon', rank:'A'},
-  {id:'stormcaller_lance', icon:'⚡', name:'Stormcaller Lance', kind:'Weapon', rank:'A'},
-  {id:'howling_twin_sabres', icon:'⚔️', name:'Howling Twin Sabres', kind:'Weapon', rank:'A'},
   {id:'umbral_wing_cloak', icon:'🦇', name:'Umbral Wing Cloak', kind:'Armor', rank:'A'},
-  {id:'wyrmscale_plate', icon:'🐉', name:'Wyrmscale Plate', kind:'Armor', rank:'A'},
-  {id:'ashen_monarch_robe', icon:'🥋', name:'Ashen Monarch Robe', kind:'Armor', rank:'A'},
-  {id:'gravebound_warplate', icon:'🛡️', name:'Gravebound Warplate', kind:'Armor', rank:'A'},
-  {id:'severed_fate_thread', icon:'🧵', name:'Severed Fate Thread', kind:'Relic', rank:'A'},
-  {id:'blackened_sun_disc', icon:'☀️', name:'Blackened Sun Disc', kind:'Relic', rank:'A'},
-  {id:'weeping_void_prism', icon:'🔷', name:'Weeping Void Prism', kind:'Relic', rank:'A'},
-  {id:'humming_dread_totem', icon:'🗿', name:'Humming Dread Totem', kind:'Relic', rank:'A'},
-  {id:'ashfall_direwyrm_scale', icon:'🐍', name:'Ashfall Direwyrm Scale', kind:'Companion', rank:'A'},
-  {id:'silent_reaper_wisp', icon:'👻', name:'Silent Reaper Wisp', kind:'Companion', rank:'A'},
-  {id:'ironclad_griffin_talon', icon:'🦅', name:'Ironclad Griffin Talon', kind:'Companion', rank:'A'},
-  {id:'crimson_hound_collar', icon:'🐺', name:'Crimson Hound Collar', kind:'Companion', rank:'A'},
   {id:'hollow_kings_signet', icon:'💍', name:"Hollow King's Signet", kind:'Regalia', rank:'A'},
-  {id:'martyrs_iron_diadem', icon:'👑', name:"Martyr's Iron Diadem", kind:'Regalia', rank:'A'},
-  {id:'severed_kings_chain', icon:'⛓️', name:"Severed King's Chain", kind:'Regalia', rank:'A'},
-  {id:'ebonrose_circlet', icon:'🥀', name:'Ebonrose Circlet', kind:'Regalia', rank:'A'},
-  {id:'creeping_umbral_haze', icon:'🌫️', name:'Creeping Umbral Haze', kind:'Aura', rank:'A'},
-  {id:'ashen_martyr_glow', icon:'🔥', name:'Ashen Martyr Glow', kind:'Aura', rank:'A'},
-  {id:'fading_starlight_veil', icon:'✨', name:'Fading Starlight Veil', kind:'Aura', rank:'A'},
-  // S-Rank - monarch/sovereign-tier (16)
+  // S-Rank - monarch/sovereign-tier
   {id:'ashborn_blade', icon:'🗡️', name:'Ashborn Blade', kind:'Weapon', rank:'S'},
-  {id:'godslayer_fang', icon:'🦷', name:'Godslayer Fang', kind:'Weapon', rank:'S'},
-  {id:'eclipse_reaper_scythe', icon:'🪓', name:'Eclipse Reaper Scythe', kind:'Weapon', rank:'S'},
-  {id:'monarchs_black_plate', icon:'🛡️', name:"Monarch's Black Plate", kind:'Armor', rank:'S'},
-  {id:'shadow_sovereign_mantle', icon:'🧥', name:'Shadow Sovereign Mantle', kind:'Armor', rank:'S'},
-  {id:'voidborn_aegis', icon:'🥋', name:'Voidborn Aegis', kind:'Armor', rank:'S'},
-  {id:'heart_of_the_abyss', icon:'💎', name:'Heart of the Abyss', kind:'Relic', rank:'S'},
-  {id:'last_kings_hourglass', icon:'⏳', name:"Last King's Hourglass", kind:'Relic', rank:'S'},
-  {id:'withered_god_seed', icon:'🌰', name:'Withered God Seed', kind:'Relic', rank:'S'},
-  {id:'ashborn_shadow_beast', icon:'🐉', name:'Ashborn Shadow Beast', kind:'Companion', rank:'S'},
-  {id:'silent_monarchs_wraith', icon:'👻', name:"Silent Monarch's Wraith", kind:'Companion', rank:'S'},
-  {id:'emberfall_crown', icon:'👑', name:'Emberfall Crown', kind:'Regalia', rank:'S'},
-  {id:'crown_of_the_forgotten_king', icon:'👑', name:'Crown of the Forgotten King', kind:'Regalia', rank:'S'},
   {id:'sovereigns_eye', icon:'👁️', name:"Sovereign's Eye", kind:'Aura', rank:'S'},
-  {id:'void_sovereigns_gleam', icon:'🌌', name:"Void Sovereign's Gleam", kind:'Aura', rank:'S'},
-  {id:'last_light_of_ascension', icon:'✨', name:'Last Light of Ascension', kind:'Aura', rank:'S'}
+  {id:'emberfall_crown', icon:'👑', name:'Emberfall Crown', kind:'Regalia', rank:'S'}
 ];
 const RANK_ORDER = ['E','D','C','B','A','S'];
 function pickBoxItem(streak, dateStr, playerRank){
@@ -3376,95 +3301,30 @@ function equippedItem(kind){
 const WEAPON_SHAPES = {
   rusted_goblin_fang: (c)=>`clip-path:polygon(50% 0%,100% 30%,75% 100%,60% 55%,40% 100%,25% 55%,0% 30%);width:16px;height:20px;background:${c};filter:sepia(.55) saturate(1.3);transform:rotate(14deg)`,
   ironjaw_kobold_tusk: (c)=>`width:8px;height:26px;border-radius:60% 10% 60% 10% / 90% 15% 90% 15%;background:${c};transform:rotate(32deg)`,
-  serrated_boar_cleaver: (c)=>`clip-path:polygon(30% 0%,100% 10%,90% 45%,100% 55%,88% 62%,96% 72%,82% 80%,60% 100%,50% 70%,40% 100%,20% 80%,0% 40%);width:19px;height:22px;background:${c};filter:sepia(.3)`,
-  splintered_ash_club: (c)=>`clip-path:polygon(40% 0%,60% 0%,72% 55%,58% 100%,42% 100%,28% 55%);width:12px;height:28px;background:${c};filter:sepia(.4)`,
   voidstep_dagger: (c)=>`clip-path:polygon(50% 0%,100% 40%,58% 100%,42% 100%,0% 40%);width:13px;height:26px;background:linear-gradient(180deg,${c},transparent 88%);transform:rotate(24deg)`,
-  twin_fang_kris: (c)=>`clip-path:polygon(50% 0%,65% 14%,50% 28%,65% 42%,50% 56%,60% 100%,40% 100%,50% 56%,35% 42%,50% 28%,35% 14%);width:14px;height:30px;background:${c}`,
-  ravens_beak_hatchet: (c)=>`border-radius:80% 10% 80% 40%;width:18px;height:16px;background:${c};transform:rotate(-20deg)`,
-  gloomsteel_rapier: (c)=>`width:3px;height:36px;background:linear-gradient(180deg,#2a2a2a,${c});transform:rotate(20deg)`,
   duskfang_sabre: (c)=>`width:7px;height:34px;border-radius:70% 30% 20% 40%;background:${c};transform:rotate(28deg) skewX(-10deg)`,
-  ebonfang_kunai_set: (c)=>`clip-path:polygon(50% 0%,80% 28%,60% 100%,40% 100%,20% 28%);width:11px;height:24px;background:${c}`,
-  stormcleft_axe: (c)=>`clip-path:polygon(20% 0%,100% 18%,100% 48%,20% 68%,38% 34%);width:24px;height:26px;background:linear-gradient(120deg,${c},#7dd3fc 75%);transform:rotate(-10deg)`,
-  nightforged_estoc: (c)=>`width:4px;height:38px;background:linear-gradient(180deg,#111,${c} 40%);transform:rotate(18deg)`,
-  grave_iron_warhammer: (c)=>`width:20px;height:16px;border-radius:4px;background:${c};transform:rotate(15deg)`,
   cinderreaper_scythe: (c)=>`clip-path:polygon(18% 0%,100% 18%,86% 52%,38% 100%,6% 86%,28% 42%);width:26px;height:30px;background:linear-gradient(135deg,${c},#ff7a1a 75%);transform:rotate(10deg)`,
-  duskrend_glaive: (c)=>`clip-path:polygon(45% 0%,100% 15%,85% 45%,50% 55%,45% 100%,38% 100%,38% 55%);width:24px;height:38px;background:linear-gradient(160deg,${c},#c084fc 80%);transform:rotate(8deg)`,
-  obsidian_fang_blade: (c)=>`clip-path:polygon(50% 0%,90% 25%,70% 100%,55% 70%,30% 100%,10% 25%);width:18px;height:28px;background:linear-gradient(180deg,#1a1a2e,${c} 60%);transform:rotate(12deg)`,
-  stormcaller_lance: (c)=>`clip-path:polygon(50% 0%,65% 20%,55% 20%,75% 45%,55% 45%,60% 100%,40% 100%,45% 45%,25% 45%,45% 20%,35% 20%);width:16px;height:36px;background:${c}`,
-  howling_twin_sabres: (c)=>`border-radius:70% 20% 40% 30%;width:10px;height:34px;background:${c};transform:rotate(24deg) skewX(-14deg)`,
-  ashborn_blade: (c)=>`width:4px;height:40px;background:linear-gradient(180deg,#fff,${c} 20%);transform:rotate(22deg)`,
-  godslayer_fang: (c)=>`clip-path:polygon(50% 0%,80% 20%,70% 80%,50% 100%,30% 80%,20% 20%);width:22px;height:40px;background:linear-gradient(180deg,#fff,${c} 30%);transform:rotate(10deg)`,
-  eclipse_reaper_scythe: (c)=>`clip-path:polygon(15% 0%,100% 12%,90% 48%,35% 100%,4% 84%,26% 38%);width:28px;height:34px;background:radial-gradient(circle at 30% 30%,#000,${c} 75%);transform:rotate(6deg)`
+  ashborn_blade: (c)=>`width:4px;height:40px;background:linear-gradient(180deg,#fff,${c} 20%);transform:rotate(22deg)`
 };
 const RELIC_SHAPES = {
   flickering_mana_shard: (c)=>`width:10px;height:10px;background:${c};transform:rotate(45deg);animation:shard-flicker 1.7s steps(3) infinite`,
-  ashen_ember_core: (c)=>`width:12px;height:12px;border-radius:50%;background:radial-gradient(circle,#fff8 0%,${c} 55%,#ff7a1a 100%);animation:circle-pulse 2s ease-in-out infinite`,
-  cracked_spirit_lens: (c)=>`width:11px;height:11px;border-radius:50%;border:2px solid ${c};background:transparent;animation:shard-flicker 2.2s steps(4) infinite`,
-  hollowreed_flask: (c)=>`border-radius:50% 50% 50% 0%;width:9px;height:12px;background:${c};transform:rotate(45deg)`,
-  murmuring_soul_bead: (c)=>`width:8px;height:8px;border-radius:50%;background:${c};animation:bead-bob 2.6s ease-in-out infinite`,
-  binding_hex_shard: (c)=>`clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);width:12px;height:12px;background:${c}`,
-  echoing_war_drum: (c)=>`width:12px;height:12px;border-radius:50%;border:3px solid ${c};background:transparent;animation:circle-pulse 1.6s ease-in-out infinite`,
-  frayed_star_compass: (c)=>`clip-path:polygon(50% 0%,63% 37%,100% 50%,63% 63%,50% 100%,37% 63%,0% 50%,37% 37%);width:14px;height:14px;background:${c}`,
-  severed_fate_thread: (c)=>`width:2px;height:16px;background:${c};transform:skewX(-20deg);animation:shard-flicker 3s steps(2) infinite`,
-  blackened_sun_disc: (c)=>`width:13px;height:13px;border-radius:50%;background:radial-gradient(circle,#000 0%,${c} 70%);animation:circle-pulse 2.4s ease-in-out infinite`,
-  weeping_void_prism: (c)=>`width:11px;height:11px;background:linear-gradient(135deg,${c},#1a1a2e);transform:rotate(45deg);animation:shard-flicker 2s steps(3) infinite`,
-  humming_dread_totem: (c)=>`clip-path:polygon(20% 0%,80% 0%,80% 30%,100% 40%,100% 60%,80% 70%,80% 100%,20% 100%,20% 70%,0% 60%,0% 40%,20% 30%);width:10px;height:16px;background:${c}`,
-  heart_of_the_abyss: (c)=>`width:14px;height:14px;border-radius:50%;background:radial-gradient(circle,#fff 0%,${c} 40%,#000 100%);animation:circle-pulse 1.8s ease-in-out infinite`,
-  last_kings_hourglass: (c)=>`clip-path:polygon(0% 0%,100% 0%,50% 50%,100% 100%,0% 100%,50% 50%);width:10px;height:16px;background:${c}`,
-  withered_god_seed: (c)=>`border-radius:50% 50% 50% 50% / 70% 70% 30% 30%;width:9px;height:14px;background:${c};animation:bead-bob 3.4s ease-in-out infinite`
+  ashen_ember_core: (c)=>`width:12px;height:12px;border-radius:50%;background:radial-gradient(circle,#fff8 0%,${c} 55%,#ff7a1a 100%);animation:circle-pulse 2s ease-in-out infinite`
 };
 const COMPANION_SHAPES = {
-  stray_pup_charm: (c)=>`clip-path:polygon(50% 15%,61% 0%,72% 10%,68% 25%,50% 40%,32% 25%,28% 10%,39% 0%);width:14px;height:14px;background:${c}`,
-  timid_shade_kit: (c)=>`clip-path:polygon(50% 0%,90% 100%,50% 75%,10% 100%);width:14px;height:14px;background:${c}`,
   grimshade_wolf_sigil: (c)=>`clip-path:polygon(50% 0%,100% 100%,50% 72%,0% 100%);width:17px;height:17px;background:${c}`,
-  sable_hawk_talon: (c)=>`border-radius:10% 80% 10% 80%;width:13px;height:16px;background:${c};transform:rotate(-25deg)`,
-  quiet_marsh_serpent: (c)=>`clip-path:polygon(20% 0%,50% 20%,20% 40%,50% 60%,20% 80%,50% 100%,60% 80%,35% 65%,60% 45%,35% 25%,60% 10%);width:12px;height:18px;background:${c}`,
-  ironclad_bulwark_emblem: (c)=>`clip-path:polygon(50% 0%,100% 22%,100% 62%,50% 100%,0% 62%,0% 22%);width:16px;height:19px;background:${c}`,
-  moonlit_direwolf_fang: (c)=>`clip-path:polygon(50% 0%,100% 100%,50% 68%,0% 100%);width:19px;height:19px;background:${c}`,
-  iron_falcon_crest: (c)=>`clip-path:polygon(0% 100%,50% 0%,100% 100%,50% 70%);width:18px;height:14px;background:${c}`,
-  hollow_sentinel_mark: (c)=>`border-radius:50%;width:16px;height:9px;background:${c}`,
-  ashfall_direwyrm_scale: (c)=>`clip-path:polygon(50% 0%,100% 35%,80% 100%,20% 100%,0% 35%);width:18px;height:20px;background:linear-gradient(160deg,${c},#ff7a1a 70%)`,
-  silent_reaper_wisp: (c)=>`border-radius:50% 50% 50% 50% / 100% 100% 0% 0%;width:14px;height:18px;background:${c};opacity:.8;animation:circle-pulse 2s ease-in-out infinite`,
-  ironclad_griffin_talon: (c)=>`border-radius:10% 80% 10% 80%;width:16px;height:20px;background:${c};transform:rotate(-25deg)`,
-  crimson_hound_collar: (c)=>`width:16px;height:16px;border-radius:50%;border:3px solid ${c};background:transparent`,
-  ashborn_shadow_beast: (c)=>`clip-path:polygon(50% 0%,100% 100%,50% 60%,0% 100%);width:22px;height:22px;background:linear-gradient(180deg,${c},#000)`,
-  silent_monarchs_wraith: (c)=>`border-radius:50% 50% 50% 50% / 100% 100% 0% 0%;width:16px;height:22px;background:${c};animation:circle-pulse 1.8s ease-in-out infinite`
+  ironclad_bulwark_emblem: (c)=>`clip-path:polygon(50% 0%,100% 22%,100% 62%,50% 100%,0% 62%,0% 22%);width:16px;height:19px;background:${c}`
 };
 const ARMOR_STYLES = {
   tattered_scout_wrap: (c)=>({body:`border:1.5px dashed ${c}`}),
-  cracked_leather_strap: (c)=>({body:`border-right:3px solid ${c}`}),
   hardened_carapace_plate: (c)=>({body:`border:5px double ${c}`}),
-  chitin_shoulder_guard: (c)=>({body:`border-top:5px solid ${c}`}),
-  boiled_hide_vest: (c)=>({body:`border:3px solid ${c};filter:sepia(.3)`}),
   nightveil_shroud: (c)=>({body:`border:1px solid ${c}66`, extraShadow:`, inset 0 0 22px 6px ${c}`}),
-  ashveil_hauberk: (c)=>({body:`border:2px dashed ${c}`, extraShadow:`, inset 0 0 10px ${c}`}),
-  thornbound_greaves: (c)=>({body:`border:2px dotted ${c}`}),
   frostbound_gauntlet: (c)=>({body:`border:2px solid ${c};animation:frost-shimmer 2.2s ease-in-out infinite`}),
   wraithguard_cloak: (c)=>({body:`border-left:5px solid ${c};border-right:1px solid ${c};border-top:1px solid ${c};border-bottom:1px solid ${c}`}),
-  sableplate_pauldrons: (c)=>({body:`border-top:4px solid ${c};border-left:4px solid ${c};border-right:4px solid ${c}`}),
-  duskwoven_mantle: (c)=>({body:`border:1px solid ${c}55`, extraShadow:`, 0 0 20px ${c}`}),
-  thornscale_greaves: (c)=>({body:`border:3px ridge ${c}`}),
-  umbral_wing_cloak: (c)=>({body:`border:2px solid ${c}`, wings:true}),
-  wyrmscale_plate: (c)=>({body:`border:4px groove ${c}`}),
-  ashen_monarch_robe: (c)=>({body:`border:1px solid ${c}44`, extraShadow:`, inset 0 0 26px 8px ${c}`}),
-  gravebound_warplate: (c)=>({body:`border:6px solid ${c}`}),
-  monarchs_black_plate: (c)=>({body:`border:6px double ${c}`}),
-  shadow_sovereign_mantle: (c)=>({body:`border:1px solid ${c}66`, wings:true, extraShadow:`, inset 0 0 16px ${c}`}),
-  voidborn_aegis: (c)=>({body:`border:1px solid transparent`, extraShadow:`, inset 0 0 30px 10px ${c}`})
+  umbral_wing_cloak: (c)=>({body:`border:2px solid ${c}`, wings:true})
 };
 const REGALIA_SHAPES = {
-  copper_hunter_band: (c)=>({ring:`width:20px;height:8px;border:1.5px solid ${c};border-radius:50%`}),
-  tarnished_watch_ring: (c)=>({ring:`width:22px;height:8px;border:2px solid ${c};border-radius:50%`}),
-  dented_captains_seal: (c)=>({ring:`width:24px;height:9px;border:2px solid ${c};border-radius:50%`, gem:`width:5px;height:5px;border-radius:50%;background:${c};top:-3px;left:50%;transform:translateX(-50%)`}),
-  graycoil_pendant: (c)=>({ring:`width:22px;height:8px;border:2px solid ${c};border-radius:50%`, spikes:1}),
   hollow_kings_signet: (c)=>({ring:`width:24px;height:9px;border:2px solid ${c};border-radius:50%`, gem:`width:5px;height:5px;border-radius:50%;background:${c};top:-3px;left:50%;transform:translateX(-50%)`}),
-  shattered_baron_crown: (c)=>({ring:`width:30px;height:9px;border:2px solid ${c};border-radius:50%`, spikes:2}),
-  graven_oath_ring: (c)=>({ring:`width:26px;height:9px;border:2px solid ${c};border-radius:50%`, gem:`width:7px;height:7px;border-radius:50%;background:${c};top:-4px;left:50%;transform:translateX(-50%)`}),
-  martyrs_iron_diadem: (c)=>({ring:`width:32px;height:10px;border:2px solid ${c};border-radius:50%`, spikes:3}),
-  severed_kings_chain: (c)=>({ring:`width:30px;height:10px;border:1.5px solid ${c};border-radius:50%`, gem:`width:5px;height:5px;border-radius:50%;background:${c};top:-3px;left:30%;transform:translateX(-50%)`}),
-  ebonrose_circlet: (c)=>({ring:`width:22px;height:7px;border:1.5px solid ${c};border-radius:50%`, gem:`width:6px;height:6px;border-radius:50%;background:${c};top:-3.5px;left:50%;transform:translateX(-50%)`}),
-  emberfall_crown: (c)=>({ring:`width:34px;height:10px;border:2px solid ${c};border-radius:50%`, spikes:3}),
-  crown_of_the_forgotten_king: (c)=>({ring:`width:36px;height:11px;border:2px solid ${c};border-radius:50%`, spikes:4})
+  emberfall_crown: (c)=>({ring:`width:34px;height:10px;border:2px solid ${c};border-radius:50%`, spikes:3})
 };
 function shapeBadge(css, c, name, pos){
   return `<div title="${esc(name)}" style="position:absolute;${pos}box-shadow:0 0 8px ${c},0 0 14px ${c};z-index:3;${css}"></div>`;
