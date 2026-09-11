@@ -810,16 +810,8 @@ function advanceCycle(cycle, poolLen, seedKey){
 }
 
 /* ---------- Mobility routine pool ---------- */
-/* ---------- Flexibility: one tier per rank (E/D/C/B/A/S), same boundaries as the Gates
-   (gateTierIndex) - not just generic full-body stretching, but chosen to directly support the
-   specific skills each rank is training toward: pike/hamstring flexibility for pike push-ups,
-   wrist extension for pseudo-planche and handstands, hip flexor + hamstring compression for
-   L-sit, shoulder flexion for wall handstand push-ups, shoulder internal rotation for the
-   muscle-up transition, ankle dorsiflexion for pistol squats, and so on as they appear in the
-   Gate tiers. One universal progression regardless of Wanderer Mode - the underlying joint/
-   muscle demands overlap enough between the dumbbell and calisthenics versions of Pull/Legs. */
 const FLEXIBILITY_TIERS = [
-  [ // E - foundational, prepping the basic push/pull/squat patterns
+  [
     'Hip flexor stretch (kneeling lunge) 45s/side',
     'Hamstring stretch (standing or seated forward fold) 45s/side',
     'Quad stretch (standing, heel to glute) 45s/side',
@@ -827,81 +819,40 @@ const FLEXIBILITY_TIERS = [
     'Calf stretch (straight leg against wall) 45s/side',
     'Glute and hip external rotation stretch (figure-4, seated or lying) 45s/side',
     'Lat and side-body stretch (overhead side reach) 45s/side',
-    'Wrist and forearm stretch (palm and back of hand) 30s/side',
-    'Overhead shoulder wall hold (arms extended against a wall, ribs down) 30s',
+    'Adductor/groin stretch (seated butterfly, gentle press) 45s',
     'Neck stretch (ear to shoulder, gentle) 30s/side',
+    'Wrist and forearm stretch (palm and back of hand) 30s/side',
     'Triceps and shoulder stretch (overhead arm behind head) 30s/side',
     'Lower back stretch (lying knee-to-chest) 45s/side'
   ],
-  [ // D - same areas, PNF deepening
+  [
     'Hip flexor stretch with PNF (contract 5s, relax, deepen) 60s/side',
     'Hamstring stretch with PNF 60s/side',
     'Quad stretch with PNF, pulling heel closer 60s/side',
     'Doorway chest stretch, deeper lean, arm variations, 60s/side',
     'Calf stretch, straight and bent knee variations, 60s/side each',
-    'Glute and hip external rotation stretch with PNF 60s/side',
+    'Glute and hip external rotation stretch with PNF (figure-4, contract-relax) 60s/side',
     'Deep lat stretch with rotation 60s/side',
-    'Wrist and forearm stretch with deeper overpressure 45s/side',
-    'Overhead shoulder wall hold, deeper reach, 45s',
+    'Adductor stretch with PNF (seated butterfly, press-and-release) 60s',
     'Deep neck and upper trap stretch with light overpressure 45s/side',
+    'Wrist and forearm stretch with deeper overpressure 45s/side',
     'Triceps and shoulder stretch, deeper hold with overpressure, 45s/side',
     'Lower back stretch, deeper hold (lying double knee-to-chest) 60s'
   ],
-  [ // C - Pike push-ups, Archer pull-ups, hanging leg raises (slow, paused), pseudo-planche (deep lean)
-    'Pike hamstring stretch (standing, hands toward toes, flat back) 60s',
-    'Deep hip flexor stretch (half-kneeling, rear foot elevated) 60s/side',
-    'Wrist extension stretch (palm down, fingers back) 45s/side',
-    'Lat stretch with side lean (hand on bar or door frame, hip shift) 60s/side',
-    'Deep couch stretch (rear foot elevated, upright torso) 60s/side',
-    'Standing quad stretch with forward hip push 60s/side',
-    'Deep calf stretch (bent-knee, deep lunge) 60s/side',
-    'Shoulder overhead reach with light band or towel 45s',
-    'Glute and hip external rotation stretch with PNF 60s/side',
-    'Doorway chest stretch, deeper lean, arm variations, 60s/side',
-    'Deep neck and upper trap stretch 45s/side',
-    'Lower back stretch, deeper hold, 60s'
-  ],
-  [ // B - deepen the C-rank patterns, start scapular/L-sit prep ahead of A-rank
-    'Pike hamstring stretch, hands flat on floor if possible, 75s',
-    'Deep hip flexor stretch with PNF (half-kneeling) 75s/side',
-    'Wrist extension stretch with overpressure 60s/side',
-    'Lat stretch with side lean and rotation 75s/side',
-    'Deep couch stretch with PNF (contract-relax) 75s/side',
-    'Scapular depression stretch (active shoulder shrug-down hold) 45s',
-    'Seated L-sit compression stretch (hands by hips, legs extended, lean forward) 30s',
-    'Deep calf stretch, straight and bent knee, 75s/side each',
-    'Shoulder overhead reach with band, deeper hold, 60s',
-    'Glute and hip external rotation stretch, elbows toward floor, 75s/side',
-    'Doorway chest stretch with rotation 75s/side',
-    'Lower back stretch, extended hold, 75s'
-  ],
-  [ // A - L-sit dips, Muscle-ups, Wall handstand push-ups, pseudo-planche (max lean), Pistol squats
-    'Active shoulder flexion hold (arms overhead against wall, ribs down) 45s',
-    'Wrist extension stretch, deep overpressure, 75s/side',
-    'L-sit compression stretch (hands on blocks, legs extended, hips lifted) 30-45s',
-    'Shoulder internal rotation stretch (arm behind back, gentle pull) 45s/side',
-    'Thoracic spine extension over a foam roller or towel roll 60s',
-    'Deep hip flexor stretch with PNF, rear foot elevated, 75s/side',
-    'Ankle dorsiflexion stretch (knee-to-wall) 45s/side',
-    'Pancake stretch (wide straddle, chest toward floor) 75s',
-    'Deep lat stretch with rotation and side lean 75s/side',
-    'Scapular depression and protraction stretch (hollow hang if able, or assisted) 30s',
-    'Pike hamstring stretch, deeper fold, 75s',
-    'Deep couch stretch, extended hold, 75s/side'
-  ],
-  [ // S - weighted L-sit/muscle-ups, Dragon flag, deficit handstand push-ups, full-lean planche, pistol/shrimp squats
-    'Active shoulder flexion hold, weighted or banded, 60s',
-    'Wrist extension stretch, deepest overpressure, 90s/side',
-    'Weighted L-sit compression stretch (light weight on lap, hands on blocks) 45s',
-    'Shoulder internal rotation stretch with overpressure 60s/side',
-    'Thoracic spine extension, extended hold, 90s',
+  [
     'Front split progression 90s/side',
+    'Straddle stretch (wide seated forward reach) 90s',
+    'Pancake stretch (wide straddle, chest toward floor) 90s',
     'Middle split progression 90s',
-    'Deep pancake stretch, weighted or assisted, 90s',
-    'Ankle dorsiflexion stretch, deep loaded lunge, 60s/side',
+    'Deep couch stretch (rear foot elevated hip flexor) 90s/side',
     'Weighted PNF hamstring stretch (strap-assisted) 90s/side',
+    'Advanced calf stretch (deep lunge, back knee straight) 90s/side',
+    'Deep hip external rotation stretch, elbows to floor, 90s/side',
     'Deep lat and side-body stretch, weighted side bend, 90s/side',
-    'Deep lower back and posterior chain stretch (lying double knee-to-chest, extended hold) 90s'
+    'Deep doorway chest stretch with rotation, 90s/side',
+    'Deep neck and upper trap stretch, extended hold, 60s/side',
+    'Deep triceps and shoulder stretch, extended hold, 60s/side',
+    'Deep lower back stretch (lying double knee-to-chest, extended hold) 90s'
   ]
 ];
 
@@ -1090,6 +1041,9 @@ function gateTierIndex(level){
   if(level<90) return 4;
   return 5;
 }
+// Flexibility keeps its own coarser 3-tier scale (unaffected by the gate-tier expansion above -
+// its stretch routines aren't what this was about, and it has its own tier arrays sized for 3).
+function flexTierIndex(level){ return level<30?0:(level<70?1:2); }
 function isTrialToday(dateStr, gateId, level){
   if(gateId==='rest') return false;
   const tierIdx = gateTierIndex(level);
@@ -2032,7 +1986,7 @@ function render(){
     S.mysteryCycle = makeCycle(MYSTERY_QUESTS.length, 'mystery');
   }
   { // Flexibility cycle is per-tier - a fresh shuffle starts the first time you reach a tier.
-    const flexTierNow = gateTierIndex(levelFromXp(S.xp).lvl);
+    const flexTierNow = flexTierIndex(levelFromXp(S.xp).lvl);
     if(!S.flexCycle || S.flexCycle.tier!==flexTierNow || !Array.isArray(S.flexCycle.order) || S.flexCycle.order.length!==FLEXIBILITY_TIERS[flexTierNow].length){
       S.flexCycle = makeCycle(FLEXIBILITY_TIERS[flexTierNow].length, 'flex_'+flexTierNow, {tier:flexTierNow});
     }
@@ -2111,7 +2065,7 @@ function render(){
     }
 
     S.mysteryCycle = advanceCycle(S.mysteryCycle, MYSTERY_QUESTS.length, 'mystery');
-    const flexTierForAdvance = gateTierIndex(levelFromXp(S.xp).lvl);
+    const flexTierForAdvance = flexTierIndex(levelFromXp(S.xp).lvl);
     if(S.flexCycle && S.flexCycle.tier===flexTierForAdvance){
       S.flexCycle = advanceCycle(S.flexCycle, FLEXIBILITY_TIERS[flexTierForAdvance].length, 'flex_'+flexTierForAdvance);
     }
