@@ -206,11 +206,6 @@
   .conn-badge.syncing{background:rgba(251,191,36,0.14);border:1px solid var(--gold);color:var(--gold);
     box-shadow:0 0 14px rgba(251,191,36,0.35)}
 
-  .refresh-btn{position:fixed;top:calc(10px + env(safe-area-inset-top));right:10px;z-index:76;
-    width:32px;height:32px;border-radius:50%;border:1px solid var(--violet);background:rgba(139,92,246,0.12);
-    color:var(--ink);display:flex;align-items:center;justify-content:center;cursor:pointer}
-  .refresh-btn:active{transform:scale(0.94)}
-
   label{display:block;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);
     margin:14px 0 6px}
   input,select{width:100%;background:rgba(5,7,15,0.7);border:1px solid var(--line);border-radius:2px;
@@ -427,10 +422,6 @@
 <div id="viewBar" style="display:none;position:sticky;top:0;z-index:70;background:rgba(139,92,246,0.18);border-bottom:1px solid var(--violet);padding:10px 14px;text-align:center;font-family:'Orbitron';font-size:11px;letter-spacing:.06em;color:#c9b3ff"></div>
 
 <div id="connBadge" class="conn-badge" style="display:none"></div>
-
-<button id="btnRefresh" class="refresh-btn" type="button" title="Check for updates">
-  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 4v6h-6"/></svg>
-</button>
 
 <!-- Sends the inactivity re-engagement emails - free tier, no backend. Fill in your own IDs
      from emailjs.com (Account > General for the public key, Email Services for the service ID,
@@ -1206,19 +1197,6 @@ function updateConnBadge(){
 }
 window.addEventListener('online', ()=>{ connectionState.online = true; updateConnBadge(); });
 window.addEventListener('offline', ()=>{ connectionState.online = false; updateConnBadge(); });
-
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('sw.js').catch(err=>console.error('Service worker registration failed:', err));
-}
-document.getElementById('btnRefresh')?.addEventListener('click', ()=>{
-  if('serviceWorker' in navigator){
-    navigator.serviceWorker.getRegistrations().then(regs=>{
-      regs.forEach(reg=>reg.update());
-    }).finally(()=>window.location.reload());
-  } else {
-    window.location.reload();
-  }
-});
 function startSyncWatcher(){
   if(syncWatchUnsub || !currentUid) return;
   // includeMetadataChanges is required here - without it, onSnapshot only re-fires when the
