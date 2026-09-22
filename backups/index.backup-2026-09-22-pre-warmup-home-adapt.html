@@ -749,7 +749,7 @@ const WARMUPS = {
   ],
   pull:[
     {n:'Arm circles and shoulder rolls', t:'30s each way', d:'Shoulders.'},
-    {n:'Light dumbbell rows (very light weight)', t:'2x10 /side', d:'Back activation, slow controlled reps.'},
+    {n:'Scapular pulls (dead hang, shoulders only)', t:'2x8-10', d:'Back activation.'},
     {n:'Band pull-aparts', t:'1x15', d:'Light, activation only.'}
   ],
   legs:[
@@ -757,13 +757,6 @@ const WARMUPS = {
     {n:'Bodyweight squats', t:'1x15', d:'Ramp-up set, easy pace.'},
     {n:'Walking high knees', t:'30s', d:'Raise heart rate, hip flexors.'},
     {n:'Ankle circles', t:'10 /side', d:'Ankles.'}
-  ],
-  // Wanderer Mode switches Pull to park/calisthenics, so a pull-up bar is back on the table -
-  // the default Pull warm-up above assumes dumbbells only, since that's the home equipment.
-  pullWanderer:[
-    {n:'Arm circles and shoulder rolls', t:'30s each way', d:'Shoulders.'},
-    {n:'Scapular pulls (dead hang, shoulders only)', t:'2x8-10', d:'Back activation.'},
-    {n:'Band pull-aparts', t:'1x15', d:'Light, activation only.'}
   ]
 };
 const RANKS = [
@@ -2405,13 +2398,13 @@ function render(){
         <div style="font-family:'Orbitron';font-size:12px;letter-spacing:.1em;color:${gateHeaderColor(gate.color)};margin-bottom:10px">
           ${gate.icon} GATE - ${esc(gate.name)} <span style="display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:2px;border:1px solid ${RANK_COLORS[rk.r]};color:${RANK_COLORS[rk.r]};background:rgba(${RANK_RGB[rk.r]},0.15);box-shadow:0 0 10px rgba(${RANK_RGB[rk.r]},0.6);font-size:11px;font-weight:900;vertical-align:middle;margin:0 2px">${rk.r}</span> <span style="color:var(--muted);font-size:10px">${(S.wandererMode && gate.wandererSub) ? gate.wandererSub : gate.sub}</span>
         </div>
-        ${(()=>{ const wu = (gateId==='pull' && S.wandererMode) ? WARMUPS.pullWanderer : WARMUPS[gateId]; return wu ? `
+        ${WARMUPS[gateId] ? `
         <details class="guide" style="margin-bottom:10px">
           <summary>🔥 Warm up first</summary>
           <div class="guide-body">
-            ${wu.map(w=>`<p><b>${esc(w.n)}</b> - ${esc(w.t)} <span style="color:var(--muted);font-size:12px">${esc(w.d)}</span></p>`).join('')}
+            ${WARMUPS[gateId].map(w=>`<p><b>${esc(w.n)}</b> - ${esc(w.t)} <span style="color:var(--muted);font-size:12px">${esc(w.d)}</span></p>`).join('')}
           </div>
-        </details>` : ''; })()}
+        </details>` : ''}
         ${gateIsTrial?(gateId==='custom'?`<div class="tier-banner">⚡ BONUS EFFORT DAY - one extra set of everything today, clear it for a +20 XP bonus</div>`:`<div class="tier-banner">⚡ TRIAL GATE - a harder challenge today, clear it for a +20 XP bonus</div>`):''}
         <ul class="ex">
           ${gateExercises.map((e,i)=>{
