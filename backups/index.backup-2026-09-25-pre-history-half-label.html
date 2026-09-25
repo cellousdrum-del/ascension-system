@@ -3305,11 +3305,11 @@ function buildHistory(){
         let line;
         if(!h.manual){
           const dayLabel = h.gate==='custom' ? esc(h.customName||'Custom Day') : (h.gate==='rest' ? null : GATES[h.gate].name);
-          line = h.gate==='rest' ? 'Rest day confirmed' : `${dayLabel} ${h.half?'half-cleared':'cleared'} (+${h.xp} XP)`;
+          line = h.gate==='rest' ? 'Rest day confirmed' : `${dayLabel} cleared (+${h.xp} XP)`;
         } else {
           const parts = [];
-          if(h.gate==='custom') parts.push(esc(h.customName||'Custom Day')+(h.gateHalf?' half-cleared':' cleared'));
-          else if(h.gate) parts.push(GATES[h.gate].name+(h.gateHalf?' half-cleared':' cleared'));
+          if(h.gate==='custom') parts.push(esc(h.customName||'Custom Day')+' cleared');
+          else if(h.gate) parts.push(GATES[h.gate].name+' cleared');
           if(h.dailyDone) parts.push('Daily Quest');
           if(h.flexDone) parts.push('Flexibility');
           line = (parts.length ? parts.join(' + ') : 'Logged') + ' (logged manually';
