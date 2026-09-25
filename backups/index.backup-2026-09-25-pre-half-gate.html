@@ -2245,8 +2245,6 @@ function render(){
     S.mobilityDone = false;
     S.mobilityClaimed = false;
     S.gateDoneToday = false;
-    S.gateHalfToday = false;
-    S.gateHalfXpGiven = null; S.gateHalfFullShape = null; S.gateHalfGivenShape = null;
     save();
   }
   const info = levelFromXp(S.xp);
@@ -2265,8 +2263,6 @@ function render(){
   const notifStatus = notifSupported ? Notification.permission : 'unsupported';
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
   const gateIsTrial = isTrialToday(S.day, gateId, info.lvl);
-  const gateFullXpToday = S.penaltyToday ? Math.round((gateIsTrial?120:100)/2) : (gateIsTrial?120:100);
-  const gateHalfXpToday = Math.round(gateFullXpToday/2);
   let trialAlertShownThisRender = false;
   if(gateIsTrial && !S.gateDoneToday && !viewOnly && S.trialNotifiedDay!==S.day){
     S.trialNotifiedDay = S.day;
@@ -2431,14 +2427,9 @@ function render(){
         ${!gateExercisesDone
           ? `<div class="penalty">⚠ Gate not cleared - complete every set above</div>`
           : `<div style="font-size:12px;color:var(--green);letter-spacing:.08em;margin-top:10px;text-transform:uppercase">✓ All sets completed</div>`}
-        ${(S.gateDoneToday && S.gateHalfToday) ? `<div style="font-size:12px;color:var(--gold);letter-spacing:.06em;margin-top:8px">◐ Half Gate cleared today (+${S.gateHalfXpGiven} XP) - finish the rest below for full credit</div>` : ''}
-        <button class="btn${(S.gateDoneToday && !S.gateHalfToday)?' ghost':''}" id="completeBtn" ${(S.gateDoneToday && !S.gateHalfToday)?'disabled':''} onclick="completeGate()">
-          ${(S.gateDoneToday && !S.gateHalfToday) ? 'Gate cleared today ✓' : (S.gateHalfToday ? `Finish for full XP (+${Math.max(0,gateFullXpToday-(S.gateHalfXpGiven||0))} XP more)` : (S.penaltyToday?`Clear the Gate (+${gateFullXpToday} XP, weakened)`:`Clear the Gate (+${gateFullXpToday} XP)`))}
+        <button class="btn${S.gateDoneToday?' ghost':''}" id="completeBtn" ${S.gateDoneToday?'disabled':''} onclick="completeGate()">
+          ${S.gateDoneToday?'Gate cleared today ✓':(S.penaltyToday?'Clear the Gate (+50 XP, weakened)':'Clear the Gate (+100 XP)')}
         </button>
-        ${!S.gateDoneToday ? `
-        <button class="btn ghost" style="margin-top:8px" onclick="completeGateHalf()">
-          Ran out of time? Mark half-complete (+${gateHalfXpToday} XP)
-        </button>` : ''}
       `}
     </section>
 
@@ -2521,16 +2512,12 @@ function render(){
       <details class="guide" style="margin-top:10px">
         <summary>Log a past workout</summary>
         <div class="guide-body">
-          <p class="note" style="margin-bottom:10px">Adds an entry to your history log. Check whichever of these you actually did that day - XP is only awarded for what's checked. Re-logging a date you've already logged corrects whichever boxes you check this time (e.g. fixing a Gate from full to half) - anything you leave unchecked stays exactly as it was. Gate or Daily Quest can cancel a streak break if backfilling closes the exact gap that caused it; Flexibility alone can't, since it doesn't count toward the streak live either.</p>
+          <p class="note" style="margin-bottom:10px">Adds an entry to your history log. Check whichever of these you actually did that day - XP is only awarded for what's checked. Gate or Daily Quest can cancel a streak break if backfilling closes the exact gap that caused it; Flexibility alone can't, since it doesn't count toward the streak live either.</p>
           <label>Date</label>
           <input id="pastDate" type="date" max="${today()}">
           <label style="display:flex;align-items:center;gap:8px;margin:14px 0 6px;cursor:pointer;text-transform:none;letter-spacing:normal;color:var(--ink);font-size:13px;font-weight:400">
             <input type="checkbox" id="pastGateDone" style="width:auto;margin:0">
-            Gate cleared (+100 XP, up to 4 stat points)
-          </label>
-          <label style="display:flex;align-items:center;gap:8px;margin:6px 0 6px 26px;cursor:pointer;text-transform:none;letter-spacing:normal;color:var(--muted);font-size:12px;font-weight:400">
-            <input type="checkbox" id="pastGateHalf" style="width:auto;margin:0">
-            Only got through about half of it (half the XP/stats instead)
+            Gate cleared (+100 XP, +1 stat)
           </label>
           <select id="pastGate">
             ${ar
@@ -2539,7 +2526,7 @@ function render(){
           </select>
           <label style="display:flex;align-items:center;gap:8px;margin:14px 0 6px;cursor:pointer;text-transform:none;letter-spacing:normal;color:var(--ink);font-size:13px;font-weight:400">
             <input type="checkbox" id="pastDailyDone" style="width:auto;margin:0">
-            Daily Quest done (+30 XP, up to 4 stat points)
+            Daily Quest done (+30 XP, +1 Vitality)
           </label>
           <label style="display:flex;align-items:center;gap:8px;margin:14px 0 6px;cursor:pointer;text-transform:none;letter-spacing:normal;color:var(--ink);font-size:13px;font-weight:400">
             <input type="checkbox" id="pastFlexDone" style="width:auto;margin:0">
@@ -2558,12 +2545,11 @@ function render(){
         <div class="guide-body">
           <p><b>Clear the Gate</b> (+100 XP): finish every set of your assigned Push/Pull/Legs workout. Also splits 4 stat points across Strength/Vitality/Endurance/Agility - not evenly every time, but always weighted toward whichever stat is currently lowest, so they stay paired over time instead of one running away with it. Once per day.</p>
           <p><b>Trial Gate</b> (+120 XP): near a rank-up boundary, today's Gate occasionally gets swapped for a harder tier - you'll get a full-screen "a monster has appeared" alert the moment you open the app that day. Clear it for the bonus XP. Turn on browser notifications in the Account tab to also get a real system alert alongside it.</p>
-          <p><b>Half Gate</b> (+50 XP, half the stat points): ran out of time? Below the Clear the Gate button, mark it half-complete instead (needs at least one set logged first) - it still counts as trained today, so the streak holds and tomorrow's rotation moves on normally, just for half the reward. Get more time later that same day? Clear the Gate normally and you'll get exactly the remainder, topping up to the full amount - never double-paid.</p>
           <p><b>The Gate waits for you.</b> If you don't clear today's assigned Gate (or confirm a scheduled Rest day), it does not move on - tomorrow (and every day after) still shows the same one, until you actually clear it or confirm it. Nothing advances automatically, including Rest days.</p>
           <p><b>Wanderer Mode</b> (toggle at the top of Home): swaps Pull and Legs to calisthenics-only exercises for when you're traveling and don't have dumbbells - Push is already park-friendly, so it stays the same. Same XP, same stat gains, same rank tiers - only the exercises change. Flip it back off once you're home. Only available on the default Push/Pull/Legs split.</p>
           <p><b>Personalized Routines</b> (Routine tab): build up to ${MAX_ROUTINES} of your own routines instead of Push/Pull/Legs, and switch between them (or back to Default) anytime without losing any of them. Each routine has its own name, its own rest cycle (train 1 to 6 days in a row before a mandatory rest day - never more than 6, for your own health), and up to 6 days, each with its own name, icon, color, assigned stat, and exercise list. A day needs at least one real exercise before its routine can be activated. Custom days have no rank tiers (one flat list) and give the same +100 XP as any Gate. If your day count doesn't divide evenly into the rest cycle, the rotation just keeps jumping to the next day in your list, even mid-cycle. Occasionally a "Bonus Effort Day" asks for one extra set of everything for +20 XP, using the same trigger as Trial Gates below.</p>
           <p><b>Daily Quest</b> (+30 XP): check off both the grip-strengthener task and the mystery task. Splits 4 stat points across all four stats the same weighted way the Gate does. Once per day.</p>
-          <p><b>Flexibility</b> (+20 XP): complete today's stretch routine, drawn from a curated pool of real static stretches (no mobility drills, no yoga flows). Each rank targets the specific joints and muscles the Gate skills at that rank actually need - pike/hamstring flexibility for pike push-ups, shoulder flexion for wall handstand push-ups, hip flexor and hamstring compression for L-sit, ankle dorsiflexion for pistol squats, and so on - with deeper holds and PNF technique at higher tiers. Pure XP, no stat attached, available every day including Rest days - and doesn't count toward your streak.</p>
+          <p><b>Flexibility</b> (+20 XP): complete today's stretch routine, drawn from a curated pool of real static stretches (no mobility drills, no yoga flows) - deeper holds and PNF technique at higher tiers, working toward splits and pancake at the top tier, scaling with rank the same way the Gates do. Pure XP, no stat attached, available every day including Rest days - and doesn't count toward your streak.</p>
           <p><b>Log your weight</b> (+10 XP): only awarded if it moved the right direction for your goal (up if bulking, down if cutting) - it always logs either way, but XP only comes with real progress.</p>
           <p><b>Streak:</b> clearing the Gate, claiming the Daily Quest, or confirming a Rest day all keep it alive - you only need one of those per day.</p>
           <p><b>Quest-only grace period.</b> Leaning on the Daily Quest alone (instead of the Gate) only carries the streak for 3 days in a row - on the 4th, the Gate becomes mandatory again and the Daily Quest alone will no longer save it. You'll get a full-screen "Streak At Risk" warning (and a browser notification, if enabled) on that critical day, before the streak actually breaks - not just after. Clearing the Gate (or confirming Rest) any time resets this clock. This is unrelated to Trial Gates above.</p>
@@ -2713,7 +2699,7 @@ function render(){
         <div class="guide-body">
           <p><b>Adding a friend:</b> there's no search box - find someone in Hunter Chat below (the shared chat everyone sees) and tap "+ FRIEND" next to one of their messages to send a request.</p>
           <p><b>Requests:</b> a pending request shows "Requested" until they respond; if someone sends you one, it shows up in a Friend Requests section above your Friends list with Accept/Decline.</p>
-          <p><b>Friends list:</b> shows each friend's level, rank (colored to match their rank badge), trained days, and streak at a glance. Tap a friend's name or "Message" to open a private DM thread with them - separate from Hunter Chat, which everyone can read.</p>
+          <p><b>Friends list:</b> shows each friend's trained days and streak at a glance. Tap a friend's name or "Message" to open a private DM thread with them - separate from Hunter Chat, which everyone can read.</p>
           <p><b>Unread dots:</b> a dot on the Social tab means an unread Hunter Chat message, friend request, or DM; a small dot next to a friend's name means an unread DM from them specifically.</p>
         </div>
       </details>
@@ -3124,23 +3110,13 @@ function allChecked(){
 // assigned stat, since that split is the user's deliberate choice, not something to balance.
 const ALL_STATS = ['str','vit','end','agi'];
 const STAT_SPLIT_SHAPES = [[4,0,0,0],[3,1,0,0],[2,2,0,0],[2,1,1,0],[1,1,1,1]];
-// Pure lookup, no mutation - shared by distributeStats() (live full-credit gains), completeGateHalf()
-// and the past-workout backfill form, so the one deterministic order+hash+shape computation only
-// lives in one place instead of being copy-pasted at every call site that needs "what would the
-// full stat award be right now."
-function statSplitShape(seed){
+function distributeStats(seed, gains){
   const order = ALL_STATS.slice().sort((a,b)=>(S.stats[a]||0)-(S.stats[b]||0));
   let h=0;
   for(let i=0;i<seed.length;i++){ h=(h*41+seed.charCodeAt(i))>>>0; }
   const shape = STAT_SPLIT_SHAPES[h % STAT_SPLIT_SHAPES.length];
-  const full = {};
-  order.forEach((k,i)=>{ if(shape[i]>0) full[k]=shape[i]; });
-  return full;
-}
-function distributeStats(seed, gains){
-  const full = statSplitShape(seed);
-  Object.keys(full).forEach(k=>{
-    const amt = full[k];
+  order.forEach((k,i)=>{
+    const amt = shape[i];
     if(amt>0){
       S.stats[k] = (S.stats[k]||0) + amt;
       if(gains) gains[k] = (gains[k]||0) + amt;
@@ -3150,39 +3126,26 @@ function distributeStats(seed, gains){
 function completeGate(){
   const gateId=todaysGate();
   const g=gateInfo(gateId);
-  if(!g || (S.gateDoneToday && !S.gateHalfToday)) return;
+  if(!g || S.gateDoneToday) return;
   if(!allChecked()){
     toast('Quest incomplete','Complete every set to clear the Gate.');
     return;
   }
-  const wasHalf = !!S.gateHalfToday;
   const weakened = !!S.penaltyToday;
   const before=levelFromXp(S.xp).lvl;
   const trial = isTrialToday(S.day, gateId, levelFromXp(S.xp).lvl);
   const gained={};
-  // Topping up from a half-clear only pays out the remainder (of both XP and stat points) so
-  // the day totals exactly the full Gate reward once, instead of stacking half + full.
-  if(wasHalf){
-    const fullShape = S.gateHalfFullShape||{};
-    const givenShape = S.gateHalfGivenShape||{};
-    Object.keys(fullShape).forEach(k=>{
-      const d = fullShape[k]-(givenShape[k]||0);
-      if(d>0){ gained[k]=d; S.stats[k]=(S.stats[k]||0)+d; }
-    });
-  } else if(gateId==='custom'){ gained[g.gain]=1; S.stats[g.gain]=(S.stats[g.gain]||0)+1; }
+  if(gateId==='custom'){ gained[g.gain]=1; S.stats[g.gain]=(S.stats[g.gain]||0)+1; }
   else { distributeStats(S.day+'_gate', gained); }
   S._upStats=gained;
   const baseXp = trial ? 120 : 100;
-  const fullXp = weakened ? Math.round(baseXp/2) : baseXp;
-  const xpGain = wasHalf ? Math.max(0, fullXp-(S.gateHalfXpGiven||0)) : fullXp;
+  const xpGain = weakened ? Math.round(baseXp/2) : baseXp;
   S.xp += xpGain;
   bumpStreak();
   S.gateDoneToday=true;
-  S.gateHalfToday=false;
-  S.gateHalfXpGiven=null; S.gateHalfFullShape=null; S.gateHalfGivenShape=null;
   S.history[S.day] = (gateId==='custom')
-    ? {gate:'custom', xp:fullXp, trial:trial, customName:g.name, customIcon:g.icon, customColor:g.color}
-    : {gate:gateId, xp:fullXp, trial:trial};
+    ? {gate:'custom', xp:xpGain, trial:trial, customName:g.name, customIcon:g.icon, customColor:g.color}
+    : {gate:gateId, xp:xpGain, trial:trial};
   save();
   const after=levelFromXp(S.xp).lvl;
   render();
@@ -3190,60 +3153,12 @@ function completeGate(){
   const penaltyStat=S._lastPenaltyStat; S._lastPenaltyStat=null;
   const weakTag = weakened ? ' (weakened, halved)' : '';
   if(after>before){ showLevelUp(after,gained); }
-  else if(wasHalf){ toast('Gate cleared','+'+xpGain+' XP more'+weakTag+' - '+g.name+' fully complete now.'); }
   else if(trial){ toast(gateId==='custom'?'Bonus effort cleared':'Trial Gate cleared','+'+xpGain+' XP'+weakTag+' - '+g.name+' complete.'); }
   else { toast('Gate cleared','+'+xpGain+' XP'+weakTag+' - '+g.name+' complete.'); }
   revealNewBox(after>before);
   if(penaltyXp || penaltyStat){
     setTimeout(()=>{ toast('Streak broken', buildPenaltyMsg(penaltyXp, penaltyStat)); }, after>before?400:3000);
   }
-  setTimeout(()=>{ S._upStats=null; },1800);
-}
-// Half-clearing a Gate still counts today as trained (same gateDoneToday flag completeGate()
-// uses) so the day-rollover logic advances the rotation and the streak bumps normally - a
-// missed-workout day with half effort logged should never look the same as skipping entirely.
-// The exact full-reward shape/amounts get frozen into S.gateHalf* here so that topping up to
-// full later the same day (completeGate()) pays out only the remainder, never double-counts.
-function completeGateHalf(){
-  if(viewOnly) return;
-  const gateId=todaysGate();
-  const g=gateInfo(gateId);
-  if(!g || S.gateDoneToday) return;
-  const anySetLogged = Object.values(S.exSets||{}).some(v=>v>0);
-  if(!anySetLogged){
-    toast('Nothing logged yet','Log at least one set before marking the Gate half-complete.');
-    return;
-  }
-  const weakened = !!S.penaltyToday;
-  const before=levelFromXp(S.xp).lvl;
-  const trial = isTrialToday(S.day, gateId, levelFromXp(S.xp).lvl);
-  const baseXp = trial ? 120 : 100;
-  const fullXp = weakened ? Math.round(baseXp/2) : baseXp;
-  const halfXp = Math.round(fullXp/2);
-
-  const fullShape = (gateId==='custom') ? {[g.gain]:1} : statSplitShape(S.day+'_gate');
-  const givenShape = {};
-  Object.keys(fullShape).forEach(k=>{
-    const amt = Math.round(fullShape[k]*0.5);
-    if(amt>0){ givenShape[k]=amt; S.stats[k]=(S.stats[k]||0)+amt; }
-  });
-  S._upStats = givenShape;
-
-  S.xp += halfXp;
-  bumpStreak();
-  S.gateDoneToday = true;
-  S.gateHalfToday = true;
-  S.gateHalfXpGiven = halfXp;
-  S.gateHalfFullShape = fullShape;
-  S.gateHalfGivenShape = givenShape;
-  S.history[S.day] = (gateId==='custom')
-    ? {gate:'custom', xp:halfXp, trial:trial, customName:g.name, customIcon:g.icon, customColor:g.color, half:true}
-    : {gate:gateId, xp:halfXp, trial:trial, half:true};
-  save();
-  const after=levelFromXp(S.xp).lvl;
-  render();
-  if(after>before){ showLevelUp(after, givenShape); }
-  else { toast('Half Gate cleared','+'+halfXp+' XP - come back later today to finish for full credit.'); }
   setTimeout(()=>{ S._upStats=null; },1800);
 }
 function completeRestDay(){
@@ -3340,8 +3255,11 @@ function logPastWorkout(){
   }
 
   const existing = S.history[d];
-  if(existing && !confirm('This date already has an entry. Checked boxes below will correct that part of the day (its old XP/stats removed, the new amount applied) - anything left unchecked stays exactly as it was. Continue?')) return;
+  if(existing && !confirm('This date already has an entry. Add to it?')) return;
 
+  const gateAlreadyAwarded = !!(existing && (existing.gateAwarded!==undefined ? existing.gateAwarded : existing.xpAwarded));
+  const dailyAlreadyAwarded = !!(existing && existing.dailyAwarded);
+  const flexAlreadyAwarded = !!(existing && existing.flexAwarded);
   const weightAlreadyLogged = S.weightLog[d]!=null;
 
   const beforeLvl = levelFromXp(S.xp).lvl;
@@ -3350,13 +3268,8 @@ function logPastWorkout(){
   let xpGain = 0;
   const entry = Object.assign({manual:true}, existing);
 
-  // Each category below is fully self-contained and always re-evaluates if checked (no more
-  // "already awarded, skip" gate) - reversing whatever it previously contributed before applying
-  // the new amount, so re-logging a date corrects it instead of just stacking on top or being
-  // silently ignored. Categories left unchecked this time are never touched.
-  if(gateDone){
-    const half = document.getElementById('pastGateHalf').checked;
-    let gateName, dayStatKey;
+  if(gateDone && !gateAlreadyAwarded){
+    let gateName;
     if(gSel.indexOf('custom:')===0){
       const dayId = gSel.slice(7);
       const routine = activeRoutine();
@@ -3364,57 +3277,37 @@ function logPastWorkout(){
       if(!day){ toast('Pick a day','Select which custom day you did - your active routine may have changed.'); return; }
       entry.gate = 'custom'; entry.customName = day.name; entry.customIcon = day.icon; entry.customColor = day.color;
       gateName = day.name;
-      dayStatKey = day.stat;
+      S.stats[day.stat] = (S.stats[day.stat]||0)+1; gains[day.stat] = (gains[day.stat]||0)+1;
     } else {
       entry.gate = gSel;
       delete entry.customName; delete entry.customIcon; delete entry.customColor;
       gateName = GATES[gSel].name;
+      distributeStats(d+'_gate', gains);
     }
-    // Reverse whatever this Gate previously contributed BEFORE computing the new shape - the
-    // "weighted toward lowest stat" split depends on current S.stats, so computing it against
-    // the not-yet-reversed old amounts would skew which stats the new shape favors.
-    const oldGateStats = (existing && existing.gateStatGains) || {};
-    const oldGateXp = (existing && (existing.gateXp!==undefined ? existing.gateXp : (existing.gateAwarded?100:0))) || 0;
-    Object.keys(oldGateStats).forEach(k=>{ S.stats[k] = (S.stats[k]||0) - oldGateStats[k]; });
-    const shape = dayStatKey ? {[dayStatKey]:1} : statSplitShape(d+'_gate');
-    const newShape = {};
-    Object.keys(shape).forEach(k=>{ const amt = half ? Math.round(shape[k]*0.5) : shape[k]; if(amt>0) newShape[k]=amt; });
-    const newGateXp = half ? Math.round(100/2) : 100;
-    Object.keys(newShape).forEach(k=>{ S.stats[k] = (S.stats[k]||0) + newShape[k]; gains[k] = (gains[k]||0) + newShape[k]; });
-    xpGain += newGateXp - oldGateXp;
-    entry.gateXp = newGateXp;
-    entry.gateStatGains = newShape;
-    entry.gateHalf = half;
+    xpGain += 100;
     entry.gateAwarded = true;
-    addedLabels.push(gateName+(half?' half-cleared':' cleared'));
+    addedLabels.push(gateName+' cleared');
   }
-  if(dailyDone){
-    const oldDailyStats = (existing && existing.dailyStatGains) || {};
-    const oldDailyXp = (existing && (existing.dailyXp!==undefined ? existing.dailyXp : (existing.dailyAwarded?30:0))) || 0;
-    Object.keys(oldDailyStats).forEach(k=>{ S.stats[k] = (S.stats[k]||0) - oldDailyStats[k]; });
-    const shape = statSplitShape(d+'_daily');
-    Object.keys(shape).forEach(k=>{ S.stats[k] = (S.stats[k]||0) + shape[k]; gains[k] = (gains[k]||0) + shape[k]; });
-    xpGain += 30 - oldDailyXp;
-    entry.dailyXp = 30;
-    entry.dailyStatGains = shape;
+  if(dailyDone && !dailyAlreadyAwarded){
+    distributeStats(d+'_daily', gains);
+    xpGain += 30;
     entry.dailyDone = true;
     entry.dailyAwarded = true;
     addedLabels.push('Daily Quest');
   }
-  if(flexDone){
-    const oldFlexXp = (existing && (existing.flexXp!==undefined ? existing.flexXp : (existing.flexAwarded?20:0))) || 0;
-    xpGain += 20 - oldFlexXp;
-    entry.flexXp = 20;
+  if(flexDone && !flexAlreadyAwarded){
+    xpGain += 20;
     entry.flexDone = true;
     entry.flexAwarded = true;
     addedLabels.push('Flexibility');
   }
-  if(weightOk){
+  if(weightOk && !weightAlreadyLogged){
     S.weightLog[d] = w;
-    if(!weightAlreadyLogged){ xpGain += 10; addedLabels.push('weight'); }
+    xpGain += 10;
+    addedLabels.push('weight');
   }
 
-  entry.xp = Math.max(0, ((existing && existing.xp) || 0) + xpGain);
+  entry.xp = ((existing && existing.xp) || 0) + xpGain;
   S.xp += xpGain;
   S.history[d] = entry;
 
@@ -3450,7 +3343,7 @@ function logPastWorkout(){
   } else if(!addedLabels.length){
     toast('Nothing new','Everything checked was already logged for this date.');
   } else {
-    let msg = addedLabels.join(', ')+' added for '+d+(xpGain?' ('+(xpGain>0?'+':'')+xpGain+' XP)':'')+'.';
+    let msg = addedLabels.join(', ')+' added for '+d+(xpGain?' (+'+xpGain+' XP)':'')+'.';
     if(cancelResult){
       const bits = [];
       if(cancelResult.refundXp) bits.push('+'+cancelResult.refundXp+' XP');
