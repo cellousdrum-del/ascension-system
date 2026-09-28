@@ -869,20 +869,6 @@ function advanceCycle(cycle, poolLen, seedKey){
   return Object.assign({}, cycle, { order, pos, gen });
 }
 
-/* ---------- Planche Path: a real full planche is a years-long isometric hold progression, not
-   something a rank tier can capture the way pike push-ups -> wall handstand push-ups was - it's
-   "can you hold this position for X seconds," not sets/reps to check off, so it lives entirely
-   outside the level/XP economy as a self-paced, self-reported tracker. Unlocks at Rank S, since
-   pseudo-planche push-ups (the Gate's lean-based lead-in to this) already max out there, and
-   keeps advancing independently of level/XP after that - leveling caps at 100, but planche
-   training realistically outlasts it. No reward tied to advancing, by design: there's no honest
-   way to auto-verify a static hold, so a reward would just be an incentive to lie to yourself. */
-const PLANCHE_STAGES = [
-  {n:'Tuck Planche', target:'20s hold', d:'Knees tucked tight to the chest, hips high, leaning forward onto straight arms.'},
-  {n:'Advanced Tuck Planche', target:'15s hold', d:'Hips extended further so the body is flatter, knees still tucked.'},
-  {n:'Straddle Planche', target:'10s hold', d:'Legs straight and spread wide to shorten the lever, body fully horizontal.'},
-  {n:'Full Planche', target:'10s hold', d:'Legs straight and together, fully horizontal - the complete skill.'}
-];
 /* ---------- Mobility routine pool ---------- */
 /* ---------- Flexibility: one tier per rank (E/D/C/B/A/S), same boundaries as the Gates
    (gateTierIndex) - not just generic full-body stretching, but chosen to directly support the
@@ -2523,21 +2509,6 @@ function render(){
     </section>
 
     <section class="win">
-      <div class="eyebrow">Planche Path</div>
-      ${rk.r==='S' ? `
-      <p class="note" style="margin-bottom:10px">A real planche is a years-long hold progression, not something a rank tier can capture - track it here at your own pace, separate from XP and leveling. No reward tied to advancing since there's no honest way to auto-verify a hold - just be straight with yourself.</p>
-      <div style="font-family:'Orbitron';font-size:15px;letter-spacing:.08em;color:var(--gold)">${esc(PLANCHE_STAGES[S.plancheStage||0].n)}</div>
-      <div style="color:var(--muted);font-size:13px;margin:4px 0 12px">${esc(PLANCHE_STAGES[S.plancheStage||0].d)} Work toward a ${esc(PLANCHE_STAGES[S.plancheStage||0].target)}.</div>
-      <div style="display:flex;gap:10px">
-        ${(S.plancheStage||0) < PLANCHE_STAGES.length-1
-          ? `<button class="btn ghost sm" style="flex:1" onclick="advancePlancheStage()">I can hold this - advance</button>`
-          : `<div style="flex:1;text-align:center;color:var(--green);font-size:12px;letter-spacing:.06em;text-transform:uppercase;padding:10px 0">Full Planche mastered</div>`}
-        ${(S.plancheStage||0) > 0 ? `<button class="btn ghost sm" style="flex:0 0 auto" onclick="regressPlancheStage()">Back a stage</button>` : ''}
-      </div>
-      ` : `<p class="note">Unlocks at Rank S - keep climbing.</p>`}
-    </section>
-
-    <section class="win">
       <div class="eyebrow">Ascension Log</div>
       <div class="stats">
         <div class="stat"><span class="k">Days Trained</span><span class="stat-val">${trainedDays}</span></div>
@@ -2867,21 +2838,6 @@ function toggleWandererMode(){
   render();
   toast(S.wandererMode?'Wanderer Mode on':'Wanderer Mode off',
     S.wandererMode?'Pull and Legs now use calisthenics only. Push is unchanged.':'Back to the normal dumbbell routine.');
-}
-function advancePlancheStage(){
-  if(viewOnly || rankFor(levelFromXp(S.xp).lvl).r!=='S') return;
-  const cur = S.plancheStage||0;
-  if(cur>=PLANCHE_STAGES.length-1) return;
-  S.plancheStage = cur+1;
-  save(); render();
-  toast('Planche Path', PLANCHE_STAGES[S.plancheStage].n+' unlocked.');
-}
-function regressPlancheStage(){
-  if(viewOnly) return;
-  const cur = S.plancheStage||0;
-  if(cur<=0) return;
-  S.plancheStage = cur-1;
-  save(); render();
 }
 
 /* ---------- Custom routine editor ---------- */
