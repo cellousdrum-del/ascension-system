@@ -556,63 +556,9 @@ const GATES = {
         {n:'Pseudo-planche push-ups (full lean, weighted)', t:'4x12', d:'Hold the deepest lean you can control.'}
       ]
     ]},
-  // Calisthenics is Pull's default now (a pull-up bar is assumed) - see togglePullDumbbells() and
-  // the WARMUPS.pullDumbbells / dumbbellTiers pairing below for the opt-in dumbbell version. A
-  // front-lever lead-in slot (E-S) mirrors Push's pseudo-planche -> Planche Path pairing, feeding
-  // into Front Lever Path at Rank S.
-  pull:{ name:'PULL', sub:'Park - Calisthenics', dumbbellSub:'Dumbbells - Home', icon:'\ud83d\udd35', color:'cyan',
+  pull:{ name:'PULL', sub:'Dumbbells - Home', wandererSub:'Park - Calisthenics', icon:'\ud83d\udd35', color:'cyan',
     gain:'agi',
     tiers:[
-      [ // E
-        {n:'Pull-ups', t:'4x5-8', d:'Back and biceps. Negatives if you cannot yet do a full rep.'},
-        {n:'Inverted rows', t:'4x8-12', d:'Low bar or two sturdy chairs. Adjust body angle for difficulty.'},
-        {n:'Chin-ups', t:'3x5-8', d:'Underhand grip. Biceps and back.'},
-        {n:'Towel or pole rows', t:'3x10-12', d:'Rear delts and upper back.'},
-        {n:'Flexed-arm hang', t:'3x10-15s', d:'Chin above the bar, hold as long as you can. Straight-arm strength primer.'},
-        {n:'Dead hang', t:'3x20-30s', d:'Grip and shoulder health.'}
-      ],
-      [ // D
-        {n:'Pull-ups', t:'4x6-10', d:'Back and biceps. Full dead hang each rep.'},
-        {n:'Inverted rows (feet elevated slightly)', t:'4x10-12', d:'A step or low ledge under the heels.'},
-        {n:'Chin-ups', t:'4x6-8', d:'Underhand grip. Biceps and back.'},
-        {n:'Towel or pole rows', t:'4x10-12', d:'Rear delts and upper back.'},
-        {n:'Tuck front lever hold (feet supported)', t:'3x8-12s', d:'Knees tucked, feet resting on a low support behind you, lean back toward horizontal.'},
-        {n:'Dead hang', t:'3x25-35s', d:'Grip and shoulder health.'}
-      ],
-      [ // C
-        {n:'Pull-ups', t:'4x8-12', d:'Strict form, full range.'},
-        {n:'Archer pull-ups (assisted)', t:'3x4-6 /side', d:'Shift weight to one arm each rep.'},
-        {n:'Inverted rows (feet elevated)', t:'4x10-15', d:'Feet up on a bench or ledge for a harder angle.'},
-        {n:'Chin-ups (slow negative)', t:'4x6-10', d:'3-4s controlled descent.'},
-        {n:'Tuck front lever hold', t:'3x8-12s', d:'Knees tucked tight to the chest, fully unsupported, hips high.'},
-        {n:'Towel or rope rows', t:'4x12-15', d:'Rear delts and upper back.'}
-      ],
-      [ // B
-        {n:'Pull-ups (paused at the top)', t:'4x10-14', d:'1s pause at the top of every rep.'},
-        {n:'Archer pull-ups (assisted)', t:'4x5-7 /side', d:'Shift weight to one arm each rep.'},
-        {n:'Inverted rows (feet elevated, slow)', t:'5x12-15', d:'3s controlled tempo each way.'},
-        {n:'Chin-ups (slow negative)', t:'4x8-10', d:'4-5s controlled descent.'},
-        {n:'Advanced tuck front lever hold', t:'3x6-10s', d:'Hips extended further, body flatter.'},
-        {n:'Towel or rope rows', t:'5x12-15', d:'Rear delts and upper back.'}
-      ],
-      [ // A
-        {n:'Weighted or max-rep pull-ups', t:'5x8-12', d:'Add weight in the backpack if bodyweight feels easy.'},
-        {n:'Archer pull-ups', t:'4x6-8 /side', d:'Full range, minimal assistance.'},
-        {n:'One-arm-assisted pull-up', t:'4x4-6 /side', d:'Support wrist with the other hand.'},
-        {n:'Typewriter pull-ups', t:'3x6-8', d:'Pull up, shift side to side at the top.'},
-        {n:'Straddle front lever hold', t:'3x5-8s', d:'Legs straight and spread wide to shorten the lever.'},
-        {n:'L-sit pull-ups', t:'3x5-8', d:'Legs held straight out during the pull.'}
-      ],
-      [ // S
-        {n:'Weighted pull-ups', t:'5x8-12', d:'Max weight in the backpack you can control.'},
-        {n:'Archer pull-ups (weighted)', t:'5x6-8 /side', d:'Full range, added weight if possible.'},
-        {n:'One-arm-assisted pull-up', t:'5x5-7 /side', d:'Minimal support from the free hand.'},
-        {n:'Typewriter pull-ups (slow)', t:'4x8-10', d:'Slow controlled shift side to side at the top.'},
-        {n:'Full front lever negatives', t:'3x3-5', d:'Lower slowly from a pull-up into full front lever position, under control.'},
-        {n:'L-sit pull-ups (weighted)', t:'4x6-8', d:'Legs straight out, added weight if possible.'}
-      ]
-    ],
-    dumbbellTiers:[
       [ // E
         {n:'One-arm dumbbell row', t:'4x8-12', d:'Back - go heavy (up to 20 kg).'},
         {n:'Dumbbell biceps curl', t:'3x10-12', d:'Control the descent 2-3 s.'},
@@ -654,6 +600,50 @@ const GATES = {
         {n:'Cross-body hammer curl (slow negative)', t:'5x12-15', d:'3-4s down on every rep.'},
         {n:'Single-arm rear-delt raise + row combo', t:'5x10-12 /side', d:'Heavier, slower tempo throughout.'},
         {n:'Weighted shrugs', t:'5x15', d:'Heaviest weight, 3s hold at the top.'}
+      ]
+    ],
+    wandererTiers:[
+      [ // E
+        {n:'Pull-ups', t:'4x5-8', d:'Back and biceps. Negatives if you cannot yet do a full rep.'},
+        {n:'Inverted rows', t:'4x8-12', d:'Low bar or two sturdy chairs. Adjust body angle for difficulty.'},
+        {n:'Chin-ups', t:'3x5-8', d:'Underhand grip. Biceps and back.'},
+        {n:'Towel or pole rows', t:'3x10-12', d:'Rear delts and upper back.'},
+        {n:'Dead hang', t:'3x20-30s', d:'Grip and shoulder health.'}
+      ],
+      [ // D
+        {n:'Pull-ups', t:'4x6-10', d:'Back and biceps. Full dead hang each rep.'},
+        {n:'Inverted rows (feet elevated slightly)', t:'4x10-12', d:'A step or low ledge under the heels.'},
+        {n:'Chin-ups', t:'4x6-8', d:'Underhand grip. Biceps and back.'},
+        {n:'Towel or pole rows', t:'4x10-12', d:'Rear delts and upper back.'},
+        {n:'Dead hang', t:'3x25-35s', d:'Grip and shoulder health.'}
+      ],
+      [ // C
+        {n:'Pull-ups', t:'4x8-12', d:'Strict form, full range.'},
+        {n:'Archer pull-ups (assisted)', t:'3x4-6 /side', d:'Shift weight to one arm each rep.'},
+        {n:'Inverted rows (feet elevated)', t:'4x10-15', d:'Feet up on a bench or ledge for a harder angle.'},
+        {n:'Chin-ups (slow negative)', t:'4x6-10', d:'3-4s controlled descent.'},
+        {n:'Towel or rope rows', t:'4x12-15', d:'Rear delts and upper back.'}
+      ],
+      [ // B
+        {n:'Pull-ups (paused at the top)', t:'4x10-14', d:'1s pause at the top of every rep.'},
+        {n:'Archer pull-ups (assisted)', t:'4x5-7 /side', d:'Shift weight to one arm each rep.'},
+        {n:'Inverted rows (feet elevated, slow)', t:'5x12-15', d:'3s controlled tempo each way.'},
+        {n:'Chin-ups (slow negative)', t:'4x8-10', d:'4-5s controlled descent.'},
+        {n:'Towel or rope rows', t:'5x12-15', d:'Rear delts and upper back.'}
+      ],
+      [ // A
+        {n:'Weighted or max-rep pull-ups', t:'5x8-12', d:'Add weight in the backpack if bodyweight feels easy.'},
+        {n:'Archer pull-ups', t:'4x6-8 /side', d:'Full range, minimal assistance.'},
+        {n:'One-arm-assisted pull-up', t:'4x4-6 /side', d:'Support wrist with the other hand.'},
+        {n:'Typewriter pull-ups', t:'3x6-8', d:'Pull up, shift side to side at the top.'},
+        {n:'L-sit pull-ups', t:'3x5-8', d:'Legs held straight out during the pull.'}
+      ],
+      [ // S
+        {n:'Weighted pull-ups', t:'5x8-12', d:'Max weight in the backpack you can control.'},
+        {n:'Archer pull-ups (weighted)', t:'5x6-8 /side', d:'Full range, added weight if possible.'},
+        {n:'One-arm-assisted pull-up', t:'5x5-7 /side', d:'Minimal support from the free hand.'},
+        {n:'Typewriter pull-ups (slow)', t:'4x8-10', d:'Slow controlled shift side to side at the top.'},
+        {n:'L-sit pull-ups (weighted)', t:'4x6-8', d:'Legs straight out, added weight if possible.'}
       ]
     ]},
   legs:{ name:'LEGS', sub:'Dumbbells - Home', wandererSub:'Park - Calisthenics', icon:'\ud83d\udfe3', color:'violet',
@@ -757,11 +747,10 @@ const WARMUPS = {
     {n:'Slow scapular push-ups', t:'1x15', d:'Light, activation only.'},
     {n:'Easy push-ups', t:'1x10', d:'Ramp-up set, well short of failure.'}
   ],
-  // Pull is calisthenics by default now (a pull-up bar is assumed), with dumbbells as the opt-in
-  // via its own separate toggle - decoupled from Wanderer Mode, which still only affects Legs.
   pull:[
     {n:'Arm circles and shoulder rolls', t:'30s each way', d:'Shoulders.'},
-    {n:'Scapular pulls (dead hang, shoulders only)', t:'2x8-10', d:'Back activation.'}
+    {n:'Light dumbbell rows (very light weight)', t:'2x10 /side', d:'Back activation, slow controlled reps.'},
+    {n:'Scapular squeezes (squeeze shoulder blades together)', t:'1x15', d:'Light, activation only, no equipment needed.'}
   ],
   legs:[
     {n:'Leg swings (front-back and side-side)', t:'10 /side', d:'Hips.'},
@@ -769,10 +758,11 @@ const WARMUPS = {
     {n:'Walking high knees', t:'30s', d:'Raise heart rate, hip flexors.'},
     {n:'Ankle circles', t:'10 /side', d:'Ankles.'}
   ],
-  pullDumbbells:[
+  // Wanderer Mode switches Pull to park/calisthenics, so a pull-up bar is back on the table -
+  // the default Pull warm-up above assumes dumbbells only, since that's the home equipment.
+  pullWanderer:[
     {n:'Arm circles and shoulder rolls', t:'30s each way', d:'Shoulders.'},
-    {n:'Light dumbbell rows (very light weight)', t:'2x10 /side', d:'Back activation, slow controlled reps.'},
-    {n:'Scapular squeezes (squeeze shoulder blades together)', t:'1x15', d:'Light, activation only, no equipment needed.'}
+    {n:'Scapular pulls (dead hang, shoulders only)', t:'2x8-10', d:'Back activation.'}
   ]
 };
 const RANKS = [
@@ -892,16 +882,6 @@ const PLANCHE_STAGES = [
   {n:'Advanced Tuck Planche', target:'15s hold', d:'Hips extended further so the body is flatter, knees still tucked.'},
   {n:'Straddle Planche', target:'10s hold', d:'Legs straight and spread wide to shorten the lever, body fully horizontal.'},
   {n:'Full Planche', target:'10s hold', d:'Legs straight and together, fully horizontal - the complete skill.'}
-];
-/* ---------- Front Lever Path: Pull's straight-arm counterpart to Planche Path, same design for
-   the same reason - a real front lever is a years-long hold progression, not something a rank
-   tier or a reward loop can honestly capture. Unlocks at Rank S alongside Planche Path, fed by
-   the front-lever lead-in holds now in Pull's Gate tiers. ---------- */
-const FRONT_LEVER_STAGES = [
-  {n:'Tuck Front Lever', target:'20s hold', d:'Hanging from a bar, knees tucked to the chest, body pulled to horizontal.'},
-  {n:'Advanced Tuck Front Lever', target:'15s hold', d:'Hips extended further so the body is flatter, knees still tucked.'},
-  {n:'Straddle Front Lever', target:'10s hold', d:'Legs straight and spread wide to shorten the lever, body fully horizontal.'},
-  {n:'Full Front Lever', target:'10s hold', d:'Legs straight and together, fully horizontal - the complete skill.'}
 ];
 /* ---------- Mobility routine pool ---------- */
 /* ---------- Flexibility: one tier per rank (E/D/C/B/A/S), same boundaries as the Gates
@@ -1205,9 +1185,7 @@ function effectiveGateExercises(dateStr, gateId, level){
     return d ? d.exercises : [];
   }
   const g = GATES[gateId];
-  const tiers = gateId==='pull'
-    ? ((S.pullDumbbells && g.dumbbellTiers) ? g.dumbbellTiers : g.tiers)
-    : ((S.wandererMode && g.wandererTiers) ? g.wandererTiers : g.tiers);
+  const tiers = (S.wandererMode && g.wandererTiers) ? g.wandererTiers : g.tiers;
   return tiers[effectiveGateTier(dateStr, gateId, level)];
 }
 function requiredSetsFor(gateId, exerciseText, dateStr, level){
@@ -2173,7 +2151,6 @@ function render(){
   }
   if(S.penaltyToday===undefined) S.penaltyToday = false;
   if(S.wandererMode===undefined) S.wandererMode = false;
-  if(S.pullDumbbells===undefined) S.pullDumbbells = false;
   if(!S.customRoutines) S.customRoutines = [];
   if(S.activeRoutineId===undefined) S.activeRoutineId = null;
   if(S.customDays && S.customDays.length){
@@ -2379,12 +2356,7 @@ function render(){
     <div class="wanderer-toggle${S.wandererMode?' on':''}" onclick="toggleWandererMode()">
       <span class="wt-icon">&#9992;</span>
       <span class="wt-label">Wanderer Mode</span>
-      <span class="wt-state">${S.wandererMode?'ON - Calisthenics (Legs)':'OFF'}</span>
-    </div>
-    <div class="wanderer-toggle${S.pullDumbbells?' on':''}" onclick="togglePullDumbbells()">
-      <span class="wt-icon">&#127947;</span>
-      <span class="wt-label">Dumbbells Today</span>
-      <span class="wt-state">${S.pullDumbbells?'ON - Dumbbells (Pull)':'OFF - Calisthenics'}</span>
+      <span class="wt-state">${S.wandererMode?'ON - Calisthenics':'OFF'}</span>
     </div>
     ` : ''}
     <section class="win">
@@ -2448,9 +2420,9 @@ function render(){
         </button>
       ` : `
         <div style="font-family:'Orbitron';font-size:12px;letter-spacing:.1em;color:${gateHeaderColor(gate.color)};margin-bottom:10px">
-          ${gate.icon} GATE - ${esc(gate.name)} <span style="display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:2px;border:1px solid ${RANK_COLORS[rk.r]};color:${RANK_COLORS[rk.r]};background:rgba(${RANK_RGB[rk.r]},0.15);box-shadow:0 0 10px rgba(${RANK_RGB[rk.r]},0.6);font-size:11px;font-weight:900;vertical-align:middle;margin:0 2px">${rk.r}</span> <span style="color:var(--muted);font-size:10px">${gateId==='pull' ? ((S.pullDumbbells && gate.dumbbellSub) ? gate.dumbbellSub : gate.sub) : ((S.wandererMode && gate.wandererSub) ? gate.wandererSub : gate.sub)}</span>
+          ${gate.icon} GATE - ${esc(gate.name)} <span style="display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:2px;border:1px solid ${RANK_COLORS[rk.r]};color:${RANK_COLORS[rk.r]};background:rgba(${RANK_RGB[rk.r]},0.15);box-shadow:0 0 10px rgba(${RANK_RGB[rk.r]},0.6);font-size:11px;font-weight:900;vertical-align:middle;margin:0 2px">${rk.r}</span> <span style="color:var(--muted);font-size:10px">${(S.wandererMode && gate.wandererSub) ? gate.wandererSub : gate.sub}</span>
         </div>
-        ${(()=>{ const wu = (gateId==='pull' && S.pullDumbbells) ? WARMUPS.pullDumbbells : WARMUPS[gateId]; return wu ? `
+        ${(()=>{ const wu = (gateId==='pull' && S.wandererMode) ? WARMUPS.pullWanderer : WARMUPS[gateId]; return wu ? `
         <details class="guide" style="margin-bottom:10px">
           <summary>🔥 Warm up first</summary>
           <div class="guide-body">
@@ -2566,21 +2538,6 @@ function render(){
     </section>
 
     <section class="win">
-      <div class="eyebrow">Front Lever Path</div>
-      ${rk.r==='S' ? `
-      <p class="note" style="margin-bottom:10px">Front lever is Pull's equivalent of planche - a years-long hold progression, tracked the same way, at your own pace, separate from XP and leveling.</p>
-      <div style="font-family:'Orbitron';font-size:15px;letter-spacing:.08em;color:var(--gold)">${esc(FRONT_LEVER_STAGES[S.frontLeverStage||0].n)}</div>
-      <div style="color:var(--muted);font-size:13px;margin:4px 0 12px">${esc(FRONT_LEVER_STAGES[S.frontLeverStage||0].d)} Work toward a ${esc(FRONT_LEVER_STAGES[S.frontLeverStage||0].target)}.</div>
-      <div style="display:flex;gap:10px">
-        ${(S.frontLeverStage||0) < FRONT_LEVER_STAGES.length-1
-          ? `<button class="btn ghost sm" style="flex:1" onclick="advanceFrontLeverStage()">I can hold this - advance</button>`
-          : `<div style="flex:1;text-align:center;color:var(--green);font-size:12px;letter-spacing:.06em;text-transform:uppercase;padding:10px 0">Full Front Lever mastered</div>`}
-        ${(S.frontLeverStage||0) > 0 ? `<button class="btn ghost sm" style="flex:0 0 auto" onclick="regressFrontLeverStage()">Back a stage</button>` : ''}
-      </div>
-      ` : `<p class="note">Unlocks at Rank S - keep climbing.</p>`}
-    </section>
-
-    <section class="win">
       <div class="eyebrow">Ascension Log</div>
       <div class="stats">
         <div class="stat"><span class="k">Days Trained</span><span class="stat-val">${trainedDays}</span></div>
@@ -2632,7 +2589,7 @@ function render(){
           <p><b>Trial Gate</b> (+120 XP): near a rank-up boundary, today's Gate occasionally gets swapped for a harder tier - you'll get a full-screen "a monster has appeared" alert the moment you open the app that day. Clear it for the bonus XP. Turn on browser notifications in the Account tab to also get a real system alert alongside it.</p>
           <p><b>Half Gate</b> (+50 XP, half the stat points): ran out of time? Below the Clear the Gate button, mark it half-complete instead (needs at least one set logged first) - it still counts as trained today, so the streak holds and tomorrow's rotation moves on normally, just for half the reward. Get more time later that same day? Clear the Gate normally and you'll get exactly the remainder, topping up to the full amount - never double-paid.</p>
           <p><b>The Gate waits for you.</b> If you don't clear today's assigned Gate (or confirm a scheduled Rest day), it does not move on - tomorrow (and every day after) still shows the same one, until you actually clear it or confirm it. Nothing advances automatically, including Rest days.</p>
-          <p><b>Push and Pull are calisthenics by default</b> - Legs and Pull each have their own separate equipment toggle at the top of Home. <b>Wanderer Mode</b> swaps Legs to calisthenics-only for when you're traveling and don't have dumbbells. <b>Dumbbells Today</b> does the opposite for Pull - it's calisthenics by default, and this toggle switches it to dumbbells for days you have them. Same XP, same stat gains, same rank tiers on either toggle - only the exercises change. Both only available on the default Push/Pull/Legs split.</p>
+          <p><b>Wanderer Mode</b> (toggle at the top of Home): swaps Pull and Legs to calisthenics-only exercises for when you're traveling and don't have dumbbells - Push is already park-friendly, so it stays the same. Same XP, same stat gains, same rank tiers - only the exercises change. Flip it back off once you're home. Only available on the default Push/Pull/Legs split.</p>
           <p><b>Personalized Routines</b> (Routine tab): build up to ${MAX_ROUTINES} of your own routines instead of Push/Pull/Legs, and switch between them (or back to Default) anytime without losing any of them. Each routine has its own name, its own rest cycle (train 1 to 6 days in a row before a mandatory rest day - never more than 6, for your own health), and up to 6 days, each with its own name, icon, color, assigned stat, and exercise list. A day needs at least one real exercise before its routine can be activated. Custom days have no rank tiers (one flat list) and give the same +100 XP as any Gate. If your day count doesn't divide evenly into the rest cycle, the rotation just keeps jumping to the next day in your list, even mid-cycle. Occasionally a "Bonus Effort Day" asks for one extra set of everything for +20 XP, using the same trigger as Trial Gates below.</p>
           <p><b>Daily Quest</b> (+30 XP): check off both the grip-strengthener task and the mystery task. Splits 4 stat points across all four stats the same weighted way the Gate does. Once per day.</p>
           <p><b>Flexibility</b> (+20 XP): complete today's stretch routine, drawn from a curated pool of real static stretches (no mobility drills, no yoga flows). Each rank targets the specific joints and muscles the Gate skills at that rank actually need - pike/hamstring flexibility for pike push-ups, shoulder flexion for wall handstand push-ups, hip flexor and hamstring compression for L-sit, ankle dorsiflexion for pistol squats, and so on - with deeper holds and PNF technique at higher tiers. Pure XP, no stat attached, available every day including Rest days - and doesn't count toward your streak.</p>
@@ -2878,9 +2835,7 @@ function statBox(label,val,key){
 }
 function gateBtn(id,activeId){
   const g=GATES[id];
-  const sub = id==='pull'
-    ? ((S.pullDumbbells && g.dumbbellSub) ? g.dumbbellSub : g.sub)
-    : ((S.wandererMode && g.wandererSub) ? g.wandererSub : g.sub);
+  const sub = (S.wandererMode && g.wandererSub) ? g.wandererSub : g.sub;
   return `<div class="gate" data-color="${g.color}" data-active="${activeId===id?1:0}">
     <div class="g-ic">${g.icon}</div><div class="g-nm">${g.name}</div><div class="g-sub">${sub.split(' - ')[0]}</div></div>`;
 }
@@ -2907,20 +2862,11 @@ function toggleDaily(k){ S.dailyDone[k]=!S.dailyDone[k]; save(); render(); }
 function toggleWandererMode(){
   if(viewOnly || activeRoutine()) return;
   S.wandererMode = !S.wandererMode;
-  S.exSets = {}; // exercise list changes (Legs swaps to calisthenics) - stale checkmarks would point at the wrong exercise
+  S.exSets = {}; // exercise list changes (Pull/Legs swap to calisthenics) - stale checkmarks would point at the wrong exercise
   save();
   render();
   toast(S.wandererMode?'Wanderer Mode on':'Wanderer Mode off',
-    S.wandererMode?'Legs now uses calisthenics only. Push and Pull are unchanged.':'Legs back to the normal dumbbell routine.');
-}
-function togglePullDumbbells(){
-  if(viewOnly || activeRoutine()) return;
-  S.pullDumbbells = !S.pullDumbbells;
-  S.exSets = {}; // exercise list changes (Pull swaps equipment) - stale checkmarks would point at the wrong exercise
-  save();
-  render();
-  toast(S.pullDumbbells?'Dumbbells Today on':'Dumbbells Today off',
-    S.pullDumbbells?'Pull now uses dumbbells for today. Flip it off once you are back to calisthenics.':'Pull back to the default calisthenics routine.');
+    S.wandererMode?'Pull and Legs now use calisthenics only. Push is unchanged.':'Back to the normal dumbbell routine.');
 }
 function advancePlancheStage(){
   if(viewOnly || rankFor(levelFromXp(S.xp).lvl).r!=='S') return;
@@ -2935,21 +2881,6 @@ function regressPlancheStage(){
   const cur = S.plancheStage||0;
   if(cur<=0) return;
   S.plancheStage = cur-1;
-  save(); render();
-}
-function advanceFrontLeverStage(){
-  if(viewOnly || rankFor(levelFromXp(S.xp).lvl).r!=='S') return;
-  const cur = S.frontLeverStage||0;
-  if(cur>=FRONT_LEVER_STAGES.length-1) return;
-  S.frontLeverStage = cur+1;
-  save(); render();
-  toast('Front Lever Path', FRONT_LEVER_STAGES[S.frontLeverStage].n+' unlocked.');
-}
-function regressFrontLeverStage(){
-  if(viewOnly) return;
-  const cur = S.frontLeverStage||0;
-  if(cur<=0) return;
-  S.frontLeverStage = cur-1;
   save(); render();
 }
 
