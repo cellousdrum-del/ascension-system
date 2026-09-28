@@ -498,57 +498,8 @@ const LEGACY_KEY='ascension_v1';
 /* ---------- Gate data (your real split), one tier per rank (E/D/C/B/A/S) - every rank-up
    changes the actual exercises, not just the badge color ---------- */
 const GATES = {
-  // Push's calisthenics content is entirely skill-specific (dips/muscle-ups/pike-to-handstand/
-  // planche lean, none of which have an honest dumbbell equivalent), so the dumbbell variant
-  // below isn't a slot-by-slot mirror - it's a straightforward dumbbell chest/shoulder/triceps
-  // accessory day, matching the style Pull's own dumbbellTiers already established (one primary
-  // press + isolation work, progressing by weight/tempo, a combo move added at rank B).
-  push:{ name:'PUSH', sub:'Park - Calisthenics', dumbbellSub:'Dumbbells - Home', icon:'\ud83d\udd34', color:'red',
+  push:{ name:'PUSH', sub:'Park - Calisthenics', icon:'\ud83d\udd34', color:'red',
     gain:'end',
-    dumbbellTiers:[
-      [ // E
-        {n:'Flat dumbbell bench press', t:'4x8-12', d:'Chest - go heavy (up to 20 kg).'},
-        {n:'Seated dumbbell shoulder press', t:'3x10-12', d:'Shoulders. Control the descent 2-3 s.'},
-        {n:'Dumbbell chest fly', t:'3x10-12', d:'Chest, isolation.'},
-        {n:'Dumbbell lateral raise', t:'3x12-15', d:'Light weight, clean form.'},
-        {n:'Overhead dumbbell triceps extension', t:'3x12-15', d:'Triceps.'}
-      ],
-      [ // D
-        {n:'Flat dumbbell bench press', t:'4x10-12', d:'Chest - heavier than last tier.'},
-        {n:'Seated dumbbell shoulder press', t:'4x10-12', d:'Shoulders. Slower negative, 2-3 s down.'},
-        {n:'Dumbbell chest fly', t:'3x12-15', d:'Chest, isolation.'},
-        {n:'Dumbbell lateral raise (slower tempo)', t:'4x12-15', d:'Light weight, 1s pause at the top.'},
-        {n:'Overhead dumbbell triceps extension', t:'4x12-15', d:'Triceps.'}
-      ],
-      [ // C
-        {n:'Flat dumbbell bench press', t:'4x10-15', d:'Chest - heavier than last tier.'},
-        {n:'Seated dumbbell shoulder press', t:'4x10-12', d:'Shoulders. Slow negative, 3-4 s down.'},
-        {n:'Dumbbell chest fly', t:'4x12-15', d:'Chest, isolation.'},
-        {n:'Single-arm dumbbell lateral raise', t:'3x12-15 /side', d:'Strict form, one side at a time.'},
-        {n:'Weighted overhead triceps extension', t:'4x12-15', d:'Pause 1s at the top.'}
-      ],
-      [ // B
-        {n:'Flat dumbbell bench press', t:'4x12-15', d:'Chest - heavier, slower tempo.'},
-        {n:'Dumbbell push press', t:'3x10-12', d:'Press into a slight leg drive. Combo movement.'},
-        {n:'Dumbbell chest fly (slow)', t:'4x12-15', d:'Chest, isolation.'},
-        {n:'Single-arm dumbbell lateral raise (paused)', t:'4x12-15 /side', d:'1s pause at the top, one side at a time.'},
-        {n:'Weighted overhead triceps extension', t:'4x15', d:'Heavier, longer hold at the top.'}
-      ],
-      [ // A
-        {n:'Flat dumbbell bench press', t:'5x10-15', d:'Max weight, slow controlled tempo.'},
-        {n:'Dumbbell push press', t:'4x10-12', d:'Press into a slight leg drive. Combo movement.'},
-        {n:'Dumbbell chest fly', t:'4x12-15', d:'Chest, isolation.'},
-        {n:'Single-arm lateral raise + press combo', t:'4x10-12 /side', d:'Raise then press without resetting.'},
-        {n:'Weighted overhead triceps extension', t:'4x12-15', d:'Heavy, 2s hold at the top.'}
-      ],
-      [ // S
-        {n:'Flat dumbbell bench press (paused)', t:'5x12-15', d:'Heaviest weight, 1s pause at the top.'},
-        {n:'Dumbbell push press', t:'5x10-12', d:'Heaviest weight, strict form.'},
-        {n:'Dumbbell chest fly (slow negative)', t:'5x12-15', d:'3-4s down on every rep.'},
-        {n:'Single-arm lateral raise + press combo', t:'5x10-12 /side', d:'Heavier, slower tempo throughout.'},
-        {n:'Weighted overhead triceps extension', t:'5x15', d:'Heaviest weight, 3s hold at the top.'}
-      ]
-    ],
     tiers:[
       [ // E
         {n:'Parallel bar dips', t:'4x8-12', d:'Chest and triceps. Controlled tempo.'},
@@ -605,7 +556,7 @@ const GATES = {
         {n:'Pseudo-planche push-ups (full lean, weighted)', t:'4x12', d:'Hold the deepest lean you can control.'}
       ]
     ]},
-  // Calisthenics is Pull's default now (a pull-up bar is assumed) - see toggleDumbbellsToday() and
+  // Calisthenics is Pull's default now (a pull-up bar is assumed) - see togglePullDumbbells() and
   // the WARMUPS.pullDumbbells / dumbbellTiers pairing below for the opt-in dumbbell version. A
   // front-lever lead-in slot (E-S) mirrors Push's pseudo-planche -> Planche Path pairing, feeding
   // into Front Lever Path at Rank S.
@@ -806,15 +757,8 @@ const WARMUPS = {
     {n:'Slow scapular push-ups', t:'1x15', d:'Light, activation only.'},
     {n:'Easy push-ups', t:'1x10', d:'Ramp-up set, well short of failure.'}
   ],
-  pushDumbbells:[
-    {n:'Arm circles', t:'30s each way', d:'Shoulders.'},
-    {n:'Wrist circles', t:'20s each way', d:'Wrists.'},
-    {n:'Slow scapular push-ups', t:'1x15', d:'Light, activation only.'},
-    {n:'Light dumbbell bench press (very light weight)', t:'1x12', d:'Ramp-up set, well short of failure.'}
-  ],
-  // Push and Pull are calisthenics by default now (equipment assumed available at the park),
-  // with dumbbells as the opt-in via the shared Dumbbells Today toggle - decoupled from Wanderer
-  // Mode, which still only affects Legs.
+  // Pull is calisthenics by default now (a pull-up bar is assumed), with dumbbells as the opt-in
+  // via its own separate toggle - decoupled from Wanderer Mode, which still only affects Legs.
   pull:[
     {n:'Arm circles and shoulder rolls', t:'30s each way', d:'Shoulders.'},
     {n:'Scapular pulls (dead hang, shoulders only)', t:'2x8-10', d:'Back activation.'}
@@ -1261,8 +1205,8 @@ function effectiveGateExercises(dateStr, gateId, level){
     return d ? d.exercises : [];
   }
   const g = GATES[gateId];
-  const tiers = (gateId==='pull'||gateId==='push')
-    ? ((S.dumbbellsToday && g.dumbbellTiers) ? g.dumbbellTiers : g.tiers)
+  const tiers = gateId==='pull'
+    ? ((S.pullDumbbells && g.dumbbellTiers) ? g.dumbbellTiers : g.tiers)
     : ((S.wandererMode && g.wandererTiers) ? g.wandererTiers : g.tiers);
   return tiers[effectiveGateTier(dateStr, gateId, level)];
 }
@@ -2229,7 +2173,7 @@ function render(){
   }
   if(S.penaltyToday===undefined) S.penaltyToday = false;
   if(S.wandererMode===undefined) S.wandererMode = false;
-  if(S.dumbbellsToday===undefined) S.dumbbellsToday = !!S.pullDumbbells;
+  if(S.pullDumbbells===undefined) S.pullDumbbells = false;
   if(!S.customRoutines) S.customRoutines = [];
   if(S.activeRoutineId===undefined) S.activeRoutineId = null;
   if(S.customDays && S.customDays.length){
@@ -2437,10 +2381,10 @@ function render(){
       <span class="wt-label">Wanderer Mode</span>
       <span class="wt-state">${S.wandererMode?'ON - Calisthenics (Legs)':'OFF'}</span>
     </div>
-    <div class="wanderer-toggle${S.dumbbellsToday?' on':''}" onclick="toggleDumbbellsToday()">
+    <div class="wanderer-toggle${S.pullDumbbells?' on':''}" onclick="togglePullDumbbells()">
       <span class="wt-icon">&#127947;</span>
       <span class="wt-label">Dumbbells Today</span>
-      <span class="wt-state">${S.dumbbellsToday?'ON - Dumbbells (Push + Pull)':'OFF - Calisthenics'}</span>
+      <span class="wt-state">${S.pullDumbbells?'ON - Dumbbells (Pull)':'OFF - Calisthenics'}</span>
     </div>
     ` : ''}
     <section class="win">
@@ -2504,9 +2448,9 @@ function render(){
         </button>
       ` : `
         <div style="font-family:'Orbitron';font-size:12px;letter-spacing:.1em;color:${gateHeaderColor(gate.color)};margin-bottom:10px">
-          ${gate.icon} GATE - ${esc(gate.name)} <span style="display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:2px;border:1px solid ${RANK_COLORS[rk.r]};color:${RANK_COLORS[rk.r]};background:rgba(${RANK_RGB[rk.r]},0.15);box-shadow:0 0 10px rgba(${RANK_RGB[rk.r]},0.6);font-size:11px;font-weight:900;vertical-align:middle;margin:0 2px">${rk.r}</span> <span style="color:var(--muted);font-size:10px">${(gateId==='pull'||gateId==='push') ? ((S.dumbbellsToday && gate.dumbbellSub) ? gate.dumbbellSub : gate.sub) : ((S.wandererMode && gate.wandererSub) ? gate.wandererSub : gate.sub)}</span>
+          ${gate.icon} GATE - ${esc(gate.name)} <span style="display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:2px;border:1px solid ${RANK_COLORS[rk.r]};color:${RANK_COLORS[rk.r]};background:rgba(${RANK_RGB[rk.r]},0.15);box-shadow:0 0 10px rgba(${RANK_RGB[rk.r]},0.6);font-size:11px;font-weight:900;vertical-align:middle;margin:0 2px">${rk.r}</span> <span style="color:var(--muted);font-size:10px">${gateId==='pull' ? ((S.pullDumbbells && gate.dumbbellSub) ? gate.dumbbellSub : gate.sub) : ((S.wandererMode && gate.wandererSub) ? gate.wandererSub : gate.sub)}</span>
         </div>
-        ${(()=>{ const wu = ((gateId==='pull'||gateId==='push') && S.dumbbellsToday) ? WARMUPS[gateId+'Dumbbells'] : WARMUPS[gateId]; return wu ? `
+        ${(()=>{ const wu = (gateId==='pull' && S.pullDumbbells) ? WARMUPS.pullDumbbells : WARMUPS[gateId]; return wu ? `
         <details class="guide" style="margin-bottom:10px">
           <summary>🔥 Warm up first</summary>
           <div class="guide-body">
@@ -2688,7 +2632,7 @@ function render(){
           <p><b>Trial Gate</b> (+120 XP): near a rank-up boundary, today's Gate occasionally gets swapped for a harder tier - you'll get a full-screen "a monster has appeared" alert the moment you open the app that day. Clear it for the bonus XP. Turn on browser notifications in the Account tab to also get a real system alert alongside it.</p>
           <p><b>Half Gate</b> (+50 XP, half the stat points): ran out of time? Below the Clear the Gate button, mark it half-complete instead (needs at least one set logged first) - it still counts as trained today, so the streak holds and tomorrow's rotation moves on normally, just for half the reward. Get more time later that same day? Clear the Gate normally and you'll get exactly the remainder, topping up to the full amount - never double-paid.</p>
           <p><b>The Gate waits for you.</b> If you don't clear today's assigned Gate (or confirm a scheduled Rest day), it does not move on - tomorrow (and every day after) still shows the same one, until you actually clear it or confirm it. Nothing advances automatically, including Rest days.</p>
-          <p><b>Push and Pull are calisthenics by default</b> - Legs and Push/Pull each have their own separate equipment toggle at the top of Home. <b>Wanderer Mode</b> swaps Legs to calisthenics-only for when you're traveling and don't have dumbbells. <b>Dumbbells Today</b> does the opposite for Push and Pull together - they're calisthenics by default, and this one toggle switches both to dumbbells for days you have them. Same XP, same stat gains, same rank tiers on either toggle - only the exercises change. Both only available on the default Push/Pull/Legs split.</p>
+          <p><b>Push and Pull are calisthenics by default</b> - Legs and Pull each have their own separate equipment toggle at the top of Home. <b>Wanderer Mode</b> swaps Legs to calisthenics-only for when you're traveling and don't have dumbbells. <b>Dumbbells Today</b> does the opposite for Pull - it's calisthenics by default, and this toggle switches it to dumbbells for days you have them. Same XP, same stat gains, same rank tiers on either toggle - only the exercises change. Both only available on the default Push/Pull/Legs split.</p>
           <p><b>Personalized Routines</b> (Routine tab): build up to ${MAX_ROUTINES} of your own routines instead of Push/Pull/Legs, and switch between them (or back to Default) anytime without losing any of them. Each routine has its own name, its own rest cycle (train 1 to 6 days in a row before a mandatory rest day - never more than 6, for your own health), and up to 6 days, each with its own name, icon, color, assigned stat, and exercise list. A day needs at least one real exercise before its routine can be activated. Custom days have no rank tiers (one flat list) and give the same +100 XP as any Gate. If your day count doesn't divide evenly into the rest cycle, the rotation just keeps jumping to the next day in your list, even mid-cycle. Occasionally a "Bonus Effort Day" asks for one extra set of everything for +20 XP, using the same trigger as Trial Gates below.</p>
           <p><b>Daily Quest</b> (+30 XP): check off both the grip-strengthener task and the mystery task. Splits 4 stat points across all four stats the same weighted way the Gate does. Once per day.</p>
           <p><b>Flexibility</b> (+20 XP): complete today's stretch routine, drawn from a curated pool of real static stretches (no mobility drills, no yoga flows). Each rank targets the specific joints and muscles the Gate skills at that rank actually need - pike/hamstring flexibility for pike push-ups, shoulder flexion for wall handstand push-ups, hip flexor and hamstring compression for L-sit, ankle dorsiflexion for pistol squats, and so on - with deeper holds and PNF technique at higher tiers. Pure XP, no stat attached, available every day including Rest days - and doesn't count toward your streak.</p>
@@ -2934,8 +2878,8 @@ function statBox(label,val,key){
 }
 function gateBtn(id,activeId){
   const g=GATES[id];
-  const sub = (id==='pull'||id==='push')
-    ? ((S.dumbbellsToday && g.dumbbellSub) ? g.dumbbellSub : g.sub)
+  const sub = id==='pull'
+    ? ((S.pullDumbbells && g.dumbbellSub) ? g.dumbbellSub : g.sub)
     : ((S.wandererMode && g.wandererSub) ? g.wandererSub : g.sub);
   return `<div class="gate" data-color="${g.color}" data-active="${activeId===id?1:0}">
     <div class="g-ic">${g.icon}</div><div class="g-nm">${g.name}</div><div class="g-sub">${sub.split(' - ')[0]}</div></div>`;
@@ -2969,14 +2913,14 @@ function toggleWandererMode(){
   toast(S.wandererMode?'Wanderer Mode on':'Wanderer Mode off',
     S.wandererMode?'Legs now uses calisthenics only. Push and Pull are unchanged.':'Legs back to the normal dumbbell routine.');
 }
-function toggleDumbbellsToday(){
+function togglePullDumbbells(){
   if(viewOnly || activeRoutine()) return;
-  S.dumbbellsToday = !S.dumbbellsToday;
-  S.exSets = {}; // exercise list changes (Push/Pull swap equipment) - stale checkmarks would point at the wrong exercise
+  S.pullDumbbells = !S.pullDumbbells;
+  S.exSets = {}; // exercise list changes (Pull swaps equipment) - stale checkmarks would point at the wrong exercise
   save();
   render();
-  toast(S.dumbbellsToday?'Dumbbells Today on':'Dumbbells Today off',
-    S.dumbbellsToday?'Push and Pull now use dumbbells for today. Flip it off once you are back to calisthenics.':'Push and Pull back to the default calisthenics routine.');
+  toast(S.pullDumbbells?'Dumbbells Today on':'Dumbbells Today off',
+    S.pullDumbbells?'Pull now uses dumbbells for today. Flip it off once you are back to calisthenics.':'Pull back to the default calisthenics routine.');
 }
 function advancePlancheStage(){
   if(viewOnly || rankFor(levelFromXp(S.xp).lvl).r!=='S') return;
