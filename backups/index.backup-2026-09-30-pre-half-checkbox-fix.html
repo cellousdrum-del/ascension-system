@@ -2658,7 +2658,7 @@ function render(){
             Gate cleared (+100 XP, up to 4 stat points)
           </label>
           <label style="display:flex;align-items:center;gap:8px;margin:6px 0 6px 26px;cursor:pointer;text-transform:none;letter-spacing:normal;color:var(--muted);font-size:12px;font-weight:400">
-            <input type="checkbox" id="pastGateHalf" style="width:auto;margin:0" onchange="if(this.checked) document.getElementById('pastGateDone').checked=true;">
+            <input type="checkbox" id="pastGateHalf" style="width:auto;margin:0">
             Only got through about half of it (half the XP/stats instead)
           </label>
           <select id="pastGate">
@@ -3496,10 +3496,7 @@ function logPastWorkout(){
   if(!d){ toast('Missing date','Pick a date first.'); return; }
   if(d > today()){ toast('Invalid date','Cannot log a future date.'); return; }
 
-  // Checking "half" alone is enough to log the Gate as half-cleared, even if the parent "Gate
-  // cleared" checkbox visually lags behind for any reason - the half checkbox's onchange handler
-  // ticks it too, but this is the actual source of truth so the two can never disagree.
-  const gateDone = document.getElementById('pastGateDone').checked || document.getElementById('pastGateHalf').checked;
+  const gateDone = document.getElementById('pastGateDone').checked;
   const gSel = document.getElementById('pastGate').value;
   const dailyDone = document.getElementById('pastDailyDone').checked;
   const flexDone = document.getElementById('pastFlexDone').checked;
