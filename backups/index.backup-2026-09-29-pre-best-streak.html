@@ -2641,7 +2641,6 @@ function render(){
       <div class="stats">
         <div class="stat"><span class="k">Days Trained</span><span class="stat-val">${trainedDays}</span></div>
         <div class="stat"><span class="k">Current Streak</span><span class="stat-val">${S.streak}</span></div>
-        <div class="stat" style="grid-column:1/-1"><span class="k">Best Streak</span><span class="stat-val">${Math.max(S.bestStreak||0, S.streak||0)}</span></div>
       </div>
       <details class="guide history-details" style="margin-top:14px"${historyOpen?' open':''}>
         <summary>View full history</summary>
@@ -3604,7 +3603,6 @@ function logPastWorkout(){
     // double-count it once the gap later gets fully covered and the break is cancelled below.
     if(!cancelResult && !inPendingGap && (S.lastActive==null || d===nextDay(S.lastActive))){
       S.streak = (S.lastActive==null) ? 1 : S.streak+1;
-      updateBestStreak();
       S.lastActive = d;
       streakUpdated = true;
       grantBoxIfEarned();
@@ -3734,12 +3732,6 @@ function logWeight(){
     toast('Ascension','Weight logged - +'+xpGain+' XP'+(weakened?' (weakened, halved)':''));
   } else { render(); toast('Logged','Weight updated.'); }
 }
-// Tracks the highest S.streak has ever reached (S.streak itself drops back to 0 on a break, so
-// the record needs its own persisted field) - called right after every site that can raise the
-// streak, never after the reset on a break.
-function updateBestStreak(){
-  if((S.streak||0) > (S.bestStreak||0)) S.bestStreak = S.streak;
-}
 function bumpStreak(){
   if(S.lastActive===today()) return;
   const y=yesterday();
@@ -3754,7 +3746,6 @@ function bumpStreak(){
     S.lastBoxStreak = 0;
   }
   S.streak = (S.lastActive===y) ? S.streak+1 : 1;
-  updateBestStreak();
   S.lastActive=today();
   grantBoxIfEarned();
 }
@@ -3831,7 +3822,6 @@ function tryCancelStreakBreak(d){
   S.xp += refundXp;
   if(refundStat) S.stats[refundStat] = (S.stats[refundStat]||0) + 1;
   S.streak = (S.lastBreakStreakBefore||0) + gapDays + (S.streak||0);
-  updateBestStreak();
   if(!S.lastActive || S.lastActive < S.lastBreakGapTo) S.lastActive = S.lastBreakGapTo;
   grantBoxIfEarned();
   // Weakened (halved XP) and the doubled grip Penalty Quest are the SAME break's fallout for
