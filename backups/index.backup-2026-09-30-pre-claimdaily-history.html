@@ -3350,9 +3350,9 @@ function completeGate(){
   S.gateDoneToday=true;
   S.gateHalfToday=false;
   S.gateHalfXpGiven=null; S.gateHalfFullShape=null; S.gateHalfGivenShape=null;
-  S.history[S.day] = Object.assign({}, S.history[S.day], (gateId==='custom')
+  S.history[S.day] = (gateId==='custom')
     ? {gate:'custom', xp:fullXp, trial:trial, customName:g.name, customIcon:g.icon, customColor:g.color}
-    : {gate:gateId, xp:fullXp, trial:trial});
+    : {gate:gateId, xp:fullXp, trial:trial};
   save();
   const after=levelFromXp(S.xp).lvl;
   render();
@@ -3406,9 +3406,9 @@ function completeGateHalf(){
   S.gateHalfXpGiven = halfXp;
   S.gateHalfFullShape = fullShape;
   S.gateHalfGivenShape = givenShape;
-  S.history[S.day] = Object.assign({}, S.history[S.day], (gateId==='custom')
+  S.history[S.day] = (gateId==='custom')
     ? {gate:'custom', xp:halfXp, trial:trial, customName:g.name, customIcon:g.icon, customColor:g.color, half:true}
-    : {gate:gateId, xp:halfXp, trial:trial, half:true});
+    : {gate:gateId, xp:halfXp, trial:trial, half:true};
   save();
   const after=levelFromXp(S.xp).lvl;
   render();
@@ -3421,7 +3421,7 @@ function completeRestDay(){
   if(todaysGate()!=='rest' || S.gateDoneToday) return;
   S.gateDoneToday = true;
   bumpStreak();
-  S.history[S.day] = Object.assign({}, S.history[S.day], {gate:'rest', xp:0});
+  S.history[S.day] = {gate:'rest', xp:0};
   save();
   render();
   const penaltyXp=S._lastPenaltyXp; S._lastPenaltyXp=null;
@@ -3648,11 +3648,6 @@ function claimDaily(){
   distributeStats(S.day+'_daily', gained);
   S._upStats=gained;
   bumpStreak();
-  // Quest-only days (Daily Quest claimed without clearing the Gate) keep the streak alive for up
-  // to 3 in a row, but had no per-day record anywhere until now - completeGate()/completeGateHalf()/
-  // completeRestDay() all merge into S.history[S.day] rather than overwrite it for the same reason,
-  // so nothing here gets clobbered if the Gate is also cleared later the same day.
-  S.history[S.day] = Object.assign({}, S.history[S.day], {dailyDone:true});
   save();
   const after=levelFromXp(S.xp).lvl;
   render();
@@ -3747,20 +3742,9 @@ function logWeight(){
 // run in the log.
 function computeAllTimeBestStreak(){
   const dates = Object.keys(S.history).filter(d=>dayCountsForStreak(S.history[d])).sort();
-  let best=0, run=0, questOnlyRun=0, prev=null;
+  let best=0, run=0, prev=null;
   for(const d of dates){
-    const consecutive = !!(prev && d===nextDay(prev));
-    if(!consecutive){ run=0; questOnlyRun=0; }
-    if(S.history[d].gate){
-      questOnlyRun = 0;
-    } else {
-      // Mirrors the live day-rollover rule exactly: 3 consecutive quest-only days are safe, the
-      // 4th breaks the streak (bumpStreak's own questOnlyStreak>=3 check) - without this, a run
-      // of 4+ quest-only days in the log would look like one unbroken streak instead of two.
-      if(questOnlyRun>=3){ run=0; questOnlyRun=0; }
-      questOnlyRun++;
-    }
-    run++;
+    run = (prev && d===nextDay(prev)) ? run+1 : 1;
     if(run>best) best = run;
     prev = d;
   }
