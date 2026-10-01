@@ -616,6 +616,7 @@ const GATES = {
         {n:'Pull-ups', t:'4x5-8', d:'Back and biceps. Negatives if you cannot yet do a full rep.'},
         {n:'Inverted rows', t:'4x8-12', d:'Low bar or two sturdy chairs. Adjust body angle for difficulty.'},
         {n:'Chin-ups', t:'3x5-8', d:'Underhand grip. Biceps and back.'},
+        {n:'Towel or pole rows', t:'3x10-12', d:'Rear delts and upper back.'},
         {n:'Flexed-arm hang', t:'3x10-15s', d:'Chin above the bar, hold as long as you can. Straight-arm strength primer.'},
         {n:'Dead hang', t:'3x20-30s', d:'Grip and shoulder health.'}
       ],
@@ -623,6 +624,7 @@ const GATES = {
         {n:'Pull-ups', t:'4x6-10', d:'Back and biceps. Full dead hang each rep.'},
         {n:'Inverted rows (feet elevated slightly)', t:'4x10-12', d:'A step or low ledge under the heels.'},
         {n:'Chin-ups', t:'4x6-8', d:'Underhand grip. Biceps and back.'},
+        {n:'Towel or pole rows', t:'4x10-12', d:'Rear delts and upper back.'},
         {n:'Tuck front lever hold (feet supported)', t:'3x8-12s', d:'Knees tucked, feet resting on a low support behind you, lean back toward horizontal.'},
         {n:'Dead hang', t:'3x25-35s', d:'Grip and shoulder health.'}
       ],
@@ -631,14 +633,16 @@ const GATES = {
         {n:'Archer pull-ups (assisted)', t:'3x4-6 /side', d:'Shift weight to one arm each rep.'},
         {n:'Inverted rows (feet elevated)', t:'4x10-15', d:'Feet up on a bench or ledge for a harder angle.'},
         {n:'Chin-ups (slow negative)', t:'4x6-10', d:'3-4s controlled descent.'},
-        {n:'Tuck front lever hold', t:'3x8-12s', d:'Knees tucked tight to the chest, fully unsupported, hips high.'}
+        {n:'Tuck front lever hold', t:'3x8-12s', d:'Knees tucked tight to the chest, fully unsupported, hips high.'},
+        {n:'Towel or rope rows', t:'4x12-15', d:'Rear delts and upper back.'}
       ],
       [ // B
         {n:'Pull-ups (paused at the top)', t:'4x10-14', d:'1s pause at the top of every rep.'},
         {n:'Archer pull-ups (assisted)', t:'4x5-7 /side', d:'Shift weight to one arm each rep.'},
         {n:'Inverted rows (feet elevated, slow)', t:'5x12-15', d:'3s controlled tempo each way.'},
         {n:'Chin-ups (slow negative)', t:'4x8-10', d:'4-5s controlled descent.'},
-        {n:'Advanced tuck front lever hold', t:'3x6-10s', d:'Hips extended further, body flatter.'}
+        {n:'Advanced tuck front lever hold', t:'3x6-10s', d:'Hips extended further, body flatter.'},
+        {n:'Towel or rope rows', t:'5x12-15', d:'Rear delts and upper back.'}
       ],
       [ // A
         {n:'Weighted or max-rep pull-ups', t:'5x8-12', d:'Add weight in the backpack if bodyweight feels easy.'},
@@ -2781,12 +2785,12 @@ function render(){
             <span style="font-size:20px;filter:drop-shadow(0 0 6px ${rc})">${it.icon}</span>
             <span style="display:flex;flex-direction:column">
               <span style="color:${rc};font-size:12px;letter-spacing:.02em;text-shadow:0 0 8px ${rc}66">${esc(it.name)}${isEquipped?' <small style="color:var(--green)">● EQUIPPED</small>':''}</span>
-              <span class="k" style="font-size:10px">${esc(it.kind)} &middot; <span style="color:${rc}">${it.rank}-Rank</span></span>
+              <span class="k" style="font-size:10px">${esc(it.kind)} &middot; <span style="color:${rc}">${it.rank}-Rank</span>${it.kind==='Aura'?' &middot; earned by rank':''}</span>
             </span>
           </div>`;
         }).join('')}
       </div>
-      <p class="note" style="margin-top:10px">Tap a Weapon, Armor, Relic, Companion, Regalia, or Aura to equip it on your Avatar above - tap it again to put it away.</p>` : `<p class="note">No items yet - maintain a 7-day streak to open your first mystery box.</p>`}
+      <p class="note" style="margin-top:10px">Tap a Weapon, Armor, Relic, Companion, or Regalia to equip it on your Avatar above - tap it again to put it away.</p>` : `<p class="note">No items yet - maintain a 7-day streak to open your first mystery box.</p>`}
       <details class="guide" style="margin-top:12px">
         <summary>How Mystery Boxes Work</summary>
         <div class="guide-body">
@@ -2799,10 +2803,10 @@ function render(){
       <details class="guide" style="margin-top:10px">
         <summary>How Equipping Works</summary>
         <div class="guide-body">
-          <p><b>One at a time, per kind:</b> you can have at most one Weapon, one Armor, one Relic, one Companion, one Regalia, and one Aura equipped simultaneously - six slots total, each independent of the others.</p>
+          <p><b>One at a time, per kind:</b> you can have at most one Weapon, one Armor, one Relic, one Companion, and one Regalia equipped simultaneously - five slots total, each independent of the others.</p>
           <p><b>Only from what you own:</b> you can only equip an item you've actually unlocked from a mystery box - equipping never grants or requires anything new.</p>
           <p><b>Tap to toggle:</b> tap an eligible item in Unlocked Items to equip it into its slot, replacing whatever was there before. Tap the same item again to put it away with nothing equipped in that slot.</p>
-          <p><b>Where it shows:</b> each equipped item changes your Avatar above - a Weapon glints by the hand, a Relic pulses beside you, a Companion appears as a small second figure, Regalia glows as a ring above the head, Armor recolors the outline of the body itself, and an Aura surrounds the whole figure with a soft pulsing halo in the item's own color.</p>
+          <p><b>Where it shows:</b> each equipped item changes your Avatar above - a Weapon glints by the hand, a Relic pulses beside you, a Companion appears as a small second figure, Regalia glows as a ring above the head, and Armor recolors the outline of the body itself.</p>
         </div>
       </details>
     </section>
@@ -3934,10 +3938,9 @@ function revealBoxItem(){
   document.getElementById('box-step2').style.display='';
 }
 function closeBoxReveal(){ document.getElementById('boxOverlay').classList.remove('show'); currentBoxItem=null; render(); }
-// Aura equips as a soft ambient halo around the whole figure, colored by the item's own rank
-// (same convention every other kind already uses) - layered behind the character and badges
-// (z-index 0) so it reads as background atmosphere, not another small positioned prop.
-const EQUIP_KINDS = ['Weapon','Armor','Relic','Companion','Regalia','Aura'];
+// Aura is deliberately not equippable here - it's earned by rank (the silhouette's glow color
+// already IS your current rank's aura), not something picked from the box drops.
+const EQUIP_KINDS = ['Weapon','Armor','Relic','Companion','Regalia'];
 function equippedItem(kind){
   const id = S.equipped && S.equipped[kind];
   return id ? AVATAR_ITEMS.find(a=>a.id===id) : null;
@@ -4069,11 +4072,6 @@ function equipVisualsHtml(){
       const off = (i-(spec.spikes-1)/2) * 9;
       parts.push(`<div style="position:absolute;top:-19px;left:calc(50% + ${off}px);width:0;height:0;border-left:3px solid transparent;border-right:3px solid transparent;border-bottom:7px solid ${c};transform:translateX(-50%);box-shadow:0 0 6px ${c}"></div>`);
     }
-  }
-  const aura = equippedItem('Aura');
-  if(aura){
-    const c = RANK_COLORS[aura.rank]||RANK_COLORS.E;
-    parts.push(`<div title="${esc(aura.name)}" style="position:absolute;inset:-26px;border-radius:50%;z-index:0;pointer-events:none;background:radial-gradient(circle,${c}3d 0%,transparent 70%);animation:circle-pulse 3s ease-in-out infinite"></div>`);
   }
   return parts.join('');
 }
