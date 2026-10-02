@@ -1416,20 +1416,15 @@ async function onAuthReady(user){
   if(user){
     currentUid = user.uid;
     const createdAt = (user.metadata && user.metadata.creationTime) ? Date.parse(user.metadata.creationTime) : 0;
+    if(createdAt >= EMAIL_VERIFICATION_CUTOFF_MS && !user.emailVerified){
+      renderVerifyGate();
+      return;
+    }
     let data = null;
     try{
       const snap = await window.fb.getDoc(window.fb.doc(window.fb.db,'users',currentUid));
       if(snap.exists()) data = snap.data();
     }catch(e){}
-    // emailGateExempt is a manual, admin-set escape hatch for accounts created directly (not
-    // through the public signup form) that are never going to verify a real email on purpose -
-    // e.g. a family member's account set up by someone else, meant to log in by username forever.
-    // Reading data before this check (instead of after, as before) costs one extra Firestore read
-    // for the rare account that actually gets gated, which is a fine trade for making the flag work.
-    if(createdAt >= EMAIL_VERIFICATION_CUTOFF_MS && !user.emailVerified && !(data && data.emailGateExempt)){
-      renderVerifyGate();
-      return;
-    }
     if(!data) data = loadLocalCloud(currentUid);
     if(!data && pendingImport){
       data = pendingImport;
