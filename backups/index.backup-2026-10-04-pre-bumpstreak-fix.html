@@ -3705,15 +3705,9 @@ function claimDailyPart(kind){
 
   S.xp += xpGain;
   S[claimedField] = true;
-  // bumpStreak() only fires once BOTH halves are claimed, not on every individual claim - a lone
-  // grip (or mystery) claim must not look like it secured the day, since the next day's rollover
-  // only checks the combined S.dailyClaimed flag. Calling it here unconditionally would increment
-  // the live streak counter today and then silently break it tomorrow when the rollover found the
-  // day wasn't actually "active" - exactly the kind of surprise break this app goes out of its way
-  // to warn about elsewhere (Trial Gates, the quest-only grace period).
+  bumpStreak();
   if(S.gripClaimed && S.mysteryClaimed){
     S.dailyClaimed = true;
-    bumpStreak();
     // Quest-only days (Daily Quest claimed without clearing the Gate) keep the streak alive for up
     // to 3 in a row, but had no per-day record anywhere until recently - completeGate()/
     // completeGateHalf()/completeRestDay() all merge into S.history[S.day] rather than overwrite it
@@ -3726,9 +3720,8 @@ function claimDailyPart(kind){
   const penaltyXp=S._lastPenaltyXp; S._lastPenaltyXp=null;
   const penaltyStat=S._lastPenaltyStat; S._lastPenaltyStat=null;
   const label = kind==='grip' ? 'grip' : 'mystery';
-  const bothDone = S.gripClaimed && S.mysteryClaimed;
   if(after>before) showLevelUp(after,halfShape);
-  else toast('Discipline','+'+xpGain+' XP'+(weakened?' (weakened, halved)':'')+' - hunter '+label+' task.'+(bothDone?'':' Streak not secured yet - the other task still counts today.'));
+  else toast('Discipline','+'+xpGain+' XP'+(weakened?' (weakened, halved)':'')+' - hunter '+label+' task.');
   revealNewBox(after>before);
   if(penaltyXp || penaltyStat){
     setTimeout(()=>{ toast('Streak broken', buildPenaltyMsg(penaltyXp, penaltyStat)); }, after>before?400:3000);
