@@ -2482,6 +2482,19 @@ function render(){
   const mysteryTask = MYSTERY_QUESTS[S.mysteryCycle.order[S.mysteryCycle.pos]];
   const mobilityRoutine = FLEXIBILITY_TIERS[S.flexCycle.tier][S.flexCycle.order[S.flexCycle.pos]];
   const monsterThreat = (S.questOnlyStreak||0) >= 3 && !S.gateDoneToday;
+  // Each task claims independently for half the reward, but the two halves are tracked against one
+  // frozen-per-day shape/total (S.dailyQuest*) so claim order never matters - whichever is claimed
+  // second tops up to the exact full amount instead of a second independently-rounded half, so
+  // grip+mystery always sums to exactly the old combined total (30, or 15 weakened), not 31/29 from
+  // double-rounding. Hoisted out here (rather than local to the Daily Quest section) because the
+  // grip pseudo-Gate now lives in its own section and needs gripAmt too.
+  const isGripGate = isGripGateUser();
+  const dailyFullXp = S.penaltyToday ? Math.round(30/2) : 30;
+  const dailyHalfXp = Math.round(dailyFullXp/2);
+  const gripAmt = S.mysteryClaimed ? Math.max(0, dailyFullXp-(S.dailyQuestXpGiven||0)) : dailyHalfXp;
+  const mysteryAmt = S.gripClaimed ? Math.max(0, dailyFullXp-(S.dailyQuestXpGiven||0)) : dailyHalfXp;
+  const gripGateEx = isGripGate ? gripGateExercises(info.lvl) : null;
+  const gripGateCleared = isGripGate && gripGateAllDone(info.lvl);
 
   app.innerHTML = `
     <div style="display:flex;align-items:center;gap:8px;margin:calc(52px + env(safe-area-inset-top) - max(14px, env(safe-area-inset-top))) 0 16px">
@@ -2604,54 +2617,44 @@ function render(){
       `}
     </section>
 
+    ${isGripGate ? `
+    <section class="win">
+      <div class="eyebrow">Quest - Grip Gate</div>
+      <div style="font-family:'Orbitron';font-size:12px;letter-spacing:.1em;color:var(--cyan-soft);margin-bottom:10px">
+        🤏 GRIP GATE${S.penaltyToday?' <span style="color:var(--gold)">- weakened, doubled sets</span>':''}
+      </div>
+      <ul class="ex">
+        ${gripGateEx.map((e,i)=>{
+          const max=gripRequiredSetsFor(e.t);
+          const cnt=S.gripExSets[i]||0;
+          const done=cnt>=max;
+          return `
+        <li class="${done?'done':''}" onclick="toggleGripEx(${i})">
+          <span class="chk">${done?'✓':(cnt>0?cnt:'')}</span>
+          <span class="ex-nm">${esc(e.n)}${e.d?`<small>${esc(e.d)}</small>`:''}</span>
+          <span class="ex-tg">${cnt}/${max} sets - ${esc(e.t)}</span>
+        </li>`;}).join('')}
+      </ul>
+      ${!gripGateCleared
+        ? `<div class="penalty">⚠ Not all grip exercises are complete yet.</div>`
+        : `<div style="font-size:12px;color:var(--green);letter-spacing:.08em;margin-top:10px;text-transform:uppercase">✓ All grip exercises completed</div>`}
+      <button class="btn sm${S.gripClaimed?' ghost':''}" style="margin-top:10px;width:100%" onclick="claimDailyPart('grip')" ${S.gripClaimed?'disabled':''}>
+        ${S.gripClaimed?'Reward claimed ✓':'Claim +'+gripAmt+' XP'+(S.penaltyToday?' (weakened)':'')}
+      </button>
+    </section>
+    ` : ''}
+
     <section class="win">
       <div class="eyebrow">Hunter's Daily Quest</div>
-      ${(()=>{
-        // Each task claims independently for half the reward, but the two halves are tracked
-        // against one frozen-per-day shape/total (S.dailyQuest*) so claim order never matters -
-        // whichever is claimed second tops up to the exact full amount instead of a second
-        // independently-rounded half, so grip+mystery always sums to exactly the old combined
-        // total (30, or 15 weakened), not 31/29 from double-rounding.
-        const dailyFullXp = S.penaltyToday ? Math.round(30/2) : 30;
-        const dailyHalfXp = Math.round(dailyFullXp/2);
-        const gripAmt = S.mysteryClaimed ? Math.max(0, dailyFullXp-(S.dailyQuestXpGiven||0)) : dailyHalfXp;
-        const mysteryAmt = S.gripClaimed ? Math.max(0, dailyFullXp-(S.dailyQuestXpGiven||0)) : dailyHalfXp;
-        // Everyone else keeps the flat single-checkbox grip task; this account alone (see
-        // isGripGateUser - it's the only one with a finger-extension rope and an independent
-        // 4-spring gripper) gets a rank-tiered checklist instead, same exercise-list pattern the
-        // real Push/Pull/Legs Gates use. Either way the claim button below stays claimDailyPart('grip')
-        // unchanged - S.dailyDone.grip just gets set a different way depending on which UI set it.
-        const gripBlock = isGripGateUser() ? (()=>{
-          const ex = gripGateExercises(info.lvl);
-          const allDone = gripGateAllDone(info.lvl);
-          return `
-        <div style="font-family:'Orbitron';font-size:11px;letter-spacing:.08em;color:var(--cyan-soft);margin-bottom:8px">
-          🤏 GRIP GATE${S.penaltyToday?' <span style="color:var(--gold)">- weakened, doubled sets</span>':''}
-        </div>
-        <ul class="ex">
-          ${ex.map((e,i)=>{
-            const max=gripRequiredSetsFor(e.t);
-            const cnt=S.gripExSets[i]||0;
-            const done=cnt>=max;
-            return `
-          <li class="${done?'done':''}" onclick="toggleGripEx(${i})">
-            <span class="chk">${done?'✓':(cnt>0?cnt:'')}</span>
-            <span class="ex-nm">${esc(e.n)}${e.d?`<small>${esc(e.d)}</small>`:''}</span>
-            <span class="ex-tg">${cnt}/${max} sets - ${esc(e.t)}</span>
-          </li>`;}).join('')}
-        </ul>
-        ${!allDone ? `<div class="penalty" style="margin-bottom:10px">⚠ Not all grip exercises are complete yet.</div>` : ''}
-      ` })() : `
+      <div class="daily">
+        ${isGripGate ? '' : `
         <div class="dq ${S.dailyDone.grip?'done':''}" onclick="toggleDaily('grip')">
           <span class="chk" style="${S.dailyDone.grip?'background:rgba(77,163,255,.18);color:var(--cyan);box-shadow:0 0 12px rgba(77,163,255,.5)':''}">${S.dailyDone.grip?'✓':''}</span>
           <span class="t">${S.penaltyToday?'80 reps of grip strengthener':'40 reps of grip strengthener'}<small>${S.penaltyToday?'Penalty Quest - doubled for breaking your streak':'Forearm and grip work - every day'}</small></span>
-        </div>`;
-        return `
-      <div class="daily">
-        ${gripBlock}
+        </div>
         <button class="btn sm${S.gripClaimed?' ghost':''}" style="margin:6px 0 14px;width:100%" onclick="claimDailyPart('grip')" ${S.gripClaimed?'disabled':''}>
           ${S.gripClaimed?'Reward claimed ✓':'Claim +'+gripAmt+' XP'+(S.penaltyToday?' (weakened)':'')}
-        </button>
+        </button>`}
         <div class="dq ${S.dailyDone.mystery?'done':''}" onclick="toggleDaily('mystery')">
           <span class="chk" style="${S.dailyDone.mystery?'background:rgba(77,163,255,.18);color:var(--cyan);box-shadow:0 0 12px rgba(77,163,255,.5)':''}">${S.dailyDone.mystery?'✓':''}</span>
           <span class="t">${mysteryTask}<small>Hunter's mystery task - changes daily</small></span>
@@ -2660,10 +2663,9 @@ function render(){
           ${S.mysteryClaimed?'Reward claimed ✓':'Claim +'+mysteryAmt+' XP'+(S.penaltyToday?' (weakened)':'')}
         </button>
       </div>
-      ${!(S.dailyDone.grip&&S.dailyDone.mystery)
+      ${!(isGripGate ? S.dailyDone.mystery : (S.dailyDone.grip&&S.dailyDone.mystery))
         ? `<div class="penalty">⚠ Penalty zone active - complete the daily quest</div>`
-        : `<div style="font-size:12px;color:var(--green);letter-spacing:.08em;margin-top:10px;text-transform:uppercase">✓ Daily quest cleared</div>`}`;
-      })()}
+        : `<div style="font-size:12px;color:var(--green);letter-spacing:.08em;margin-top:10px;text-transform:uppercase">✓ Daily quest cleared</div>`}
       <div class="streak">🔥 Streak: ${S.streak} day${S.streak===1?'':'s'}</div>
     </section>
 
