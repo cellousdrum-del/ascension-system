@@ -796,59 +796,6 @@ const GATES = {
       ]
     ]}
 };
-// Rank-tiered content for the grip/finger pseudo-Gate, scoped to a single account (see
-// GRIP_GATE_USERNAME below) that owns a finger-extension rope and an independent 4-spring hand
-// gripper alongside the standard gripper everyone else gets as a flat Daily Quest checkbox. The
-// 4-spring device trains index/middle/ring/pinky together and the thumb separately afterward (to
-// avoid decompensating), so that split is kept as two exercises rather than one. Reps stay lower
-// than the standard gripper on every new exercise since this account is a beginner at isolated
-// finger work specifically, even at higher ranks.
-const GRIP_GATE_TIERS = [
-  [ // E
-    {n:'Grip strengthener', t:'3x10-12', d:'Standard gripper. Full close each rep, controlled release.'},
-    {n:'Finger extension (rope)', t:'2x12-15', d:'Expand against the band - the opposite motion from the gripper, keeps flexors and extensors balanced.'},
-    {n:'4-spring finger press (index, middle, ring, pinky)', t:'2x6-8 /finger', d:'One spring at a time, each finger pressed independently.'},
-    {n:'Thumb press (solo)', t:'2x6-8', d:'Thumb spring on its own, after the other four - keeps it from decompensating alongside them.'}
-  ],
-  [ // D
-    {n:'Grip strengthener', t:'3x12-15', d:'Standard gripper. Full close each rep, controlled release.'},
-    {n:'Finger extension (rope)', t:'3x12-15', d:'Expand against the band, controlled tempo both ways.'},
-    {n:'4-spring finger press (index, middle, ring, pinky)', t:'2x8-10 /finger', d:'One spring at a time, each finger pressed independently.'},
-    {n:'Thumb press (solo)', t:'2x8-10', d:'Thumb spring on its own, after the other four.'}
-  ],
-  [ // C
-    {n:'Grip strengthener', t:'4x10-12', d:'Standard gripper. Full close each rep, controlled release.'},
-    {n:'Finger extension (rope)', t:'3x15', d:'Expand against the band, controlled tempo both ways.'},
-    {n:'4-spring finger press (index, middle, ring, pinky)', t:'3x8-10 /finger', d:'One spring at a time, each finger pressed independently.'},
-    {n:'Thumb press (solo)', t:'3x8-10', d:'Thumb spring on its own, after the other four.'}
-  ],
-  [ // B
-    {n:'Grip strengthener', t:'4x12-15', d:'Standard gripper. Full close each rep, controlled release.'},
-    {n:'Finger extension (rope)', t:'3x15-18', d:'Expand against the band, slower tempo both ways.'},
-    {n:'4-spring finger press (index, middle, ring, pinky)', t:'3x10-12 /finger', d:'One spring at a time, each finger pressed independently.'},
-    {n:'Thumb press (solo)', t:'3x10-12', d:'Thumb spring on its own, after the other four.'}
-  ],
-  [ // A
-    {n:'Grip strengthener', t:'4x15-18', d:'Standard gripper. Full close each rep, controlled release.'},
-    {n:'Finger extension (rope)', t:'4x15-18', d:'Expand against the band, slow and controlled both ways.'},
-    {n:'4-spring finger press (index, middle, ring, pinky)', t:'4x10-12 /finger', d:'One spring at a time, each finger pressed independently.'},
-    {n:'Thumb press (solo)', t:'4x10-12', d:'Thumb spring on its own, after the other four.'}
-  ],
-  [ // S
-    {n:'Grip strengthener', t:'5x15-18', d:'Standard gripper. Full close each rep, controlled release.'},
-    {n:'Finger extension (rope)', t:'4x18-20', d:'Expand against the band, slow and controlled both ways.'},
-    {n:'4-spring finger press (index, middle, ring, pinky)', t:'4x12-15 /finger', d:'One spring at a time, each finger pressed independently.'},
-    {n:'Thumb press (solo)', t:'4x12-15', d:'Thumb spring on its own, after the other four.'}
-  ]
-];
-// Case-insensitive on purpose - only the account identity matters here, not exact stored casing.
-function isGripGateUser(){ return (myUsername||'').toLowerCase()==='txetxe'; }
-function gripGateExercises(level){ return GRIP_GATE_TIERS[gateTierIndex(level)]; }
-function gripRequiredSetsFor(exerciseText){ const base = parseSets(exerciseText); return S.penaltyToday ? base*2 : base; }
-function gripGateAllDone(level){
-  const ex = gripGateExercises(level);
-  return ex.every((e,i)=>(S.gripExSets[i]||0) >= gripRequiredSetsFor(e.t));
-}
 /* ---------- Quick warm-up, shown above the Gate for push/pull/legs days only - same for every
    rank (it's prepping the same joints/patterns regardless of tier), skipped for custom routine
    days since their content is user-defined and there's no way to know what to warm up for. ---------- */
@@ -2262,7 +2209,6 @@ function render(){
   if(!S.history) S.history = {};
   if(!S.weightLog) S.weightLog = {};
   if(!S.exSets) S.exSets = {};
-  if(!S.gripExSets) S.gripExSets = {};
   if(!S.dailyDone) S.dailyDone = {grip:false,mystery:false};
   if(S.dailyDone.mystery===undefined) S.dailyDone.mystery = false;
   if(S.dailyDone.grip===undefined) S.dailyDone.grip = false;
@@ -2394,7 +2340,6 @@ function render(){
 
     S.day = today();
     S.exSets = {};
-    S.gripExSets = {};
     S.dailyDone = {grip:false,mystery:false};
     S.dailyClaimed = false;
     S.gripClaimed = false; S.mysteryClaimed = false;
@@ -2616,39 +2561,12 @@ function render(){
         const dailyHalfXp = Math.round(dailyFullXp/2);
         const gripAmt = S.mysteryClaimed ? Math.max(0, dailyFullXp-(S.dailyQuestXpGiven||0)) : dailyHalfXp;
         const mysteryAmt = S.gripClaimed ? Math.max(0, dailyFullXp-(S.dailyQuestXpGiven||0)) : dailyHalfXp;
-        // Everyone else keeps the flat single-checkbox grip task; this account alone (see
-        // isGripGateUser - it's the only one with a finger-extension rope and an independent
-        // 4-spring gripper) gets a rank-tiered checklist instead, same exercise-list pattern the
-        // real Push/Pull/Legs Gates use. Either way the claim button below stays claimDailyPart('grip')
-        // unchanged - S.dailyDone.grip just gets set a different way depending on which UI set it.
-        const gripBlock = isGripGateUser() ? (()=>{
-          const ex = gripGateExercises(info.lvl);
-          const allDone = gripGateAllDone(info.lvl);
-          return `
-        <div style="font-family:'Orbitron';font-size:11px;letter-spacing:.08em;color:var(--cyan-soft);margin-bottom:8px">
-          🤏 GRIP GATE${S.penaltyToday?' <span style="color:var(--gold)">- weakened, doubled sets</span>':''}
-        </div>
-        <ul class="ex">
-          ${ex.map((e,i)=>{
-            const max=gripRequiredSetsFor(e.t);
-            const cnt=S.gripExSets[i]||0;
-            const done=cnt>=max;
-            return `
-          <li class="${done?'done':''}" onclick="toggleGripEx(${i})">
-            <span class="chk">${done?'✓':(cnt>0?cnt:'')}</span>
-            <span class="ex-nm">${esc(e.n)}${e.d?`<small>${esc(e.d)}</small>`:''}</span>
-            <span class="ex-tg">${cnt}/${max} sets - ${esc(e.t)}</span>
-          </li>`;}).join('')}
-        </ul>
-        ${!allDone ? `<div class="penalty" style="margin-bottom:10px">⚠ Not all grip exercises are complete yet.</div>` : ''}
-      ` })() : `
+        return `
+      <div class="daily">
         <div class="dq ${S.dailyDone.grip?'done':''}" onclick="toggleDaily('grip')">
           <span class="chk" style="${S.dailyDone.grip?'background:rgba(77,163,255,.18);color:var(--cyan);box-shadow:0 0 12px rgba(77,163,255,.5)':''}">${S.dailyDone.grip?'✓':''}</span>
           <span class="t">${S.penaltyToday?'80 reps of grip strengthener':'40 reps of grip strengthener'}<small>${S.penaltyToday?'Penalty Quest - doubled for breaking your streak':'Forearm and grip work - every day'}</small></span>
-        </div>`;
-        return `
-      <div class="daily">
-        ${gripBlock}
+        </div>
         <button class="btn sm${S.gripClaimed?' ghost':''}" style="margin:6px 0 14px;width:100%" onclick="claimDailyPart('grip')" ${S.gripClaimed?'disabled':''}>
           ${S.gripClaimed?'Reward claimed ✓':'Claim +'+gripAmt+' XP'+(S.penaltyToday?' (weakened)':'')}
         </button>
@@ -3066,18 +2984,6 @@ function toggleEx(i){
   save(); render();
 }
 function toggleDaily(k){ S.dailyDone[k]=!S.dailyDone[k]; save(); render(); }
-function toggleGripEx(i){
-  if(viewOnly) return;
-  const level = levelFromXp(S.xp).lvl;
-  const ex = gripGateExercises(level);
-  const max = gripRequiredSetsFor(ex[i].t);
-  const cur = S.gripExSets[i]||0;
-  S.gripExSets[i] = (cur+1)>max ? 0 : cur+1;
-  // Derived, not manually clicked, like the rest of the grip pseudo-Gate - it only flips to true
-  // once every exercise in today's tier is at its required set count.
-  S.dailyDone.grip = gripGateAllDone(level);
-  save(); render();
-}
 function toggleWandererMode(){
   if(viewOnly || activeRoutine()) return;
   S.wandererMode = !S.wandererMode;
@@ -4321,7 +4227,7 @@ function startGame(){
   S={
     name, startW:w, weight:w, goalW:g,
     xp:0, stats:{str:10,vit:10,end:10,agi:10},
-    startDate:today(), cycleIndex:0, exSets:{}, gripExSets:{}, gateDoneToday:false, tzMigrated:true, statsRebalanced2026:true,
+    startDate:today(), cycleIndex:0, exSets:{}, gateDoneToday:false, tzMigrated:true, statsRebalanced2026:true,
     dailyDone:{grip:false,mystery:false}, dailyClaimed:false, gripClaimed:false, mysteryClaimed:false,
     mobilityDone:false, mobilityClaimed:false,
     streak:0, questOnlyStreak:0, avatarItems:[], lastBoxStreak:0, lastActive:null, day:today(),
