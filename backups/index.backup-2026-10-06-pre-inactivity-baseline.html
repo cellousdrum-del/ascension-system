@@ -1770,15 +1770,9 @@ async function checkInactivityEmails(){
     const targets = [];
     usersSnap.forEach(d=>{
       const u = d.data();
-      const loggedDays = Object.keys(u.history||{}).sort();
-      if(u.banned || (!u.lastActive && !loggedDays.length)) return;
-      // lastActive alone is the last *streak* day, which can sit well in the past: a brand-new
-      // account that backfills old workouts gets lastActive = the first backfilled date, and a
-      // logged day after a gap never moves it. Count from the latest of that, the latest logged
-      // day and the signup date, so nobody is called inactive for days they didn't have an account.
-      const baseline = [u.lastActive, loggedDays[loggedDays.length-1], u.startDate].filter(Boolean).sort().pop();
-      const daysInactive = daysBetween(baseline, today());
-      if(daysInactive>=2) targets.push({uid:d.id, username:u.username||d.id, lastActive:baseline, daysInactive});
+      if(u.banned || !u.lastActive) return;
+      const daysInactive = daysBetween(u.lastActive, today());
+      if(daysInactive>=2) targets.push({uid:d.id, username:u.username||d.id, lastActive:u.lastActive, daysInactive});
     });
     if(!targets.length) return;
     if(!S.inactivityTracking) S.inactivityTracking = {};
