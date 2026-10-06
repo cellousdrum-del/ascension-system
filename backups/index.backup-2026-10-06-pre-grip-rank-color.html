@@ -2614,10 +2614,10 @@ function render(){
     </section>
 
     ${isGripGate ? `
-    <section class="win rank-${rk.r.toLowerCase()}">
+    <section class="win">
       <div class="eyebrow">Quest - Grip Gate</div>
       <div style="font-family:'Orbitron';font-size:12px;letter-spacing:.1em;color:var(--cyan-soft);margin-bottom:10px">
-        🤏 GRIP GATE <span style="display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:2px;border:1px solid ${RANK_COLORS[rk.r]};color:${RANK_COLORS[rk.r]};background:rgba(${RANK_RGB[rk.r]},0.15);box-shadow:0 0 10px rgba(${RANK_RGB[rk.r]},0.6);font-size:11px;font-weight:900;vertical-align:middle;margin:0 2px">${rk.r}</span>${S.penaltyToday?' <span style="color:var(--gold)">- weakened, doubled sets</span>':''}
+        🤏 GRIP GATE${S.penaltyToday?' <span style="color:var(--gold)">- weakened, doubled sets</span>':''}
       </div>
       <ul class="ex">
         ${gripGateEx.map((e,i)=>{
