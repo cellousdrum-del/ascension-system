@@ -76,6 +76,7 @@ STR/VIT/END/AGI rise by 4 points per claim, split by `statSplitShape(seed)`. The
 - A day counts if the Gate is cleared, the Daily Quest is fully claimed, or a rest day is confirmed.
 - Up to 3 quest-only days in a row are tolerated; after that a "monster" warning says only a Gate saves the streak.
 - Missing a day breaks the streak and applies a penalty (`applyStreakPenalty`) plus a "Weakened" day: half XP and doubled grip reps. Backfilling past days can undo a break.
+- **The log.** Days can be backfilled (`logPastWorkout`), and manually logged days can be deleted (`deleteHistoryEntry`). Deleting reverts the exact XP and stats the entry recorded and removes that day's weigh-in. If the day was inside the current streak, the streak shortens to the days after it, and the day becomes a pending break gap, so re-logging it restores the streak. Days recorded live can't be deleted, because they don't store their stat gains.
 - Streak milestones drop mystery boxes holding avatar cosmetics (`AVATAR_ITEMS`, `grantBoxIfEarned`). Titles (`TITLES`) change every 10 levels.
 
 ### Social
@@ -100,7 +101,7 @@ There is no build and no test suite. The usual loop:
 1. **Back up first.** `git show HEAD:index.html > backups/index.backup-YYYY-MM-DD-what.html`
 2. **Syntax check.** Extract each classic `<script>` and run it through `new Function(src)` in Node.
 3. **Preview.** `firebase hosting:channel:deploy test-x --expires 1h` gives a temporary URL against the real backend. Test there.
-4. **Test accounts.** If you create one, delete both its Firestore doc and its Auth user afterwards.
+4. **Test accounts.** If you create one, delete both its Firestore doc and its Auth user afterwards. New accounts hit the email-verification screen, and the client can't set `emailGateExempt` on itself, so set that flag with project-owner credentials (Firebase console or the Firestore REST API).
 5. **Release.** `firebase deploy --only hosting`, then commit and push. Deploy rules separately with `firebase deploy --only firestore:rules`.
 
 iOS home-screen PWAs can resume without reloading, which is why the app has a manual refresh button.
