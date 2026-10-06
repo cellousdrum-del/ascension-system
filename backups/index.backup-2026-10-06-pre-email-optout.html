@@ -1750,12 +1750,6 @@ const INACTIVITY_EMAILS = {
     body: (name)=>`Hunter ${name},\n\nFive days without a single Gate or quest - the longest silence the System has recorded from you, and the longest you can afford.\n\nFive days is about where momentum really starts to slip. One cleared Gate is all it takes to turn that around.\n\nOpen Ascension System: ${ASCENSION_URL}\n\nYou were selected as a Player for a reason.\n\n---\nThis is an automated message - please do not reply.`
   }
 };
-// Accounts that never get inactivity emails, by uid (stable even if the username changes).
-// Kept in code rather than as a field on the user's doc, since the owner's whole-doc saves
-// from a stale tab would silently drop a field they didn't load.
-const INACTIVITY_EMAIL_OPT_OUT = new Set([
-  'Nu9iDC3LWcM9IDJjEaOuHhNB42o2' // leire
-]);
 let inactivityCheckDone = false;
 async function sendInactivityEmail(toEmail, username, milestone){
   if(typeof emailjs==='undefined' || EMAILJS_PUBLIC_KEY.indexOf('YOUR_')===0) return;
@@ -1777,7 +1771,7 @@ async function checkInactivityEmails(){
     usersSnap.forEach(d=>{
       const u = d.data();
       const loggedDays = Object.keys(u.history||{}).sort();
-      if(u.banned || INACTIVITY_EMAIL_OPT_OUT.has(d.id) || (!u.lastActive && !loggedDays.length)) return;
+      if(u.banned || (!u.lastActive && !loggedDays.length)) return;
       // lastActive alone is the last *streak* day, which can sit well in the past: a brand-new
       // account that backfills old workouts gets lastActive = the first backfilled date, and a
       // logged day after a gap never moves it. Count from the latest of that, the latest logged
