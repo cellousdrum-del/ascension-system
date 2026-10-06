@@ -7,11 +7,23 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isAdmin', false) == true;
     }
 
+    // Fields only an admin may grant. Compared by value with a false default (not by affected
+    // keys) because the client saves the whole state object with setDoc, so an owner writing
+    // back an unchanged or absent-vs-false flag must still pass.
+    function keepsPrivilegedFlags() {
+      return request.resource.data.get('isAdmin', false) == resource.data.get('isAdmin', false)
+        && request.resource.data.get('banned', false) == resource.data.get('banned', false)
+        && request.resource.data.get('emailGateExempt', false) == resource.data.get('emailGateExempt', false);
+    }
+
     match /users/{uid} {
       allow read: if true;
-      allow create: if request.auth != null && request.auth.uid == uid;
+      allow create: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.get('isAdmin', false) == false
+        && request.resource.data.get('banned', false) == false
+        && request.resource.data.get('emailGateExempt', false) == false;
       allow update: if request.auth != null &&
-        (request.auth.uid == uid || isAdmin());
+        ((request.auth.uid == uid && keepsPrivilegedFlags()) || isAdmin());
       allow delete: if request.auth != null && request.auth.uid == uid;
     }
 

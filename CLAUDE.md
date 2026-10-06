@@ -11,7 +11,7 @@ If you are here to build a **new, separate app** from this one, read "Building y
 3. Game systems
 4. Rules to keep in mind when editing
 5. Checking and deploying changes
-6. Known issues
+6. Admin-only flags
 7. Building your own app from this
 
 ## 1. Files
@@ -105,19 +105,16 @@ There is no build and no test suite. The usual loop:
 
 iOS home-screen PWAs can resume without reloading, which is why the app has a manual refresh button.
 
-## 6. Known issues
+## 6. Admin-only flags
 
-- **Users can make themselves admin.** In `firestore.rules`, users may update their own doc freely, so a user could set `isAdmin: true` (or `emailGateExempt`) on themselves. Fix this by rejecting changes to those fields from the owner:
+`isAdmin`, `banned` and `emailGateExempt` live on the user's own doc, but `firestore.rules` stops the owner from granting or changing them (`keepsPrivilegedFlags()`). The rules compare values with a `false` default rather than changed keys, because the client always saves the whole of `S`. Only an admin, or the Firebase console, can set them.
 
-  ```
-  allow update: if request.auth != null && (
-    isAdmin() ||
-    (request.auth.uid == uid &&
-     !request.resource.data.diff(resource.data).affectedKeys()
-        .hasAny(['isAdmin', 'banned', 'emailGateExempt'])));
-  ```
+Two client pieces keep this working:
 
-  Also block those fields on `create`.
+- **The sync watcher.** `startSyncWatcher()` copies those three flags from the server into `S`, so a ban or console change made while the app is open doesn't make that tab's next save fail.
+- **Backup restore.** Restoring a backup keeps the account's current flags rather than the file's.
+
+If you add another admin-only field, add it to all three places: the rules, the sync watcher and the restore.
 
 ## 7. Building your own app from this
 
@@ -135,7 +132,7 @@ This repo is meant as a **reference and starting point**. It is not a template t
 4. **Remove owner-specific bits.**
    - The `txetxe` Grip Gate: `isGripGateUser`, `GRIP_GATE_TIERS` and the "Quest - Grip Gate" section in `render()`.
    - The workout content in `GATES`, `WARMUPS`, `MYSTERY_QUESTS` and `FLEXIBILITY_TIERS`. This is the owner's personal training plan, so rewrite it for your own sport.
-5. **Fix the rules issue above**, then deploy:
+5. **Deploy** the rules and the app:
    - Install the CLI and log in: `npm i -g firebase-tools`, then `firebase login`.
    - Run `firebase deploy --only firestore:rules,hosting`.
 6. **Make yourself admin.** Sign up in your app, then in the Firebase console set `isAdmin: true` on your own `users/{uid}` doc.

@@ -1398,13 +1398,6 @@ function startSyncWatcher(){
     connectionState.fromCache = snap.metadata.fromCache;
     connectionState.pendingWrites = snap.metadata.hasPendingWrites;
     updateConnBadge();
-    // Admin-only flags can change server-side (a ban, or a flag set in the console) while this
-    // tab is open. The rules reject owner writes that change them, so adopt the server's values
-    // or every later whole-doc save from this tab would be refused.
-    const d = snap.data();
-    if(d && S && !viewOnly && !snap.metadata.fromCache && !snap.metadata.hasPendingWrites){
-      ['isAdmin','banned','emailGateExempt'].forEach(k=>{ if(d[k]!==undefined) S[k]=d[k]; else delete S[k]; });
-    }
   }, ()=>{});
 }
 function stopSyncWatcher(){
@@ -4415,11 +4408,7 @@ function handleImportFile(input){
     if(S && !confirm('This will overwrite your current progress with the backup file. Continue?')) return;
     parsed.tzMigrated = true;
     parsed.username = myUsername || parsed.username || '';
-    // Admin-only flags always come from the live account, never the file - the Firestore rules
-    // reject any owner write that changes them, so a mismatched backup would make every save fail.
-    ['isAdmin','banned','emailGateExempt'].forEach(k=>{
-      if(S && S[k]!==undefined) parsed[k] = S[k]; else delete parsed[k];
-    });
+    if(parsed.isAdmin===undefined) parsed.isAdmin = myIsAdmin;
     S = parsed;
     save();
     render();
