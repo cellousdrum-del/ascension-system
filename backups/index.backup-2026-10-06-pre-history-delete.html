@@ -3646,66 +3646,9 @@ function buildHistory(){
           line += h.xp ? `, +${h.xp} XP total)` : ')';
         }
         if(w!=null) line+=` &middot; Weight ${fmt(w)} kg`;
-        const del = (!viewOnly && historyEntryDeletable(d)) ? ` <button type="button" onclick="deleteHistoryEntry('${d}')" style="background:none;border:1px solid rgba(255,107,107,.45);color:#ff8080;font-size:11px;padding:1px 7px;border-radius:2px;cursor:pointer;margin-left:4px">Delete</button>` : '';
-        return `<p style="margin:0 0 8px;font-size:13px"><b style="color:var(--cyan-soft)">${d}</b> - ${line}${del}</p>`;
+        return `<p style="margin:0 0 8px;font-size:13px"><b style="color:var(--cyan-soft)">${d}</b> - ${line}</p>`;
       }).join('');
   }
-}
-// Only manually logged entries are deletable: they record exactly what they awarded (xp,
-// gateStatGains, dailyStatGains), so deleting can undo it precisely. Live-played days don't
-// store their stat points. Today's entry is off-limits once anything was done live today, since
-// that also lives in today's flags (gateDoneToday etc.), not just in the history entry.
-function historyEntryDeletable(d){
-  const h = S.history && S.history[d];
-  if(!h || !h.manual) return false;
-  if(d===today() && (S.gateDoneToday || S.dailyClaimed || S.gripClaimed || S.mysteryClaimed)) return false;
-  return true;
-}
-function deleteHistoryEntry(d){
-  if(viewOnly || !historyEntryDeletable(d)) return;
-  const h = S.history[d];
-  const w = S.weightLog ? S.weightLog[d] : null;
-  const xpLoss = h.xp || 0;
-  const statLoss = {};
-  [h.gateStatGains, h.dailyStatGains].forEach(g=>{
-    if(g) Object.keys(g).forEach(k=>{ statLoss[k] = (statLoss[k]||0) + g[k]; });
-  });
-  const statTxt = Object.keys(statLoss).map(k=>'-'+statLoss[k]+' '+k.toUpperCase()).join(', ');
-  if(!confirm('Delete the log entry for '+d+(w!=null?' (including the '+fmt(w)+' kg weigh-in)':'')+'?\n\n'
-    +'This removes '+xpLoss+' XP'+(statTxt?' and '+statTxt:'')+', and shortens your streak if that day was part of it. You can log the day again afterwards.')) return;
-
-  const beforeLvl = levelFromXp(S.xp).lvl;
-  S.xp = Math.max(0, S.xp - xpLoss);
-  Object.keys(statLoss).forEach(k=>{ S.stats[k] = Math.max(0, (S.stats[k]||0) - statLoss[k]); });
-
-  // If the day was inside the current streak run, the run now ends at the gap: keep only the
-  // days after it. Recorded as a pending break gap (no penalty) so re-logging that exact day
-  // restores the full streak through tryCancelStreakBreak(), same as backfilling a missed day.
-  // Today is different - it isn't over yet, so the run simply falls back to yesterday.
-  let streakNote = '';
-  if(dayCountsForStreak(h) && S.streak>0 && S.lastActive && d<=S.lastActive && daysBetween(d, S.lastActive)<=S.streak-1){
-    const before = S.streak;
-    if(d===today()){
-      S.streak = before - 1;
-      S.lastActive = S.streak>0 ? yesterday() : null;
-    } else {
-      const after = daysBetween(d, S.lastActive);
-      if(!S.lastBreakGapFrom && !S.penaltyToday){
-        S.lastBreakGapFrom = d; S.lastBreakGapTo = d;
-        S.lastBreakStreakBefore = before - 1 - after;
-        S.lastBreakRefundXp = 0; S.lastBreakRefundStat = null;
-      }
-      S.streak = after;
-    }
-    streakNote = ' Streak '+before+' → '+S.streak+'.';
-  }
-
-  delete S.history[d];
-  if(w!=null) delete S.weightLog[d];
-  save();
-  render();
-  const afterLvl = levelFromXp(S.xp).lvl;
-  toast('Entry deleted', d+' removed (-'+xpLoss+' XP'+(statTxt?', '+statTxt:'')+').'+streakNote+(afterLvl<beforeLvl?' Back to level '+afterLvl+'.':''));
 }
 function logPastWorkout(){
   if(viewOnly) return;
