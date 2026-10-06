@@ -2559,10 +2559,9 @@ function render(){
       ${monsterThreat?`<div class="penalty" style="margin-bottom:10px">👹 A monster has appeared - clear today's Gate or your streak breaks, daily quest alone won't save it now</div>`:''}
       <div class="gates">
         ${ar
-          ? (ar.days||[]).map((d,i)=>customDayChip(d, gateId==='custom' && curCustomDay && curCustomDay.id===d.id, i)).join('')
+          ? (ar.days||[]).map(d=>customDayChip(d, gateId==='custom' && curCustomDay && curCustomDay.id===d.id)).join('')
           : `${gateBtn('push',gateId)}${gateBtn('pull',gateId)}${gateBtn('legs',gateId)}`}
       </div>
-      ${(!viewOnly && !S.gateDoneToday && !(ar && gateId==='rest')) ? `<div style="font-size:11px;color:var(--muted);text-align:center;margin:-4px 0 10px">Tap another day to switch today's Gate - locks once cleared</div>` : ''}
       ${(ar && !gate) ? `
         <div style="text-align:center;padding:22px 10px 10px">
           <div style="color:var(--muted);font-size:14px">You haven't set up any custom days yet.</div>
@@ -3042,51 +3041,14 @@ function gateBtn(id,activeId){
   const sub = (id==='pull'||id==='push')
     ? ((S.dumbbellsToday && g.dumbbellSub) ? g.dumbbellSub : g.sub)
     : ((S.wandererMode && g.wandererSub) ? g.wandererSub : g.sub);
-  return `<div class="gate" data-color="${g.color}" data-active="${activeId===id?1:0}" onclick="switchGate('${id}')" style="cursor:${S.gateDoneToday?'default':'pointer'}">
+  return `<div class="gate" data-color="${g.color}" data-active="${activeId===id?1:0}">
     <div class="g-ic">${g.icon}</div><div class="g-nm">${g.name}</div><div class="g-sub">${sub.split(' - ')[0]}</div></div>`;
-}
-function confirmGateSwitch(){
-  if(viewOnly) return false;
-  if(S.gateDoneToday){
-    toast('Gate locked','You already cleared a Gate today - you can switch again tomorrow.');
-    return false;
-  }
-  const anySetLogged = Object.values(S.exSets||{}).some(v=>v>0);
-  if(anySetLogged && !confirm("Switching resets the sets you've logged on today's Gate. Switch anyway?")) return false;
-  return true;
-}
-// Jumps the rotation itself rather than overriding just today, so tomorrow continues from the
-// chosen day (pull today -> legs tomorrow). Stays within the current half of CYCLE so the weekly
-// Rest slot is never skipped over; switching away from Rest lands in the second half, keeping
-// Rest at most three training days away.
-function switchGate(id){
-  if(activeRoutine() || todaysGate()===id) return;
-  if(!confirmGateSwitch()) return;
-  const offset = CYCLE.indexOf(id);
-  const half = S.cycleIndex>=3 ? 3 : 0;
-  S.cycleIndex = half + offset;
-  S.exSets = {};
-  save(); render();
-}
-function switchCustomDay(idx){
-  const r = activeRoutine();
-  if(!r) return;
-  if(todaysGate()==='rest'){
-    toast('Rest day','This routine has a mandatory rest day today.');
-    return;
-  }
-  const cur = todaysCustomDay();
-  if(cur && r.days[idx] && cur.id===r.days[idx].id) return;
-  if(!confirmGateSwitch()) return;
-  S.customDayPointer = idx;
-  S.exSets = {};
-  save(); render();
 }
 const GATE_HEADER_COLORS = {red:'#ff8080', cyan:'var(--cyan-soft)', violet:'#b79cff', green:'#6ee7b7', gold:'#fde68a', orange:'#fdba74'};
 function gateHeaderColor(color){ return GATE_HEADER_COLORS[color] || 'var(--cyan-soft)'; }
-function customDayChip(d,isActive,idx){
+function customDayChip(d,isActive){
   const c = DAY_COLORS[d.color] || DAY_COLORS.cyan;
-  return `<div class="gate" onclick="switchCustomDay(${idx})" style="cursor:${S.gateDoneToday?'default':'pointer'};${isActive?`border-color:${c.hex};background:rgba(${c.rgb},0.12);box-shadow:0 0 16px rgba(${c.rgb},0.35)`:''}">
+  return `<div class="gate" style="${isActive?`border-color:${c.hex};background:rgba(${c.rgb},0.12);box-shadow:0 0 16px rgba(${c.rgb},0.35)`:''}">
     <div class="g-ic">${d.icon}</div><div class="g-nm" style="${isActive?`color:${c.hex}`:''}">${esc(d.name).toUpperCase()}</div><div class="g-sub">CUSTOM</div></div>`;
 }
 
