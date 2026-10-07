@@ -837,9 +837,8 @@ const GRIP_GATE_TIERS = [
     {n:'Thumb press (solo)', t:'4x12-15', d:'Thumb spring on its own, after the other four.'}
   ]
 ];
-// Owner-only tweaks (Grip Gate, own-stretches Flexibility). Case-insensitive on purpose - only the
-// account identity matters here, not exact stored casing.
-function isTxetxeAccount(){ return (myUsername||'').toLowerCase()==='txetxe'; }
+// Case-insensitive on purpose - only the account identity matters here, not exact stored casing.
+function isGripGateUser(){ return (myUsername||'').toLowerCase()==='txetxe'; }
 function gripGateExercises(level){ return GRIP_GATE_TIERS[gateTierIndex(level)]; }
 function gripRequiredSetsFor(exerciseText){ const base = parseSets(exerciseText); return S.penaltyToday ? base*2 : base; }
 function gripGateAllDone(level){
@@ -2504,7 +2503,7 @@ function render(){
   // grip+mystery always sums to exactly the old combined total (30, or 15 weakened), not 31/29 from
   // double-rounding. Hoisted out here (rather than local to the Daily Quest section) because the
   // grip pseudo-Gate now lives in its own section and needs gripAmt too.
-  const isGripGate = isTxetxeAccount();
+  const isGripGate = isGripGateUser();
   const dailyFullXp = S.penaltyToday ? Math.round(30/2) : 30;
   const dailyHalfXp = Math.round(dailyFullXp/2);
   const gripAmt = S.mysteryClaimed ? Math.max(0, dailyFullXp-(S.dailyQuestXpGiven||0)) : dailyHalfXp;
@@ -2691,9 +2690,7 @@ function render(){
       <div class="daily">
         <div class="dq ${S.mobilityDone?'done':''}" onclick="toggleMobility()">
           <span class="chk" style="${S.mobilityDone?'background:rgba(77,163,255,.18);color:var(--cyan);box-shadow:0 0 12px rgba(77,163,255,.5)':''}">${S.mobilityDone?'✓':''}</span>
-          ${isTxetxeAccount()
-            ? `<span class="t">Do your own stretching routine<small>Flexibility work - every day, no stat attached</small></span>`
-            : `<span class="t">${mobilityRoutine}<small>Flexibility work - changes daily, no stat attached</small></span>`}
+          <span class="t">${mobilityRoutine}<small>Flexibility work - changes daily, no stat attached</small></span>
         </div>
       </div>
       ${!S.mobilityDone

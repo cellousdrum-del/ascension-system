@@ -63,7 +63,7 @@ Users can replace PPL with up to 5 routines of up to 6 custom days. Each routine
 
 ### Daily Quest
 - A grip task plus a rotating mystery task (`MYSTERY_QUESTS`), each claimed separately (`claimDailyPart`) for +15 XP. Both together count as an "active" day.
-- One account (`isGripGateUser()`, username `txetxe`) gets a rank-tiered **Grip Gate** (`GRIP_GATE_TIERS`) in its own section instead of the flat grip checkbox.
+- One account (`isTxetxeAccount()`, username `txetxe`) gets a rank-tiered **Grip Gate** (`GRIP_GATE_TIERS`) in its own section instead of the flat grip checkbox, and a generic "do your own stretching routine" Flexibility task instead of the rotating stretch.
 
 ### Other daily items
 - **Flexibility:** `FLEXIBILITY_TIERS`, +20 XP, no stat attached.
@@ -131,7 +131,7 @@ This repo is meant as a **reference and starting point**. It is not a template t
    - In `.firebaserc` and `.github/workflows/firebase-hosting-deploy.yml`, change `solo-leveling-fdd0f` to your project id.
    - Delete `deploy-pages.yml` if you don't want a GitHub Pages copy.
 4. **Remove owner-specific bits.**
-   - The `txetxe` Grip Gate: `isGripGateUser`, `GRIP_GATE_TIERS` and the "Quest - Grip Gate" section in `render()`.
+   - The `txetxe`-only tweaks: `isTxetxeAccount`, `GRIP_GATE_TIERS`, the "Quest - Grip Gate" section and the generic Flexibility text in `render()`.
    - The workout content in `GATES`, `WARMUPS`, `MYSTERY_QUESTS` and `FLEXIBILITY_TIERS`. This is the owner's personal training plan, so rewrite it for your own sport.
 5. **Deploy** the rules and the app:
    - Install the CLI and log in: `npm i -g firebase-tools`, then `firebase login`.
