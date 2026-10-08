@@ -2283,7 +2283,6 @@ function render(){
   if(S.dailyDone.mystery===undefined) S.dailyDone.mystery = false;
   if(S.dailyDone.grip===undefined) S.dailyDone.grip = false;
   if(S.gripClaimed===undefined) S.gripClaimed = false;
-  if(S.gripHalfToday===undefined) S.gripHalfToday = false;
   if(S.mysteryClaimed===undefined) S.mysteryClaimed = false;
   if(S.mobilityDone===undefined) S.mobilityDone = false;
   if(S.mobilityClaimed===undefined) S.mobilityClaimed = false;
@@ -2415,7 +2414,6 @@ function render(){
     S.dailyDone = {grip:false,mystery:false};
     S.dailyClaimed = false;
     S.gripClaimed = false; S.mysteryClaimed = false;
-    S.gripHalfToday = false; S.gripHalfOwedXp = 0; S.gripHalfOwedShape = null; S.gripHalfXpGiven = 0;
     S.dailyQuestShape = null; S.dailyQuestShapeDay = null; S.dailyQuestGivenShape = null; S.dailyQuestXpGiven = 0;
     S.mobilityDone = false;
     S.mobilityClaimed = false;
@@ -2510,7 +2508,7 @@ function render(){
   const dailyFullXp = S.penaltyToday ? Math.round(30/2) : 30;
   const dailyHalfXp = Math.round(dailyFullXp/2);
   const gripAmt = S.mysteryClaimed ? Math.max(0, dailyFullXp-(S.dailyQuestXpGiven||0)) : dailyHalfXp;
-  const mysteryAmt = (S.gripClaimed || S.gripHalfToday) ? Math.max(0, dailyFullXp-(S.dailyQuestXpGiven||0)-(S.gripHalfOwedXp||0)) : dailyHalfXp;
+  const mysteryAmt = S.gripClaimed ? Math.max(0, dailyFullXp-(S.dailyQuestXpGiven||0)) : dailyHalfXp;
   const gripGateEx = isGripGate ? gripGateExercises(info.lvl) : null;
   const gripGateCleared = isGripGate && gripGateAllDone(info.lvl);
 
@@ -2657,14 +2655,9 @@ function render(){
       ${!gripGateCleared
         ? `<div class="penalty">⚠ Not all grip exercises are complete yet.</div>`
         : `<div style="font-size:12px;color:var(--green);letter-spacing:.08em;margin-top:10px;text-transform:uppercase">✓ All grip exercises completed</div>`}
-      ${S.gripHalfToday ? `<div style="font-size:12px;color:var(--gold);letter-spacing:.06em;margin-top:8px">◐ Half Grip Gate claimed today (+${S.gripHalfXpGiven||0} XP) - finish the rest below for full credit</div>` : ''}
       <button class="btn sm${S.gripClaimed?' ghost':''}" style="margin-top:10px;width:100%" onclick="claimDailyPart('grip')" ${S.gripClaimed?'disabled':''}>
-        ${S.gripClaimed ? 'Reward claimed ✓' : (S.gripHalfToday ? 'Finish for full XP (+'+(S.gripHalfOwedXp||0)+' XP more)' : 'Claim +'+gripAmt+' XP'+(S.penaltyToday?' (weakened)':''))}
+        ${S.gripClaimed?'Reward claimed ✓':'Claim +'+gripAmt+' XP'+(S.penaltyToday?' (weakened)':'')}
       </button>
-      ${(!S.gripClaimed && !S.gripHalfToday) ? `
-      <button class="btn ghost sm" style="margin-top:8px;width:100%" onclick="claimDailyPart('grip', true)">
-        Ran out of time? Mark half-complete (+${Math.round(gripAmt/2)} XP)
-      </button>` : ''}
     </section>
     ` : ''}
 
@@ -3680,7 +3673,7 @@ function buildHistory(){
 function historyEntryDeletable(d){
   const h = S.history && S.history[d];
   if(!h || !h.manual) return false;
-  if(d===today() && (S.gateDoneToday || S.dailyClaimed || S.gripClaimed || S.gripHalfToday || S.mysteryClaimed)) return false;
+  if(d===today() && (S.gateDoneToday || S.dailyClaimed || S.gripClaimed || S.mysteryClaimed)) return false;
   return true;
 }
 function deleteHistoryEntry(d){
@@ -3881,28 +3874,15 @@ function logPastWorkout(){
 // so claim order never matters and the two halves always sum to exactly the old combined total -
 // the second claim tops up to the precise remainder rather than being a second independently-
 // rounded half, same delta-tracking pattern completeGate()'s half-Gate top-up already uses.
-// half=true (Grip Gate only) pays half of grip's share now and parks the rest in
-// S.gripHalfOwed* - a later full grip claim pays exactly that, and a mystery claim made in between
-// excludes it from its remainder, so the day still sums to the full total in any claim order.
-// A half grip counts as grip done for securing the day, like completeGateHalf() for the Gate.
-function claimDailyPart(kind, half){
+function claimDailyPart(kind){
   if(viewOnly) return;
   const claimedField = kind==='grip' ? 'gripClaimed' : 'mysteryClaimed';
   if(S[claimedField]) return;
-  half = !!half && kind==='grip';
-  if(half && S.gripHalfToday) return;
-  const toppingUp = kind==='grip' && !half && !!S.gripHalfToday;
   // Migration safety: an account that already claimed the old combined reward today (before this
   // split shipped) must not be able to claim a second helping just because the new per-task flags
-  // start undefined - backfill the flag with zero extra XP instead. A half grip plus mystery also
-  // sets dailyClaimed, so finishing that half is excluded.
-  if(S.dailyClaimed && !toppingUp){ S[claimedField]=true; save(); render(); return; }
-  if(half){
-    if(!Object.values(S.gripExSets||{}).some(v=>v>0)){
-      toast('Nothing logged yet','Log at least one set before marking the Grip Gate half-complete.');
-      return;
-    }
-  } else if(!S.dailyDone[kind]){
+  // start undefined - backfill the flag with zero extra XP instead.
+  if(S.dailyClaimed){ S[claimedField]=true; save(); render(); return; }
+  if(!S.dailyDone[kind]){
     toast('Quest incomplete','Complete that task first.');
     return;
   }
@@ -3918,34 +3898,14 @@ function claimDailyPart(kind, half){
   }
   const full = S.dailyQuestShape;
   const given = S.dailyQuestGivenShape||{};
+  const isSecond = !!S[kind==='grip' ? 'mysteryClaimed' : 'gripClaimed'];
   let xpGain, halfShape = {};
-  if(toppingUp){
-    xpGain = S.gripHalfOwedXp||0;
-    halfShape = Object.assign({}, S.gripHalfOwedShape||{});
+  if(isSecond){
+    xpGain = Math.max(0, fullXp-(S.dailyQuestXpGiven||0));
+    Object.keys(full).forEach(k=>{ const d=full[k]-(given[k]||0); if(d>0) halfShape[k]=d; });
   } else {
-    const isSecond = kind==='grip' ? !!S.mysteryClaimed : !!(S.gripClaimed || S.gripHalfToday);
-    const owedXp = S.gripHalfOwedXp||0, owed = S.gripHalfOwedShape||{};
-    let shareXp; const share = {};
-    if(isSecond){
-      shareXp = Math.max(0, fullXp-(S.dailyQuestXpGiven||0)-owedXp);
-      Object.keys(full).forEach(k=>{ const d=full[k]-(given[k]||0)-(owed[k]||0); if(d>0) share[k]=d; });
-    } else {
-      shareXp = Math.round(fullXp/2);
-      Object.keys(full).forEach(k=>{ const amt=Math.round(full[k]*0.5); if(amt>0) share[k]=amt; });
-    }
-    if(half){
-      xpGain = Math.round(shareXp/2);
-      let pts = Math.floor(Object.values(share).reduce((a,b)=>a+b,0)/2);
-      Object.keys(share).forEach(k=>{ const take=Math.min(share[k],pts); if(take>0){ halfShape[k]=take; pts-=take; } });
-      const owedShape = {};
-      Object.keys(share).forEach(k=>{ const d=share[k]-(halfShape[k]||0); if(d>0) owedShape[k]=d; });
-      S.gripHalfOwedXp = shareXp - xpGain;
-      S.gripHalfOwedShape = owedShape;
-      S.gripHalfXpGiven = xpGain;
-    } else {
-      xpGain = shareXp;
-      halfShape = share;
-    }
+    xpGain = Math.round(fullXp/2);
+    Object.keys(full).forEach(k=>{ const amt=Math.round(full[k]*0.5); if(amt>0) halfShape[k]=amt; });
   }
   Object.keys(halfShape).forEach(k=>{ S.stats[k]=(S.stats[k]||0)+halfShape[k]; given[k]=(given[k]||0)+halfShape[k]; });
   S.dailyQuestGivenShape = given;
@@ -3953,20 +3913,14 @@ function claimDailyPart(kind, half){
   S._upStats = halfShape;
 
   S.xp += xpGain;
-  if(half){
-    S.gripHalfToday = true;
-  } else {
-    S[claimedField] = true;
-    if(toppingUp){ S.gripHalfToday = false; S.gripHalfOwedXp = 0; S.gripHalfOwedShape = null; S.gripHalfXpGiven = 0; }
-  }
-  const gripDone = S.gripClaimed || S.gripHalfToday;
+  S[claimedField] = true;
   // bumpStreak() only fires once BOTH halves are claimed, not on every individual claim - a lone
   // grip (or mystery) claim must not look like it secured the day, since the next day's rollover
   // only checks the combined S.dailyClaimed flag. Calling it here unconditionally would increment
   // the live streak counter today and then silently break it tomorrow when the rollover found the
   // day wasn't actually "active" - exactly the kind of surprise break this app goes out of its way
   // to warn about elsewhere (Trial Gates, the quest-only grace period).
-  if(gripDone && S.mysteryClaimed && !S.dailyClaimed){
+  if(S.gripClaimed && S.mysteryClaimed){
     S.dailyClaimed = true;
     bumpStreak();
     // Quest-only days (Daily Quest claimed without clearing the Gate) keep the streak alive for up
@@ -3981,12 +3935,9 @@ function claimDailyPart(kind, half){
   const penaltyXp=S._lastPenaltyXp; S._lastPenaltyXp=null;
   const penaltyStat=S._lastPenaltyStat; S._lastPenaltyStat=null;
   const label = kind==='grip' ? 'grip' : 'mystery';
-  const bothDone = gripDone && S.mysteryClaimed;
-  const streakNote = bothDone ? '' : ' Streak not secured yet - the other task still counts today.';
+  const bothDone = S.gripClaimed && S.mysteryClaimed;
   if(after>before) showLevelUp(after,halfShape);
-  else if(half) toast('Half Grip Gate','+'+xpGain+' XP'+(weakened?' (weakened, halved)':'')+' - finish the rest later today for +'+S.gripHalfOwedXp+' XP more.'+streakNote);
-  else if(toppingUp) toast('Grip Gate complete','+'+xpGain+' XP more - grip task fully done.'+streakNote);
-  else toast('Discipline','+'+xpGain+' XP'+(weakened?' (weakened, halved)':'')+' - hunter '+label+' task.'+streakNote);
+  else toast('Discipline','+'+xpGain+' XP'+(weakened?' (weakened, halved)':'')+' - hunter '+label+' task.'+(bothDone?'':' Streak not secured yet - the other task still counts today.'));
   revealNewBox(after>before);
   if(penaltyXp || penaltyStat){
     setTimeout(()=>{ toast('Streak broken', buildPenaltyMsg(penaltyXp, penaltyStat)); }, after>before?400:3000);
@@ -4486,7 +4437,7 @@ function startGame(){
     name, startW:w, weight:w, goalW:g,
     xp:0, stats:{str:10,vit:10,end:10,agi:10},
     startDate:today(), cycleIndex:0, exSets:{}, gripExSets:{}, gateDoneToday:false, tzMigrated:true, statsRebalanced2026:true,
-    dailyDone:{grip:false,mystery:false}, dailyClaimed:false, gripClaimed:false, gripHalfToday:false, mysteryClaimed:false,
+    dailyDone:{grip:false,mystery:false}, dailyClaimed:false, gripClaimed:false, mysteryClaimed:false,
     mobilityDone:false, mobilityClaimed:false,
     streak:0, questOnlyStreak:0, avatarItems:[], lastBoxStreak:0, lastActive:null, day:today(),
     history:{}, weightLog:{},
