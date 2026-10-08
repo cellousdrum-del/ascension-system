@@ -62,7 +62,7 @@ Collections: `users` (publicly readable, which powers the leaderboard and friend
 Users can replace PPL with up to 5 routines of up to 6 custom days. Each routine has a mandatory rest day every `restCycle` training days. See the "Custom routine editor" section.
 
 ### Daily Quest
-- A grip task plus a rotating mystery task (`MYSTERY_QUESTS`), each claimed separately (`claimDailyPart`) for +15 XP. Both together count as an "active" day.
+- A grip task plus a rotating mystery task (`MYSTERY_QUESTS`), each claimed separately (`claimDailyPart`) for +15 XP. Both together count as an "active" day (on the `txetxe` account the Grip Gate alone does, full or half, and the mystery task is an optional bonus).
 - One account (`isTxetxeAccount()`, username `txetxe`) gets a rank-tiered **Grip Gate** (`GRIP_GATE_TIERS`) in its own section instead of the flat grip checkbox (with its own half-complete: `claimDailyPart('grip', true)` pays half of grip's share and parks the rest in `S.gripHalfOwed*`), and a generic "do your own stretching routine" Flexibility task instead of the rotating stretch.
 
 ### Other daily items
