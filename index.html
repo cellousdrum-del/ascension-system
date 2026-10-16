@@ -2284,6 +2284,10 @@ function render(){
   if(S.dailyDone.grip===undefined) S.dailyDone.grip = false;
   if(S.gripClaimed===undefined) S.gripClaimed = false;
   if(S.gripHalfToday===undefined) S.gripHalfToday = false;
+  // Days half-cleared then finished before completeGate() reset the flag still say half:true with
+  // the full reward. Weakened finished days (50/60 XP) can't be told apart from a real half, so
+  // only full-strength ones are corrected.
+  Object.values(S.history).forEach(h=>{ if(h && !h.manual && h.half && (h.xp||0)>=100) h.half = false; });
   if(S.mysteryClaimed===undefined) S.mysteryClaimed = false;
   if(S.mobilityDone===undefined) S.mobilityDone = false;
   if(S.mobilityClaimed===undefined) S.mobilityClaimed = false;
@@ -3536,9 +3540,11 @@ function completeGate(){
   S.gateDoneToday=true;
   S.gateHalfToday=false;
   S.gateHalfXpGiven=null; S.gateHalfFullShape=null; S.gateHalfGivenShape=null;
+  // half:false explicitly - this merges over a half-clear entry when topping up, which would
+  // otherwise keep the old half:true and log the finished day as "half-cleared".
   S.history[S.day] = Object.assign({}, S.history[S.day], (gateId==='custom')
-    ? {gate:'custom', xp:fullXp, trial:trial, customName:g.name, customIcon:g.icon, customColor:g.color}
-    : {gate:gateId, xp:fullXp, trial:trial});
+    ? {gate:'custom', xp:fullXp, trial:trial, customName:g.name, customIcon:g.icon, customColor:g.color, half:false}
+    : {gate:gateId, xp:fullXp, trial:trial, half:false});
   save();
   const after=levelFromXp(S.xp).lvl;
   render();
@@ -3660,12 +3666,19 @@ function buildHistory(){
         const w=S.weightLog?S.weightLog[d]:null;
         let line;
         if(!h.manual){
-          const dayLabel = h.gate==='custom' ? esc(h.customName||'Custom Day') : (h.gate==='rest' ? null : GATES[h.gate].name);
-          line = h.gate==='rest' ? 'Rest day confirmed' : `${dayLabel} ${h.half?'half-cleared':'cleared'} (+${h.xp} XP)`;
+          // A live day can be Gate-only, Daily-Quest-only (no gate field at all) or both.
+          const parts = [];
+          if(h.gate==='rest') parts.push('Rest day confirmed');
+          else if(h.gate){
+            const dayLabel = h.gate==='custom' ? esc(h.customName||'Custom Day') : (GATES[h.gate] ? GATES[h.gate].name : esc(h.gate));
+            parts.push(`${dayLabel} ${h.half?'half-cleared':'cleared'} (+${h.xp||0} XP)`);
+          }
+          if(h.dailyDone) parts.push('Daily Quest');
+          line = parts.length ? parts.join(' + ') : 'Logged';
         } else {
           const parts = [];
           if(h.gate==='custom') parts.push(esc(h.customName||'Custom Day')+(h.gateHalf?' half-cleared':' cleared'));
-          else if(h.gate) parts.push(GATES[h.gate].name+(h.gateHalf?' half-cleared':' cleared'));
+          else if(h.gate) parts.push((GATES[h.gate] ? GATES[h.gate].name : esc(h.gate))+(h.gateHalf?' half-cleared':' cleared'));
           if(h.dailyDone) parts.push('Daily Quest');
           if(h.flexDone) parts.push('Flexibility');
           line = (parts.length ? parts.join(' + ') : 'Logged') + ' (logged manually';
