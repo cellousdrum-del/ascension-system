@@ -415,10 +415,10 @@
   <div class="levelup">
     <div class="lu-k">System Notice</div>
     <div class="trial-ic">✉️</div>
-    <div class="lu-t">SECURE YOUR ACCOUNT</div>
-    <p class="note" style="margin-top:8px">Your account has no real email attached. Without one: there's no way to recover your password if you forget it, and you won't get a reminder if you ever go quiet for a few days and could use a nudge back in. Add one now from the Account tab.</p>
-    <button class="btn" style="margin-top:18px" onclick="closeEmailMigration(); switchTab('account')">Add Email</button>
-    <button class="reset" style="margin-top:12px" onclick="closeEmailMigration()">Skip for now</button>
+    <div class="lu-t" id="emoTitle">SECURE YOUR ACCOUNT</div>
+    <p class="note" id="emoBody" style="margin-top:8px">Your account has no real email attached. Without one: there's no way to recover your password if you forget it, and you won't get a reminder if you ever go quiet for a few days and could use a nudge back in. Add one now from the Account tab.</p>
+    <button class="btn" id="emoPrimary" style="margin-top:18px" onclick="closeEmailMigration(); switchTab('account')">Add Email</button>
+    <button class="reset" id="emoSecondary" style="margin-top:12px" onclick="closeEmailMigration()">Skip for now</button>
   </div>
 </div>
 
@@ -1665,6 +1665,42 @@ async function addRealEmail(){
   }
 }
 function closeEmailMigration(){ const el=document.getElementById('emailMigrationOverlay'); if(el) el.classList.remove('show'); }
+// One-off notices for specific accounts (by uid), shown in the email overlay until one of its
+// buttons is clicked, and only while when() still holds - so a notice about an unconfirmed email
+// can never show once the email is actually confirmed.
+const ACCOUNT_NOTICES = [
+  { id:'myk-email-unconfirmed-2026-10', uid:'jgUxitaYtUQzX4qFHx45li28VUJ2',
+    when:()=>isSyntheticEmail(window.fb.auth.currentUser.email),
+    title:'EMAIL NOT CONFIRMED',
+    body:"It looks like you added an email to your account but never confirmed it, so it isn't active yet. Add it again from the Account tab and we'll send you a new confirmation link - click it to finish. If the email doesn't show up within a few minutes, check your spam folder.",
+    primary:'Add email again', secondary:'Got it' }
+];
+function pendingAccountNotice(){
+  if(viewOnly || !window.fb || !window.fb.auth || !window.fb.auth.currentUser) return null;
+  const done = S.dismissedNotices || {};
+  return ACCOUNT_NOTICES.find(n=>n.uid===currentUid && !done[n.id] && n.when()) || null;
+}
+function dismissAccountNotice(id, thenAccount){
+  S.dismissedNotices = Object.assign({}, S.dismissedNotices, {[id]:true});
+  save();
+  closeEmailMigration();
+  if(thenAccount) switchTab('account'); else render();
+}
+// Fills the shared email overlay with either a targeted notice or the default daily nag.
+function setEmailOverlay(notice){
+  const t=document.getElementById('emoTitle'), b=document.getElementById('emoBody');
+  const p=document.getElementById('emoPrimary'), s=document.getElementById('emoSecondary');
+  if(notice){
+    t.textContent = notice.title; b.textContent = notice.body;
+    p.textContent = notice.primary; p.setAttribute('onclick', `dismissAccountNotice('${notice.id}', true)`);
+    s.textContent = notice.secondary; s.setAttribute('onclick', `dismissAccountNotice('${notice.id}', false)`);
+  } else {
+    t.textContent = 'SECURE YOUR ACCOUNT';
+    b.textContent = "Your account has no real email attached. Without one: there's no way to recover your password if you forget it, and you won't get a reminder if you ever go quiet for a few days and could use a nudge back in. Add one now from the Account tab.";
+    p.textContent = 'Add Email'; p.setAttribute('onclick', "closeEmailMigration(); switchTab('account')");
+    s.textContent = 'Skip for now'; s.setAttribute('onclick', 'closeEmailMigration()');
+  }
+}
 
 async function viewProfile(username){
   const uname = (username||'').trim().toLowerCase();
@@ -2410,11 +2446,16 @@ function render(){
   }
   // Nag once a day (never blocking) if this account still has no real email attached, since
   // that means password recovery is impossible for them right now.
-  if(!viewOnly && window.fb && window.fb.auth && window.fb.auth.currentUser && isSyntheticEmail(window.fb.auth.currentUser.email) && S.emailMigrationLastPromptedDay!==S.day){
+  // A targeted account notice takes this slot instead, ignores the once-a-day limit, and keeps
+  // coming back until one of its buttons is clicked.
+  const accountNotice = pendingAccountNotice();
+  const emailOverlay = document.getElementById('emailMigrationOverlay');
+  if(!emailOverlay.classList.contains('show') && !pendingEmailMigration && (accountNotice || (!viewOnly && window.fb && window.fb.auth && window.fb.auth.currentUser && isSyntheticEmail(window.fb.auth.currentUser.email) && S.emailMigrationLastPromptedDay!==S.day))){
     S.emailMigrationLastPromptedDay = S.day;
     save();
+    setEmailOverlay(accountNotice);
     if(trialAlertShownThisRender || gateWarningShownThisRender){ pendingEmailMigration = true; }
-    else { document.getElementById('emailMigrationOverlay').classList.add('show'); }
+    else { emailOverlay.classList.add('show'); }
   }
   const gateExercises = gateId==='rest' ? null : effectiveGateExercises(S.day, gateId, info.lvl);
   const gateExercisesDone = gateExercises!=null && gateExercises.every((e,i)=>(S.exSets[i]||0)>=requiredSetsFor(gateId, e.t, S.day, info.lvl));

@@ -83,7 +83,7 @@ STR/VIT/END/AGI rise by 4 points per claim, split by `statSplitShape(seed)`. The
 Friends (requests), DMs, global chat and a leaderboard.
 
 ### Admin
-Admin is set by `isAdmin: true` on the user doc. Admins can ban users and open anyone's account read-only ("dive in", `viewOnly`). Re-engagement emails (users inactive for 2 or 5 days) and the owner's nightly streak-at-risk email are not in this repo: a separate private scheduled job (GitHub Actions + a Firestore-only service account + EmailJS) sends them, so nothing depends on anyone logging in. The app only stores each account's real email in `contactEmails` on login.
+Admin is set by `isAdmin: true` on the user doc. Admins can ban users and open anyone's account read-only ("dive in", `viewOnly`). Re-engagement emails (users inactive for 2 or 5 days) and the owner's nightly streak-at-risk email are not in this repo: a separate private scheduled job (GitHub Actions + a Firestore-only service account + EmailJS) sends them, so nothing depends on anyone logging in. The app only stores each account's real email in `contactEmails` on login. One-off messages to a specific account go in `ACCOUNT_NOTICES` (by uid, with a `when()` condition): they reuse the email overlay and keep showing until a button is clicked (`S.dismissedNotices`).
 
 ## 4. Rules to keep in mind when editing
 
