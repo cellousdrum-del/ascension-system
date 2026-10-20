@@ -83,7 +83,7 @@ STR/VIT/END/AGI rise by 4 points per claim, split by `statSplitShape(seed)`. The
 Friends (requests), DMs, global chat and a leaderboard.
 
 ### Admin
-Admin is set by `isAdmin: true` on the user doc. Admins can ban users and open anyone's account read-only ("dive in", `viewOnly`). On admin login, re-engagement emails go to users inactive for 2 or 5 days, through EmailJS's free tier (`EMAILJS_*` constants).
+Admin is set by `isAdmin: true` on the user doc. Admins can ban users and open anyone's account read-only ("dive in", `viewOnly`). Re-engagement emails (users inactive for 2 or 5 days) and the owner's nightly streak-at-risk email are not in this repo: a separate private scheduled job (GitHub Actions + a Firestore-only service account + EmailJS) sends them, so nothing depends on anyone logging in. The app only stores each account's real email in `contactEmails` on login.
 
 ## 4. Rules to keep in mind when editing
 
@@ -127,7 +127,7 @@ This repo is meant as a **reference and starting point**. It is not a template t
    - Add a **Web app** and copy its config.
 2. **Copy the code** (fork or download) into a new repo, and delete `backups/`.
 3. **Point everything at your project:**
-   - In `index.html`, replace `firebaseConfig`, set `ASCENSION_URL`, and swap the `EMAILJS_*` values for your own (or delete the inactivity-email feature).
+   - In `index.html`, replace `firebaseConfig`. (The emails are a separate job, not included; build your own if you want them.)
    - In `.firebaserc` and `.github/workflows/firebase-hosting-deploy.yml`, change `solo-leveling-fdd0f` to your project id.
    - Delete `deploy-pages.yml` if you don't want a GitHub Pages copy.
 4. **Remove owner-specific bits.**
