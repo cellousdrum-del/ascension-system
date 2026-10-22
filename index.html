@@ -328,6 +328,21 @@
   #emailMigrationOverlay.show{display:flex}
   #emailMigrationOverlay .levelup{border-color:var(--cyan);box-shadow:0 0 40px rgba(77,163,255,0.5)}
   #emailMigrationOverlay .lu-k{color:var(--cyan)}
+  #tourLayer{position:fixed;inset:0;z-index:95;display:none}
+  #tourLayer.show{display:block}
+  #tourBlock{position:absolute;inset:0}
+  #tourSpot{position:absolute;border:2px solid var(--cyan);border-radius:8px;pointer-events:none;
+    box-shadow:0 0 0 9999px rgba(3,5,12,0.8),0 0 24px rgba(77,163,255,0.75);transition:top .25s,left .25s,width .25s,height .25s,opacity .2s}
+  #tourSpot.none{opacity:0;box-shadow:0 0 0 9999px rgba(3,5,12,0.8)}
+  #tourCard{position:absolute;left:50%;transform:translateX(-50%);width:calc(100% - 24px);max-width:420px;box-sizing:border-box;
+    background:rgba(8,14,30,0.97);border:1px solid var(--cyan);border-radius:4px;padding:16px 16px 14px;
+    box-shadow:0 0 34px rgba(77,163,255,0.45)}
+  #tourCard .tc-k{font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:.2em;color:var(--cyan);margin-bottom:6px}
+  #tourCard .tc-t{font-family:'Orbitron',sans-serif;font-size:15px;letter-spacing:.08em;color:var(--cyan-soft);margin-bottom:8px}
+  #tourCard p{margin:0;font-size:14px;line-height:1.5;color:var(--ink)}
+  #tourCard .tc-b{display:flex;align-items:center;gap:8px;margin-top:14px}
+  #tourCard .tc-b .sp{flex:1}
+  #tourCard .reset{color:var(--muted)}
   .hist-row{display:flex;justify-content:space-between;align-items:center;padding:11px 4px;
     border-bottom:1px dashed rgba(77,163,255,0.14);cursor:pointer;font-size:14px}
   .hist-row:last-child{border-bottom:none}
@@ -419,6 +434,22 @@
     <p class="note" id="emoBody" style="margin-top:8px">Your account has no real email attached. Without one: there's no way to recover your password if you forget it, and you won't get a reminder if you ever go quiet for a few days and could use a nudge back in. Add one now from the Account tab.</p>
     <button class="btn" id="emoPrimary" style="margin-top:18px" onclick="closeEmailMigration(); switchTab('account')">Add Email</button>
     <button class="reset" id="emoSecondary" style="margin-top:12px" onclick="closeEmailMigration()">Skip for now</button>
+  </div>
+</div>
+
+<div id="tourLayer">
+  <div id="tourBlock"></div>
+  <div id="tourSpot" class="none"></div>
+  <div id="tourCard">
+    <div class="tc-k" id="tourK"></div>
+    <div class="tc-t" id="tourT"></div>
+    <p id="tourP"></p>
+    <div class="tc-b">
+      <button class="reset" onclick="endTour()">Skip</button>
+      <span class="sp"></span>
+      <button class="btn ghost sm" id="tourBack" onclick="tourNav(-1)">Back</button>
+      <button class="btn sm" id="tourNext" onclick="tourNav(1)">Next</button>
+    </div>
   </div>
 </div>
 
@@ -1511,6 +1542,7 @@ async function onAuthReady(user){
     startDmUnreadWatcher();
     startSyncWatcher();
     render();
+    setTimeout(maybeAutoTour, 900);
   } else {
     clearTimeout(pushTimer);
     stopChatListener();
@@ -1913,6 +1945,288 @@ function buildFriendsSectionsHtml(){
   return html;
 }
 
+/* ---------- Muscle map: which muscles each exercise works (matched on the exercise name, so it
+   covers the built-in Gates, the Grip Gate and custom routines alike - an exercise nothing matches
+   simply doesn't show), how much each was trained today / this week, and how recovered each is.
+   Weights: 1 = primary mover, less = secondary. Load = weight x sets. First matching rule wins,
+   so specific names (calf, dips, L-sit pull-ups...) sit above the generic ones (press, push-up). ---------- */
+const MUSCLES = {
+  chest:'Chest', delts:'Shoulders', reardelts:'Rear delts', traps:'Traps', lats:'Lats', lowback:'Lower back',
+  biceps:'Biceps', triceps:'Triceps', forearms:'Forearms', abs:'Abs', quads:'Quads', hams:'Hamstrings', glutes:'Glutes', calves:'Calves'
+};
+const MUSCLE_RULES = [
+  [/calf/i, {calves:1}],
+  [/grip|finger|thumb|forearm|wrist|dead hang/i, {forearms:1}],
+  [/romanian|deadlift|good morning|back extension|hyperext/i, {hams:1,glutes:.8,lowback:.5}],
+  [/hip thrust|glute bridge|bridge/i, {glutes:1,hams:.4}],
+  [/hamstring|leg curl/i, {hams:1}],
+  [/squat|lunge|leg press|leg extension|step-?up|pistol|shrimp/i, {quads:1,glutes:.7,hams:.3}],
+  [/knee raise|leg raise|toes-to-bar|dragon|crunch|sit-?up|plank|hollow|ab wheel|russian|twist|core/i, {abs:1,forearms:.2}],
+  [/dips?\b/i, {chest:1,triceps:.8,delts:.4}],
+  [/muscle-?up/i, {lats:.8,chest:.6,triceps:.6,biceps:.4}],
+  [/lever/i, {lats:1,abs:.7,forearms:.4,biceps:.3}],
+  [/pull-?up|chin-?up|pull-?down|lat pull/i, {lats:1,biceps:.6,traps:.3,forearms:.3}],
+  [/rear|prone|y\/t|y-raise|face pull|reverse fly/i, {reardelts:1,traps:.5}],
+  [/\brows?\b/i, {lats:1,traps:.5,reardelts:.4,biceps:.5}],
+  [/flexed-arm hang|curl/i, {biceps:1,forearms:.3}],
+  [/shrug|upright/i, {traps:1,forearms:.3}],
+  [/tricep|skull|pushdown|close-grip|kickback/i, {triceps:1}],
+  [/planche/i, {delts:1,chest:.6,abs:.5}],
+  [/handstand|pike|shoulder press|overhead press|military|push press|lateral raise|front raise|wall walk|arnold/i, {delts:1,triceps:.5,traps:.2}],
+  [/bench|chest|push-?up|fly|flye|press/i, {chest:1,triceps:.6,delts:.4}],
+  [/l-sit/i, {abs:1,triceps:.4}]
+];
+function musclesForExercise(name){
+  const r = MUSCLE_RULES.find(x=>x[0].test(name||''));
+  return r ? r[1] : null;
+}
+function addLoad(a, b, f){ for(const k in b) a[k] = (a[k]||0) + b[k]*(f||1); return a; }
+function exerciseListLoad(list, setsFn){
+  const load = {};
+  (list||[]).forEach((e,i)=>{
+    const n = setsFn(e,i); if(!n) return;
+    const m = musclesForExercise(e.n); if(m) addLoad(load, m, n);
+  });
+  return load;
+}
+function shiftDay(ymd, n){ const t = new Date(ymd+'T00:00:00Z'); t.setUTCDate(t.getUTCDate()+n); return t.toISOString().slice(0,10); }
+// Live load from the sets checked off right now (today's Gate, plus the Grip Gate on the owner account).
+function todayMuscleLoad(){
+  const load = {};
+  if(!S) return load;
+  const lvl = levelFromXp(S.xp).lvl, g = todaysGate();
+  if(g!=='rest') addLoad(load, exerciseListLoad(effectiveGateExercises(S.day, g, lvl), (e,i)=>(S.exSets||{})[i]||0));
+  if(isTxetxeAccount()) addLoad(load, exerciseListLoad(gripGateExercises(lvl), (e,i)=>(S.gripExSets||{})[i]||0));
+  return load;
+}
+// Days from before exact sets were recorded: estimate from the Gate logged, at the current rank's content.
+function estimateDayLoad(d){
+  const h = S.history && S.history[d];
+  if(!h || !h.gate || h.gate==='rest') return null;
+  let ex = null;
+  if(h.gate==='custom'){
+    (S.customRoutines||[]).forEach(r=>(r.days||[]).forEach(day=>{ if(day.name===h.customName) ex = day.exercises; }));
+  } else if(GATES[h.gate]) ex = GATES[h.gate].tiers[gateTierIndex(levelFromXp(S.xp).lvl)];
+  if(!ex) return null;
+  const f = (h.half || h.gateHalf) ? .5 : 1;
+  return exerciseListLoad(ex, e=>parseSets(e.t)*f);
+}
+// Called at day rollover (before the old day's sets are cleared) so each day keeps its exact muscle load.
+function snapshotMuscleDay(){
+  const load = todayMuscleLoad();
+  if(!Object.keys(load).length) return;
+  if(!S.muscleLog) S.muscleLog = {};
+  const l = {}; Object.keys(load).forEach(k=>{ l[k] = Math.round(load[k]*10)/10; });
+  S.muscleLog[S.day] = {l, t:S.lastSetAt||null};
+  const keys = Object.keys(S.muscleLog).sort();
+  while(keys.length>30) delete S.muscleLog[keys.shift()];
+}
+function loadForDate(d){
+  if(d===today()){
+    const t = todayMuscleLoad();
+    if(Object.keys(t).length) return t;
+    return estimateDayLoad(d) || {};
+  }
+  const m = S.muscleLog && S.muscleLog[d];
+  if(m && m.l) return m.l;
+  return estimateDayLoad(d) || {};
+}
+function weekMuscleLoad(){
+  const t = today(), total = {};
+  for(let i=0;i<7;i++) addLoad(total, loadForDate(shiftDay(t,-i)));
+  return total;
+}
+// Most recent session per muscle -> hours needed (36-72h, more for bigger sessions) and how far along.
+function muscleRecovery(){
+  const now = Date.now(), t = today(), out = {};
+  for(let i=0;i<=14;i++){
+    const d = shiftDay(t,-i), L = loadForDate(d);
+    const log = i===0 ? null : (S.muscleLog && S.muscleLog[d]);
+    for(const k in L){
+      if(out[k] || !(L[k]>0)) continue;
+      const needed = 36 + Math.min(36, L[k]*3.5);
+      const at = i===0 ? (S.lastSetAt || now) : ((log && log.t) || new Date(d+'T18:00:00').getTime());
+      const hours = Math.max(0, (now-at)/3.6e6);
+      out[k] = {date:d, load:L[k], needed, hours, frac:Math.min(1, hours/needed)};
+    }
+  }
+  return out;
+}
+let MMODE = 'day';
+function setMMode(m){ MMODE = m; render(); }
+const BODY_FRONT = [
+  ['traps','M60 34 L66 34 L80 43 L74 49 L60 42 Z'],
+  ['delts','M75 44 C87 41 97 46 99 58 L98 70 L87 72 L79 56 Z'],
+  ['chest','M61 47 L74 47 L78 57 L77 66 Q69 72 61 70 Z'],
+  ['biceps','M87 73 L98 71 L97 96 L89 97 Z'],
+  ['forearms','M89 99 L97 98 L99 126 L92 128 Z'],
+  ['abs','M61 72 L74 69 L74 102 L72 110 L61 112 Z'],
+  ['quads','M62 114 L80 110 L83 126 L81 160 L73 168 L63 164 Z'],
+  ['calves','M64 174 L75 174 L79 192 L77 222 L69 225 L64 200 Z'],
+  [null,'M60 28 L66 28 L66 36 L60 36 Z'],
+  [null,'M89 129 L99 127 L100 140 L92 141 Z'],
+  [null,'M63 164 L73 168 L75 174 L64 174 Z'],
+  [null,'M66 227 L78 226 L81 240 L66 240 Z']
+];
+const BODY_BACK = [
+  ['traps','M60 34 L66 34 L80 43 L73 58 L60 76 Z'],
+  ['reardelts','M75 44 C87 41 97 46 99 58 L97 68 L86 68 L80 52 Z'],
+  ['lats','M61 78 L72 62 L83 68 L79 94 L69 102 L61 100 Z'],
+  ['triceps','M87 70 L98 69 L97 96 L89 97 Z'],
+  ['forearms','M89 99 L97 98 L99 126 L92 128 Z'],
+  ['lowback','M61 102 L70 102 L76 98 L75 114 L61 114 Z'],
+  ['glutes','M61 116 L79 113 L85 128 L77 142 L61 142 Z'],
+  ['hams','M62 144 L81 142 L82 166 L74 172 L63 168 Z'],
+  ['calves','M64 174 L77 174 L80 194 L77 222 L69 225 L64 198 Z'],
+  [null,'M60 28 L66 28 L66 36 L60 36 Z'],
+  [null,'M89 129 L99 127 L100 140 L92 141 Z'],
+  [null,'M63 168 L74 172 L77 174 L64 174 Z'],
+  [null,'M66 227 L78 226 L81 240 L66 240 Z']
+];
+function bodySvg(fillFor){
+  const half = shapes => shapes.map(([m,d])=>{
+    const f = m ? fillFor(m) : {fill:'rgba(124,138,165,.10)', stroke:'rgba(124,138,165,.22)'};
+    return `<path d="${d}" fill="${f.fill}" stroke="${f.stroke}" stroke-width="1" stroke-linejoin="round"${f.glow?` style="filter:drop-shadow(0 0 3px ${f.glow})"`:''}>${m?`<title>${MUSCLES[m]}${f.tip?' - '+f.tip:''}</title>`:''}</path>`;
+  }).join('');
+  const fig = (shapes, dx, label)=>`<g transform="translate(${dx} 0)">
+    <circle cx="60" cy="16" r="11" fill="rgba(124,138,165,.10)" stroke="rgba(124,138,165,.22)"/>
+    <g>${half(shapes)}</g>
+    <g transform="translate(120 0) scale(-1 1)">${half(shapes)}</g>
+    <text x="60" y="250" text-anchor="middle" font-size="7" letter-spacing="1.5" fill="#7c8aa5" font-family="Orbitron,sans-serif">${label}</text></g>`;
+  return `<svg viewBox="0 0 250 256" style="width:100%;max-width:380px;display:block;margin:6px auto 0">${fig(BODY_FRONT,0,'FRONT')}${fig(BODY_BACK,130,'BACK')}</svg>`;
+}
+function musclesCard(){
+  const rk = rankFor(levelFromXp(S.xp).lvl), rgb = RANK_RGB[rk.r];
+  const mode = MMODE;
+  const load = mode==='week' ? weekMuscleLoad() : (mode==='day' ? loadForDate(today()) : null);
+  const rec = mode==='rec' ? muscleRecovery() : null;
+  const keys = Object.keys(mode==='rec' ? rec : load).filter(k=>(mode==='rec' ? true : load[k]>0));
+  const max = mode==='rec' ? 1 : Math.max(1, ...keys.map(k=>load[k]));
+  const fmtH = h => h<1 ? 'under 1h' : (h<48 ? Math.round(h)+'h' : (Math.round(h/24*10)/10)+' days');
+  const svg = bodySvg(m=>{
+    const dim = {fill:'rgba(77,163,255,.06)', stroke:'rgba(77,163,255,.22)'};
+    if(mode==='rec'){
+      const r = rec[m]; if(!r) return dim;
+      const c = `hsl(${Math.round(r.frac*120)},78%,52%)`;
+      return {fill:c, stroke:'rgba(255,255,255,.55)', glow:c, tip:r.frac>=1 ? 'recovered' : Math.round(r.frac*100)+'% recovered, ready in '+fmtH(r.needed-r.hours)};
+    }
+    const v = (load[m]||0)/max; if(v<=0) return dim;
+    return {fill:`rgba(${rgb},${(.22+.7*v).toFixed(2)})`, stroke:`rgba(${rgb},.95)`, glow:v>.45 ? `rgba(${rgb},.8)` : null, tip:Math.round(load[m]*10)/10+' set-equivalents'};
+  });
+  const seg = [['day','Today'],['week','7 days'],['rec','Recovery']].map(([k,l])=>
+    `<button class="btn ${mode===k?'':'ghost '}sm" style="flex:1;margin:0" onclick="setMMode('${k}')">${l}</button>`).join('');
+  let body;
+  if(!keys.length){
+    body = `<p class="note" style="text-align:center;margin:8px 0 0">${mode==='day' ? 'Check off sets in a Gate and the muscles you train light up here.' : (mode==='week' ? 'No training in the last 7 days yet.' : 'Nothing trained recently - every muscle is fresh.')}</p>`;
+  } else if(mode==='rec'){
+    body = `<div style="display:flex;align-items:center;gap:6px;justify-content:center;font-size:10px;color:var(--muted);margin:2px 0 10px;letter-spacing:.06em">JUST TRAINED<span style="display:inline-block;width:110px;height:8px;border-radius:99px;background:linear-gradient(90deg,hsl(0,78%,52%),hsl(60,78%,52%),hsl(120,78%,52%))"></span>RECOVERED</div>` +
+      keys.sort((a,b)=>rec[a].frac-rec[b].frac).map(k=>{ const r = rec[k]; const c = `hsl(${Math.round(r.frac*120)},78%,52%)`;
+        return `<div style="display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:5px 0;border-bottom:1px dashed rgba(77,163,255,.14)"><span><b style="color:${c}">&#9679;</b> ${MUSCLES[k]}</span><span style="color:var(--muted)">${r.frac>=1 ? 'recovered' : Math.round(r.frac*100)+'% - ready in '+fmtH(r.needed-r.hours)}</span></div>`; }).join('');
+  } else {
+    body = `<div style="display:flex;align-items:center;gap:6px;justify-content:center;font-size:10px;color:var(--muted);margin:2px 0 10px;letter-spacing:.06em">LESS<span style="display:inline-block;width:110px;height:8px;border-radius:99px;background:linear-gradient(90deg,rgba(${rgb},.22),rgba(${rgb},.95))"></span>MORE</div>` +
+      keys.sort((a,b)=>load[b]-load[a]).map(k=>
+        `<div style="display:flex;align-items:center;gap:10px;font-size:13px;padding:4px 0"><span style="width:96px">${MUSCLES[k]}</span><span style="flex:1;height:6px;border-radius:99px;background:rgba(77,163,255,.12)"><i style="display:block;height:100%;width:${Math.round(100*load[k]/max)}%;border-radius:99px;background:rgba(${rgb},.9)"></i></span><span style="width:34px;text-align:right;color:var(--muted)">${Math.round(load[k]*10)/10}</span></div>`).join('');
+  }
+  return `<section class="win" data-tour="muscles">
+      <div class="eyebrow">Muscle Map</div>
+      <div style="display:flex;gap:8px">${seg}</div>
+      ${svg}
+      <div style="margin-top:8px">${body}</div>
+    </section>`;
+}
+/* ---------- Interactive tutorial: dims the page, spotlights one element at a time (found by its
+   data-tour attribute, switching tabs when a step needs another one) and explains it. Starts by
+   itself once per account (S.tourSeen), always skippable, replayable from the ? button and the
+   Account tab. A step whose element isn't on screen (e.g. a rest day, or a custom routine) just
+   shows its card without a spotlight. ---------- */
+const TOUR_STEPS = [
+  {k:'WELCOME', t:'Welcome, Hunter', p:'A one-minute tour of everything the System offers. Skip it any time, and replay it later from the ? button at the top.'},
+  {tab:'home', sel:'hunter', t:'Your Hunter card', p:'Your level, XP bar, rank (E up to S) and four stats. Everything you do earns XP, and higher ranks unlock harder training.'},
+  {tab:'home', sel:'weight', t:'Weight', p:'Log your weight once a day for +10 XP. The bar shows your progress toward your goal.'},
+  {tab:'home', sel:'gatechips', t:'Pick your Gate', p:'Push, Pull and Legs rotate for you, with a rest day each week. Tap another day to switch today\'s Gate, until you\'ve cleared one. With a custom routine, these are your own days.'},
+  {tab:'home', sel:'gate', t:'Clear the Gate', p:'Tap each set as you finish it. Clear every set for +100 XP and a streak day. Short on time? Mark it half-complete for half the reward and finish later.'},
+  {tab:'home', sel:'muscles', t:'Muscle map', p:'See which muscles you trained today or this week. Tap Recovery to see how rested each one is: red just trained, green ready again.'},
+  {tab:'home', sel:'daily', t:'Daily Quest', p:'Small tasks worth +15 XP each. Claiming them keeps your streak alive on days you skip the Gate, up to 3 days in a row. After that only clearing a Gate saves it.'},
+  {tab:'home', sel:'flex', t:'Flexibility', p:'A daily stretch for +20 XP. It never affects your streak.'},
+  {tab:'routine', sel:'tab-routine', t:'Routine tab', p:'Build your own routines with custom days and exercises, and switch between them whenever you like.'},
+  {tab:'progress', sel:'tab-progress', t:'Progress tab', p:'Your weight trend, the full Ascension Log (log past workouts and delete mistakes) and the muscle map.'},
+  {tab:'avatar', sel:'tab-avatar', t:'Avatar tab', p:'Streak milestones drop mystery boxes with gear for your Hunter. Tap an item to equip it.'},
+  {tab:'social', sel:'tab-social', t:'Social tab', p:'Add friends, chat, send messages and see how you rank against other Hunters.'},
+  {tab:'account', sel:'btn-account', t:'Account', p:'Back up your progress, change your password or email, and manage alerts.'},
+  {tab:'account', sel:'btn-help', t:'Replay anytime', p:'Tap the ? button whenever you want this tour again. That\'s everything, Hunter. Arise.'}
+];
+let tourIdx = -1, tourTimer = null;
+function tourEl(){
+  const st = TOUR_STEPS[tourIdx];
+  return st && st.sel ? document.querySelector('[data-tour="'+st.sel+'"]') : null;
+}
+function tourPlace(){
+  if(tourIdx<0) return;
+  const spot = document.getElementById('tourSpot'), card = document.getElementById('tourCard');
+  const el = tourEl();
+  if(!el){
+    spot.classList.add('none');
+    card.style.top = Math.max(16, (window.innerHeight - card.offsetHeight)/2) + 'px'; card.style.bottom = 'auto';
+    return;
+  }
+  const r = el.getBoundingClientRect(), pad = 5;
+  const maxH = Math.max(100, window.innerHeight - card.offsetHeight - 36 - Math.max(0, r.top));
+  const h = Math.min(r.height, maxH);
+  spot.classList.remove('none');
+  spot.style.left = (r.left-pad)+'px'; spot.style.top = (r.top-pad)+'px';
+  spot.style.width = (r.width+pad*2)+'px'; spot.style.height = (h+pad*2)+'px';
+  // Card goes opposite the spotlight: bottom when the target sits in the upper half, top otherwise.
+  if(r.top + h/2 < window.innerHeight/2){ card.style.top = 'auto'; card.style.bottom = '12px'; }
+  else { card.style.bottom = 'auto'; card.style.top = 'calc(12px + env(safe-area-inset-top))'; }
+}
+function tourShow(){
+  const st = TOUR_STEPS[tourIdx], n = TOUR_STEPS.length;
+  document.getElementById('tourK').textContent = st.k || ('STEP '+tourIdx+' / '+(n-1));
+  document.getElementById('tourT').textContent = st.t;
+  document.getElementById('tourP').textContent = st.p;
+  document.getElementById('tourBack').style.visibility = tourIdx===0 ? 'hidden' : 'visible';
+  document.getElementById('tourNext').textContent = tourIdx===n-1 ? 'Finish' : (tourIdx===0 ? 'Start' : 'Next');
+  if(st.tab && currentTab!==st.tab) switchTab(st.tab);
+  tourPlace();
+  setTimeout(()=>{
+    const el = tourEl();
+    if(el){
+      const r = el.getBoundingClientRect();
+      if(r.top < 70 || r.top > window.innerHeight*0.55) window.scrollTo({top: Math.max(0, window.scrollY + r.top - 80), behavior:'auto'});
+    }
+    tourPlace();
+  }, 150);
+}
+function startTour(){
+  if(!S) return;
+  tourIdx = 0;
+  document.getElementById('tourLayer').classList.add('show');
+  clearInterval(tourTimer); tourTimer = setInterval(tourPlace, 400);
+  tourShow();
+}
+function tourNav(d){
+  const next = tourIdx + d;
+  if(next < 0) return;
+  if(next >= TOUR_STEPS.length){ endTour(); return; }
+  tourIdx = next; tourShow();
+}
+function endTour(){
+  tourIdx = -1; clearInterval(tourTimer);
+  document.getElementById('tourLayer').classList.remove('show');
+  if(S && !viewOnly && !S.tourSeen){ S.tourSeen = true; save(); }
+  window.scrollTo({top:0, behavior:'auto'});
+  switchTab('home');
+}
+// Once per account: new accounts right after onboarding, everyone else on their next open. Waits
+// out any popup already on screen rather than stacking on top of it.
+function maybeAutoTour(){
+  if(!S || viewOnly || S.tourSeen || tourIdx>=0) return;
+  if(document.querySelector('#overlay.show,#boxOverlay.show,#trialOverlay.show,#gateWarningOverlay.show,#emailMigrationOverlay.show')){
+    setTimeout(maybeAutoTour, 3000); return;
+  }
+  if(currentTab!=='home') switchTab('home');
+  startTour();
+}
 function switchTab(tab){
   currentTab = tab;
   if(tab==='social') hasUnreadChat = false;
@@ -1926,7 +2240,7 @@ function switchTab(tab){
 function renderTabNav(){
   const tabs = [['home','Home'],['routine','Routine'],['progress','Progress'],['avatar','Avatar'],['social','Social']];
   return `<div class="tabbar" id="tabbarSlot">${tabs.map(([id,label])=>
-    `<div class="tab-btn" data-active="${currentTab===id?1:0}" onclick="switchTab('${id}')">${label}${(id==='social'&&(hasUnreadChat||hasUnreadRequest||hasUnreadDm))?'<span class="tab-dot"></span>':''}</div>`
+    `<div class="tab-btn" data-tour="tab-${id}" data-active="${currentTab===id?1:0}" onclick="switchTab('${id}')">${label}${(id==='social'&&(hasUnreadChat||hasUnreadRequest||hasUnreadDm))?'<span class="tab-dot"></span>':''}</div>`
   ).join('')}</div>`;
 }
 
@@ -2304,6 +2618,7 @@ function render(){
     S.cycleIndex = seedIdx>=0 ? seedIdx : 0;
   }
   if(S.day !== today() && !viewOnly){
+    snapshotMuscleDay();
     // How many real calendar days passed since we last saw you, not just "before vs after" -
     // otherwise clearing the Gate once and then never reopening the app again would freeze your
     // streak forever, since only the single last-tracked day's completion was ever checked.
@@ -2478,11 +2793,11 @@ function render(){
 
   app.innerHTML = `
     <div style="display:flex;align-items:center;gap:8px;margin:calc(52px + env(safe-area-inset-top) - max(14px, env(safe-area-inset-top))) 0 16px">
-      <div style="width:40px;flex:0 0 auto"></div>
+      <button class="account-icon-btn" data-tour="btn-help" onclick="startTour()" title="Tutorial" aria-label="Tutorial" style="font-family:Orbitron,sans-serif;font-weight:900">?</button>
       <div style="flex:1;display:flex;justify-content:center;min-width:0">
         <div class="eyebrow" style="margin:0">Ascension System</div>
       </div>
-      <button class="account-icon-btn${currentTab==='account'?' active':''}" onclick="switchTab('account')" title="Account" aria-label="Account">&#9881;&#xFE0E;</button>
+      <button class="account-icon-btn${currentTab==='account'?' active':''}" data-tour="btn-account" onclick="switchTab('account')" title="Account" aria-label="Account">&#9881;&#xFE0E;</button>
     </div>
 
     ${renderTabNav()}
@@ -2500,7 +2815,7 @@ function render(){
       <span class="wt-state">${S.dumbbellsToday?'ON - Dumbbells (Push + Pull)':'OFF - Calisthenics'}</span>
     </div>
     ` : ''}
-    <section class="win">
+    <section class="win" data-tour="hunter">
       <div class="hunter-top">
         <div>
           <div class="hname">${esc(S.name)}</div>
@@ -2521,7 +2836,7 @@ function render(){
       ${S.penaltyToday?`<div class="penalty" style="margin-top:10px">⚠ WEAKENED - streak broken. Half XP and doubled grip reps until tomorrow. <span style="text-decoration:underline;cursor:pointer" onclick="clearWeakenedManually()">Forgot a day and already backfilled it? Clear it</span></div>`:''}
     </section>
 
-    <section class="win">
+    <section class="win" data-tour="weight">
       <div class="eyebrow">Weight Progress</div>
       <div class="weight-row">
         <div class="weight-now">${fmt(S.weight)}<span> kg</span></div>
@@ -2538,10 +2853,10 @@ function render(){
         : `<div class="penalty">⚠ Weight not logged - come back once today's weigh-in is in</div>`}
     </section>
 
-    <section class="win rank-${rk.r.toLowerCase()}">
+    <section class="win rank-${rk.r.toLowerCase()}" data-tour="gate">
       <div class="eyebrow">Quest - Today's Gate</div>
       ${monsterThreat?`<div class="penalty" style="margin-bottom:10px">👹 A monster has appeared - clear today's Gate or your streak breaks, daily quest alone won't save it now</div>`:''}
-      <div class="gates">
+      <div class="gates" data-tour="gatechips">
         ${ar
           ? (ar.days||[]).map((d,i)=>customDayChip(d, gateId==='custom' && curCustomDay && curCustomDay.id===d.id, i)).join('')
           : `${gateBtn('push',gateId)}${gateBtn('pull',gateId)}${gateBtn('legs',gateId)}`}
@@ -2630,7 +2945,9 @@ function render(){
     </section>
     ` : ''}
 
-    <section class="win">
+    ${musclesCard()}
+
+    <section class="win" data-tour="daily">
       <div class="eyebrow">Hunter's Daily Quest</div>
       <div class="daily">
         ${isGripGate ? '' : `
@@ -2659,7 +2976,7 @@ function render(){
       <div class="streak">🔥 Streak: ${S.streak} day${S.streak===1?'':'s'}</div>
     </section>
 
-    <section class="win">
+    <section class="win" data-tour="flex">
       <div class="eyebrow">Flexibility</div>
       <div class="daily">
         <div class="dq ${S.mobilityDone?'done':''}" onclick="toggleMobility()">
@@ -2704,6 +3021,8 @@ function render(){
         </div>
       </details>
     </section>
+
+    ${musclesCard()}
 
     <section class="win">
       <div class="eyebrow">Planche Path</div>
@@ -2956,7 +3275,8 @@ function render(){
         <button class="btn ghost sm" style="flex:1" onclick="exportProgress()" ${viewOnly?'disabled':''}>Backup progress</button>
         <button class="btn ghost sm" style="flex:1" onclick="document.getElementById('importFile').click()" ${viewOnly?'disabled':''}>Restore backup</button>
       </div>
-      <button class="btn ghost" style="margin-top:14px" onclick="doLogout()">Log out</button>
+      <button class="btn ghost" style="margin-top:14px" onclick="startTour()">Replay tutorial</button>
+      <button class="btn ghost" style="margin-top:10px" onclick="doLogout()">Log out</button>
     </section>
 
     <section class="win">
@@ -3094,6 +3414,7 @@ function toggleEx(i){
   const max=requiredSetsFor(gateId, ex[i].t, S.day, level);
   const cur=S.exSets[i]||0;
   S.exSets[i] = (cur+1)>max ? 0 : cur+1;
+  S.lastSetAt = Date.now();
   save(); render();
 }
 function toggleDaily(k){ S.dailyDone[k]=!S.dailyDone[k]; save(); render(); }
@@ -3104,6 +3425,7 @@ function toggleGripEx(i){
   const max = gripRequiredSetsFor(ex[i].t);
   const cur = S.gripExSets[i]||0;
   S.gripExSets[i] = (cur+1)>max ? 0 : cur+1;
+  S.lastSetAt = Date.now();
   // Derived, not manually clicked, like the rest of the grip pseudo-Gate - it only flips to true
   // once every exercise in today's tier is at its required set count.
   S.dailyDone.grip = gripGateAllDone(level);
@@ -4473,6 +4795,7 @@ function startGame(){
   };
   myIsAdmin = false;
   save(); render();
+  setTimeout(maybeAutoTour, 1200);
   toast('System online','Welcome, '+name+'. Let the ascension begin.');
 }
 function hardReset(){

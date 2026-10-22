@@ -79,6 +79,12 @@ STR/VIT/END/AGI rise by 4 points per claim, split by `statSplitShape(seed)`. The
 - **The log.** Days can be backfilled (`logPastWorkout`), and manually logged days can be deleted (`deleteHistoryEntry`). Deleting reverts the exact XP and stats the entry recorded and removes that day's weigh-in. If the day was inside the current streak, the streak shortens to the days after it, and the day becomes a pending break gap, so re-logging it restores the streak. Days recorded live can't be deleted, because they don't store their stat gains.
 - Streak milestones drop mystery boxes holding avatar cosmetics (`AVATAR_ITEMS`, `grantBoxIfEarned`). Titles (`TITLES`) change every 10 levels.
 
+### Muscle map
+A body figure (front and back) on Home and Progress with three views: Today, 7 days and Recovery. `MUSCLE_RULES` maps an exercise's *name* to muscles with weights (first matching regex wins), so built-in Gates, the Grip Gate and custom routines all work, and a name nothing matches just doesn't show. Load = weight x sets checked. Today is computed live from `S.exSets` / `S.gripExSets`; at day rollover `snapshotMuscleDay()` stores the day in `S.muscleLog` (30 days kept); days from before that existed are estimated from the Gate logged in `S.history`. Recovery gives each muscle 36-72h (more for bigger sessions), counted from `S.lastSetAt` or the saved time, shown as a red-to-green gradient. The figure is plain SVG paths (`BODY_FRONT` / `BODY_BACK`, right half mirrored).
+
+### Tutorial
+`TOUR_STEPS` drives an interactive tour: a dimmed overlay spotlights the element carrying the matching `data-tour` attribute, switching tabs when a step needs one. It starts once per account (`S.tourSeen`), is skippable, and replays from the ? button in the header or from the Account tab. New UI worth explaining needs a `data-tour` attribute and a step.
+
 ### Social
 Friends (requests), DMs, global chat and a leaderboard.
 
