@@ -1951,30 +1951,69 @@ function buildFriendsSectionsHtml(){
    Weights: 1 = primary mover, less = secondary. Load = weight x sets. First matching rule wins,
    so specific names (calf, dips, L-sit pull-ups...) sit above the generic ones (press, push-up). ---------- */
 const MUSCLES = {
-  chest:'Chest', delts:'Shoulders', reardelts:'Rear delts', traps:'Traps', lats:'Lats', lowback:'Lower back',
-  biceps:'Biceps', triceps:'Triceps', forearms:'Forearms', abs:'Abs', quads:'Quads', hams:'Hamstrings', glutes:'Glutes', calves:'Calves'
+  chestup:'Upper chest', chestlow:'Mid/lower chest',
+  delts_f:'Front delts', delts_s:'Side delts', delts_r:'Rear delts',
+  trapsup:'Upper traps', midback:'Mid back', lats:'Lats', lowback:'Lower back', serratus:'Serratus',
+  biceps:'Biceps', brachialis:'Brachialis', tri_long:'Triceps (long head)', tri_lat:'Triceps (lateral head)',
+  flexors:'Forearm flexors', extensors:'Forearm extensors',
+  abs_up:'Upper abs', abs_low:'Lower abs', obliques:'Obliques', hipflex:'Hip flexors',
+  glutes:'Glutes', glutemed:'Glute medius', quads:'Quads', adductors:'Inner thigh', hams:'Hamstrings',
+  calves:'Calves', soleus:'Soleus', shins:'Shins',
+  fingflex:'Finger flexors', fingext:'Finger extensors', thumb:'Thumb'
+};
+// Days saved before the finer split used these coarser ids; spread them over their parts when read.
+const MUSCLE_LEGACY = {
+  chest:{chestlow:.6,chestup:.4}, delts:{delts_f:.5,delts_s:.5}, reardelts:{delts_r:1}, traps:{trapsup:.5,midback:.5},
+  abs:{abs_up:.5,abs_low:.5}, triceps:{tri_long:.5,tri_lat:.5}, forearms:{flexors:.7,extensors:.3}, calves:{calves:.6,soleus:.4}
+};
+// Base recovery hours before the session-size bonus: small, fast-recovering muscles vs big slow ones.
+const MUSCLE_RECOVERY_BASE = {
+  fingflex:24, fingext:24, thumb:24, flexors:24, extensors:24, calves:24, soleus:24, shins:24, abs_up:24, abs_low:24,
+  obliques:24, serratus:24, hipflex:30, brachialis:30, delts_s:30, delts_r:30,
+  chestup:42, chestlow:42, lats:42, quads:42, glutes:42, hams:42, lowback:42
 };
 const MUSCLE_RULES = [
-  [/calf/i, {calves:1}],
-  [/grip|finger|thumb|forearm|wrist|dead hang/i, {forearms:1}],
-  [/romanian|deadlift|good morning|back extension|hyperext/i, {hams:1,glutes:.8,lowback:.5}],
-  [/hip thrust|glute bridge|bridge/i, {glutes:1,hams:.4}],
+  [/calf/i, {calves:1,soleus:.6}],
+  [/thumb/i, {thumb:1}],
+  [/finger extension|rope/i, {fingext:1,extensors:.8}],
+  [/finger/i, {fingflex:1,flexors:.6}],
+  [/grip/i, {fingflex:1,flexors:1,thumb:.4}],
+  [/dead hang/i, {flexors:1,lats:.3,delts_r:.2}],
+  [/wrist|forearm/i, {flexors:1,extensors:.5}],
+  [/romanian|deadlift|good morning|back extension|hyperext/i, {hams:1,glutes:.8,lowback:.6,trapsup:.2,flexors:.3}],
+  [/hip thrust|glute bridge|bridge/i, {glutes:1,hams:.4,glutemed:.3}],
   [/hamstring|leg curl/i, {hams:1}],
-  [/squat|lunge|leg press|leg extension|step-?up|pistol|shrimp/i, {quads:1,glutes:.7,hams:.3}],
-  [/knee raise|leg raise|toes-to-bar|dragon|crunch|sit-?up|plank|hollow|ab wheel|russian|twist|core/i, {abs:1,forearms:.2}],
-  [/dips?\b/i, {chest:1,triceps:.8,delts:.4}],
-  [/muscle-?up/i, {lats:.8,chest:.6,triceps:.6,biceps:.4}],
-  [/lever/i, {lats:1,abs:.7,forearms:.4,biceps:.3}],
-  [/pull-?up|chin-?up|pull-?down|lat pull/i, {lats:1,biceps:.6,traps:.3,forearms:.3}],
-  [/rear|prone|y\/t|y-raise|face pull|reverse fly/i, {reardelts:1,traps:.5}],
-  [/\brows?\b/i, {lats:1,traps:.5,reardelts:.4,biceps:.5}],
-  [/flexed-arm hang|curl/i, {biceps:1,forearms:.3}],
-  [/shrug|upright/i, {traps:1,forearms:.3}],
-  [/tricep|skull|pushdown|close-grip|kickback/i, {triceps:1}],
-  [/planche/i, {delts:1,chest:.6,abs:.5}],
-  [/handstand|pike|shoulder press|overhead press|military|push press|lateral raise|front raise|wall walk|arnold/i, {delts:1,triceps:.5,traps:.2}],
-  [/bench|chest|push-?up|fly|flye|press/i, {chest:1,triceps:.6,delts:.4}],
-  [/l-sit/i, {abs:1,triceps:.4}]
+  [/split squat|lunge|step-?up|pistol|shrimp/i, {quads:1,glutes:.8,glutemed:.5,adductors:.4,hams:.3}],
+  [/squat|leg press|leg extension/i, {quads:1,glutes:.7,adductors:.4,hams:.2}],
+  [/knee raise|leg raise|toes-to-bar/i, {abs_low:1,hipflex:.8,abs_up:.4,flexors:.3,obliques:.2}],
+  [/dragon/i, {abs_low:1,abs_up:.8,hipflex:.5,lats:.3}],
+  [/crunch|sit-?up/i, {abs_up:1,abs_low:.4,hipflex:.3}],
+  [/plank|hollow|ab wheel/i, {abs_up:.8,abs_low:.8,obliques:.4,serratus:.3}],
+  [/russian|twist|side bend|woodchop/i, {obliques:1,abs_up:.4}],
+  [/\bcore\b/i, {abs_up:.8,abs_low:.8,obliques:.4}],
+  [/dips?\b/i, {chestlow:1,tri_long:.8,tri_lat:.8,delts_f:.5,serratus:.2}],
+  [/muscle-?up/i, {lats:.8,chestlow:.6,tri_long:.6,tri_lat:.6,biceps:.4,brachialis:.3,delts_f:.3}],
+  [/lever/i, {lats:1,abs_up:.7,abs_low:.6,flexors:.4,delts_r:.3,biceps:.3,serratus:.3}],
+  [/chin-?up/i, {biceps:1,brachialis:.5,lats:.8,midback:.3,flexors:.3}],
+  [/pull-?up/i, {lats:1,biceps:.5,brachialis:.3,midback:.5,delts_r:.3,trapsup:.2,flexors:.3}],
+  [/pull-?down|lat pull/i, {lats:1,biceps:.5,midback:.3,delts_r:.2}],
+  [/rear|prone|y\/t|y-raise|face pull|reverse fly/i, {delts_r:1,midback:.6,trapsup:.4}],
+  [/\brows?\b/i, {lats:1,midback:1,delts_r:.5,biceps:.5,brachialis:.3,flexors:.3,lowback:.2}],
+  [/hammer/i, {brachialis:1,biceps:.6,flexors:.4}],
+  [/flexed-arm hang|curl/i, {biceps:1,brachialis:.5,flexors:.4}],
+  [/shrug|upright/i, {trapsup:1,midback:.3,flexors:.3}],
+  [/overhead[^,]*tricep|tricep[^,]*extension|skull/i, {tri_long:1,tri_lat:.5}],
+  [/tricep|pushdown|close-grip|kickback/i, {tri_lat:1,tri_long:.6}],
+  [/planche/i, {delts_f:1,chestup:.7,chestlow:.4,abs_up:.5,serratus:.5,flexors:.3}],
+  [/handstand/i, {delts_f:1,delts_s:.6,tri_long:.4,tri_lat:.4,serratus:.6,flexors:.5,abs_up:.3,trapsup:.3}],
+  [/lateral raise/i, {delts_s:1,delts_f:.3,trapsup:.3}],
+  [/front raise/i, {delts_f:1,delts_s:.3,chestup:.3}],
+  [/pike|shoulder press|overhead press|military|push press|wall walk|arnold/i, {delts_f:1,delts_s:.7,tri_long:.5,tri_lat:.5,trapsup:.3,serratus:.3,chestup:.3}],
+  [/incline/i, {chestup:1,chestlow:.4,delts_f:.6,tri_lat:.5,tri_long:.3}],
+  [/fly|flye/i, {chestlow:1,chestup:.6,delts_f:.3}],
+  [/push-?up/i, {chestlow:1,chestup:.7,delts_f:.5,tri_lat:.6,tri_long:.4,serratus:.5}],
+  [/bench|chest|press/i, {chestlow:1,chestup:.6,delts_f:.5,tri_lat:.6,tri_long:.4}],
+  [/l-sit/i, {abs_low:1,hipflex:.8,abs_up:.5,tri_long:.3,tri_lat:.3}]
 ];
 function musclesForExercise(name){
   const r = MUSCLE_RULES.find(x=>x[0].test(name||''));
@@ -2028,7 +2067,14 @@ function loadForDate(d){
     return estimateDayLoad(d) || {};
   }
   const m = S.muscleLog && S.muscleLog[d];
-  if(m && m.l) return m.l;
+  if(m && m.l){
+    const out = {};
+    Object.keys(m.l).forEach(k=>{
+      if(MUSCLES[k]) out[k] = (out[k]||0) + m.l[k];
+      else if(MUSCLE_LEGACY[k]) Object.keys(MUSCLE_LEGACY[k]).forEach(n=>{ out[n] = (out[n]||0) + m.l[k]*MUSCLE_LEGACY[k][n]; });
+    });
+    return out;
+  }
   return estimateDayLoad(d) || {};
 }
 function weekMuscleLoad(){
@@ -2044,7 +2090,7 @@ function muscleRecovery(){
     const log = i===0 ? null : (S.muscleLog && S.muscleLog[d]);
     for(const k in L){
       if(out[k] || !(L[k]>0)) continue;
-      const needed = 36 + Math.min(36, L[k]*3.5);
+      const needed = (MUSCLE_RECOVERY_BASE[k]||36) + Math.min(36, L[k]*3.5);
       const at = i===0 ? (S.lastSetAt || now) : ((log && log.t) || new Date(d+'T18:00:00').getTime());
       const hours = Math.max(0, (now-at)/3.6e6);
       out[k] = {date:d, load:L[k], needed, hours, frac:Math.min(1, hours/needed)};
@@ -2055,33 +2101,55 @@ function muscleRecovery(){
 let MMODE = 'day';
 function setMMode(m){ MMODE = m; render(); }
 const BODY_FRONT = [
-  ['traps','M60 34 L66 34 L80 43 L74 49 L60 42 Z'],
-  ['delts','M75 44 C87 41 97 46 99 58 L98 70 L87 72 L79 56 Z'],
-  ['chest','M61 47 L74 47 L78 57 L77 66 Q69 72 61 70 Z'],
-  ['biceps','M87 73 L98 71 L97 96 L89 97 Z'],
-  ['forearms','M89 99 L97 98 L99 126 L92 128 Z'],
-  ['abs','M61 72 L74 69 L74 102 L72 110 L61 112 Z'],
-  ['quads','M62 114 L80 110 L83 126 L81 160 L73 168 L63 164 Z'],
-  ['calves','M64 174 L75 174 L79 192 L77 222 L69 225 L64 200 Z'],
+  ['serratus','M73 71 L81 67 L85 72 L83 81 L73 82 Z'],
+  ['obliques','M73 83 L83 82 L85 94 L81 108 L73 108 Z'],
+  ['trapsup','M60 34 L66 34 L80 43 L74 49 L60 42 Z'],
+  ['delts_f','M75 44 C82 42.5 87 43 89 46 L90 64 L87 72 L79 56 Z'],
+  ['delts_s','M89 46 C94 48 98 52 99 58 L98 70 L87 72 L90 64 Z'],
+  ['chestup','M61 47 L74 47 L77 54 L61 56 Z'],
+  ['chestlow','M61 57 L77 55 L77 66 Q69 72 61 70 Z'],
+  ['biceps','M87 73 L98 71 L96 85 L89 86 Z'],
+  ['brachialis','M89 87 L96 86 L97 96 L89 97 Z'],
+  ['flexors','M89 99 L97 98 L99 126 L92 128 Z'],
+  ['abs_up','M61 72 L72 70 L72 89 L61 89 Z'],
+  ['abs_low','M61 90 L72 90 L72 104 L70 110 L61 112 Z'],
+  ['hipflex','M62 112 L72 108 L82 113 L82 122 L69 125 L62 121 Z'],
+  ['adductors','M62 124 L69 126 L69 150 L66 162 L63 164 Z'],
+  ['quads','M69 127 L82 123 L83 130 L81 160 L73 168 L66 162 L69 150 Z'],
+  ['shins','M64 174 L75 174 L79 192 L77 222 L69 225 L64 200 Z'],
   [null,'M60 28 L66 28 L66 36 L60 36 Z'],
   [null,'M89 129 L99 127 L100 140 L92 141 Z'],
   [null,'M63 164 L73 168 L75 174 L64 174 Z'],
   [null,'M66 227 L78 226 L81 240 L66 240 Z']
 ];
 const BODY_BACK = [
-  ['traps','M60 34 L66 34 L80 43 L73 58 L60 76 Z'],
-  ['reardelts','M75 44 C87 41 97 46 99 58 L97 68 L86 68 L80 52 Z'],
+  ['trapsup','M60 34 L66 34 L80 43 L72 50 L60 46 Z'],
+  ['midback','M60 47 L72 51 L73 58 L60 76 Z'],
+  ['delts_r','M75 44 C87 41 97 46 99 58 L97 68 L86 68 L80 52 Z'],
   ['lats','M61 78 L72 62 L83 68 L79 94 L69 102 L61 100 Z'],
-  ['triceps','M87 70 L98 69 L97 96 L89 97 Z'],
-  ['forearms','M89 99 L97 98 L99 126 L92 128 Z'],
+  ['tri_long','M87 70 L94 69.5 L93 97 L89 97 Z'],
+  ['tri_lat','M94 69.5 L98 69 L97 96 L93 97 Z'],
+  ['extensors','M89 99 L97 98 L99 126 L92 128 Z'],
   ['lowback','M61 102 L70 102 L76 98 L75 114 L61 114 Z'],
-  ['glutes','M61 116 L79 113 L85 128 L77 142 L61 142 Z'],
+  ['glutes','M61 114 L68 113 L68 124 L77 128 L85 126 L77 142 L61 142 Z'],
+  ['glutemed','M68 112 L79 111 L85 124 L77 128 L68 124 Z'],
   ['hams','M62 144 L81 142 L82 166 L74 172 L63 168 Z'],
-  ['calves','M64 174 L77 174 L80 194 L77 222 L69 225 L64 198 Z'],
+  ['calves','M64 174 L77 174 L80 195 L65 195 Z'],
+  ['soleus','M65 196 L80 196 L77 222 L69 225 L64 210 Z'],
   [null,'M60 28 L66 28 L66 36 L60 36 Z'],
   [null,'M89 129 L99 127 L100 140 L92 141 Z'],
   [null,'M63 168 L74 172 L77 174 L64 174 Z'],
   [null,'M66 227 L78 226 L81 240 L66 240 Z']
+];
+// Right hand, palm view. The back-of-hand view mirrors it.
+const HAND_SHAPES = [
+  ['fp','M20 52 L20 30 Q20 23 26.5 23 Q33 23 33 30 L33 52 Z'],
+  ['fp','M35 52 L35 24 Q35 17 41.5 17 Q48 17 48 24 L48 52 Z'],
+  ['fp','M50 52 L50 28 Q50 21 56.5 21 Q63 21 63 28 L63 52 Z'],
+  ['fp','M65 52 L65 36 Q65 30 70.5 30 Q76 30 76 36 L76 52 Z'],
+  ['fp','M20 54 L76 54 L76 84 Q76 92 68 92 L28 92 Q20 92 20 84 Z'],
+  ['thumb','M78 78 L92 58 Q96 52 101 55 Q106 59 101 65 L86 88 Z'],
+  [null,'M30 94 L66 94 L66 104 L30 104 Z']
 ];
 function bodySvg(fillFor){
   const half = shapes => shapes.map(([m,d])=>{
@@ -2095,6 +2163,19 @@ function bodySvg(fillFor){
     <text x="60" y="250" text-anchor="middle" font-size="7" letter-spacing="1.5" fill="#7c8aa5" font-family="Orbitron,sans-serif">${label}</text></g>`;
   return `<svg viewBox="0 0 250 256" style="width:100%;max-width:380px;display:block;margin:6px auto 0">${fig(BODY_FRONT,0,'FRONT')}${fig(BODY_BACK,130,'BACK')}</svg>`;
 }
+function handSvg(fillFor){
+  const dim = {fill:'rgba(124,138,165,.10)', stroke:'rgba(124,138,165,.22)'};
+  const draw = (muscleOfFingers)=>HAND_SHAPES.map(([k,d])=>{
+    const m = k==='fp' ? muscleOfFingers : k;
+    const f = m ? fillFor(m) : dim;
+    return `<path d="${d}" fill="${f.fill}" stroke="${f.stroke}" stroke-width="1" stroke-linejoin="round"${f.glow?` style="filter:drop-shadow(0 0 3px ${f.glow})"`:''}>${m?`<title>${MUSCLES[m]}${f.tip?' - '+f.tip:''}</title>`:''}</path>`;
+  }).join('');
+  return `<svg viewBox="0 0 250 122" style="width:100%;max-width:380px;display:block;margin:10px auto 0">
+    <g transform="translate(10 0)">${draw('fingflex')}<text x="60" y="118" text-anchor="middle" font-size="7" letter-spacing="1.5" fill="#7c8aa5" font-family="Orbitron,sans-serif">PALM</text></g>
+    <g transform="translate(240 0) scale(-1 1)">${draw('fingext')}</g>
+    <text x="180" y="118" text-anchor="middle" font-size="7" letter-spacing="1.5" fill="#7c8aa5" font-family="Orbitron,sans-serif">BACK OF HAND</text>
+  </svg>`;
+}
 function musclesCard(){
   const rk = rankFor(levelFromXp(S.xp).lvl), rgb = RANK_RGB[rk.r];
   const mode = MMODE;
@@ -2103,7 +2184,7 @@ function musclesCard(){
   const keys = Object.keys(mode==='rec' ? rec : load).filter(k=>(mode==='rec' ? true : load[k]>0));
   const max = mode==='rec' ? 1 : Math.max(1, ...keys.map(k=>load[k]));
   const fmtH = h => h<1 ? 'under 1h' : (h<48 ? Math.round(h)+'h' : (Math.round(h/24*10)/10)+' days');
-  const svg = bodySvg(m=>{
+  const fillFor = m=>{
     const dim = {fill:'rgba(77,163,255,.06)', stroke:'rgba(77,163,255,.22)'};
     if(mode==='rec'){
       const r = rec[m]; if(!r) return dim;
@@ -2112,7 +2193,10 @@ function musclesCard(){
     }
     const v = (load[m]||0)/max; if(v<=0) return dim;
     return {fill:`rgba(${rgb},${(.22+.7*v).toFixed(2)})`, stroke:`rgba(${rgb},.95)`, glow:v>.45 ? `rgba(${rgb},.8)` : null, tip:Math.round(load[m]*10)/10+' set-equivalents'};
-  });
+  };
+  // The hand close-up only shows once a finger or thumb muscle has been trained.
+  const showHand = ['fingflex','fingext','thumb'].some(k=>keys.includes(k));
+  const svg = bodySvg(fillFor) + (showHand ? handSvg(fillFor) : '');
   const seg = [['day','Today'],['week','7 days'],['rec','Recovery']].map(([k,l])=>
     `<button class="btn ${mode===k?'':'ghost '}sm" style="flex:1;margin:0" onclick="setMMode('${k}')">${l}</button>`).join('');
   let body;
@@ -2121,11 +2205,11 @@ function musclesCard(){
   } else if(mode==='rec'){
     body = `<div style="display:flex;align-items:center;gap:6px;justify-content:center;font-size:10px;color:var(--muted);margin:2px 0 10px;letter-spacing:.06em">JUST TRAINED<span style="display:inline-block;width:110px;height:8px;border-radius:99px;background:linear-gradient(90deg,hsl(0,78%,52%),hsl(60,78%,52%),hsl(120,78%,52%))"></span>RECOVERED</div>` +
       keys.sort((a,b)=>rec[a].frac-rec[b].frac).map(k=>{ const r = rec[k]; const c = `hsl(${Math.round(r.frac*120)},78%,52%)`;
-        return `<div style="display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:5px 0;border-bottom:1px dashed rgba(77,163,255,.14)"><span><b style="color:${c}">&#9679;</b> ${MUSCLES[k]}</span><span style="color:var(--muted)">${r.frac>=1 ? 'recovered' : Math.round(r.frac*100)+'% - ready in '+fmtH(r.needed-r.hours)}</span></div>`; }).join('');
+        return `<div style="display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:5px 0;border-bottom:1px dashed rgba(77,163,255,.14)"><span><b style="color:${c}">&#9679;</b> ${MUSCLES[k]}</span><span style="color:var(--muted);text-align:right">${r.frac>=1 ? 'recovered' : Math.round(r.frac*100)+'% - ready in '+fmtH(r.needed-r.hours)}</span></div>`; }).join('');
   } else {
     body = `<div style="display:flex;align-items:center;gap:6px;justify-content:center;font-size:10px;color:var(--muted);margin:2px 0 10px;letter-spacing:.06em">LESS<span style="display:inline-block;width:110px;height:8px;border-radius:99px;background:linear-gradient(90deg,rgba(${rgb},.22),rgba(${rgb},.95))"></span>MORE</div>` +
       keys.sort((a,b)=>load[b]-load[a]).map(k=>
-        `<div style="display:flex;align-items:center;gap:10px;font-size:13px;padding:4px 0"><span style="width:96px">${MUSCLES[k]}</span><span style="flex:1;height:6px;border-radius:99px;background:rgba(77,163,255,.12)"><i style="display:block;height:100%;width:${Math.round(100*load[k]/max)}%;border-radius:99px;background:rgba(${rgb},.9)"></i></span><span style="width:34px;text-align:right;color:var(--muted)">${Math.round(load[k]*10)/10}</span></div>`).join('');
+        `<div style="display:flex;align-items:center;gap:10px;font-size:13px;padding:4px 0"><span style="width:150px">${MUSCLES[k]}</span><span style="flex:1;height:6px;border-radius:99px;background:rgba(77,163,255,.12)"><i style="display:block;height:100%;width:${Math.round(100*load[k]/max)}%;border-radius:99px;background:rgba(${rgb},.9)"></i></span><span style="width:34px;text-align:right;color:var(--muted)">${Math.round(load[k]*10)/10}</span></div>`).join('');
   }
   return `<section class="win" data-tour="muscles">
       <div class="eyebrow">Muscle Map</div>
@@ -2134,6 +2218,7 @@ function musclesCard(){
       <div style="margin-top:8px">${body}</div>
     </section>`;
 }
+
 /* ---------- Interactive tutorial: dims the page, spotlights one element at a time (found by its
    data-tour attribute, switching tabs when a step needs another one) and explains it. Starts by
    itself once per account (S.tourSeen), always skippable, replayable from the ? button and the
