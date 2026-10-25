@@ -879,7 +879,11 @@ const GRIP_GATE_TIERS = [
 // account identity matters here, not exact stored casing.
 function isTxetxeAccount(){ return (myUsername||'').toLowerCase()==='txetxe'; }
 function gripGateExercises(level){ return GRIP_GATE_TIERS[gateTierIndex(level)]; }
-function gripRequiredSetsFor(exerciseText){ const base = parseSets(exerciseText); return S.penaltyToday ? base*2 : base; }
+function gripRequiredSetsFor(exerciseText){
+  let base = parseSets(exerciseText);
+  if(gripModeInfo().light) base = Math.max(1, Math.ceil(base/2));
+  return S.penaltyToday ? base*2 : base;
+}
 function gripGateAllDone(level){
   const ex = gripGateExercises(level);
   return ex.every((e,i)=>(S.gripExSets[i]||0) >= gripRequiredSetsFor(e.t));
@@ -1329,7 +1333,7 @@ function gateTierIndex(level){
   return 5;
 }
 function isTrialToday(dateStr, gateId, level){
-  if(gateId==='rest') return false;
+  if(gateId==='rest' || deloadActive()) return false;
   const tierIdx = gateTierIndex(level);
   if(tierIdx>=5) return false;
   const boundary = GATE_TIER_BOUNDARIES[tierIdx];
@@ -1355,7 +1359,8 @@ function effectiveGateExercises(dateStr, gateId, level){
   return tiers[effectiveGateTier(dateStr, gateId, level)];
 }
 function requiredSetsFor(gateId, exerciseText, dateStr, level){
-  const base = parseSets(exerciseText);
+  let base = parseSets(exerciseText);
+  if(deloadActive()) base = Math.max(1, Math.ceil(base/2));
   return (gateId==='custom' && isTrialToday(dateStr, gateId, level)) ? base+1 : base;
 }
 
@@ -2053,26 +2058,34 @@ function todayMuscleLoad(){
 // Days from before exact sets were recorded: estimate from the Gate logged, at the current rank's content.
 function estimateDayLoad(d){
   const h = S.history && S.history[d];
-  if(!h || !h.gate || h.gate==='rest') return null;
-  let ex = null;
-  if(h.gate==='custom'){
-    (S.customRoutines||[]).forEach(r=>(r.days||[]).forEach(day=>{ if(day.name===h.customName) ex = day.exercises; }));
-  } else if(GATES[h.gate]) ex = GATES[h.gate].tiers[gateTierIndex(levelFromXp(S.xp).lvl)];
-  if(!ex) return null;
-  const f = (h.half || h.gateHalf) ? .5 : 1;
-  return exerciseListLoad(ex, e=>parseSets(e.t)*f);
-}
-// Called at day rollover (before the old day's sets are cleared) so each day keeps its exact muscle load.
-function snapshotMuscleDay(){
-  const load = todayMuscleLoad();
-  if(!Object.keys(load).length) return;
-  if(!S.muscleLog) S.muscleLog = {};
-  const l = {}; Object.keys(load).forEach(k=>{ l[k] = Math.round(load[k]*10)/10; });
-  S.muscleLog[S.day] = {l, t:S.lastSetAt||null};
-  const keys = Object.keys(S.muscleLog).sort();
-  while(keys.length>30) delete S.muscleLog[keys.shift()];
+  if(!h) return null;
+  const lvl = levelFromXp(S.xp).lvl, load = {};
+  let any = false;
+  if(h.gate && h.gate!=='rest'){
+    let ex = null;
+    if(h.gate==='custom'){
+      (S.customRoutines||[]).forEach(r=>(r.days||[]).forEach(day=>{ if(day.name===h.customName) ex = day.exercises; }));
+    } else if(GATES[h.gate]) ex = GATES[h.gate].tiers[gateTierIndex(lvl)];
+    if(ex){
+      const f = (h.half || h.gateHalf) ? .5 : 1;
+      addLoad(load, exerciseListLoad(ex, e=>parseSets(e.t)*f));
+      any = true;
+    }
+  }
+  // The Grip Gate (owner account only, since 2026-10-05) leaves only the Daily Quest flag behind.
+  if(isTxetxeAccount() && h.dailyDone && d>='2026-10-05'){
+    addLoad(load, exerciseListLoad(gripGateExercises(lvl), e=>parseSets(e.t)));
+    any = true;
+  }
+  return any ? load : null;
 }
 function loadForDate(d){
+  const el = S.exerciseLog && S.exerciseLog[d];
+  if(el && el.x && el.x.length){
+    const load = {};
+    el.x.forEach(x=>{ const m = musclesForExercise(x.n); if(m) addLoad(load, m, x.s); });
+    if(Object.keys(load).length) return load;
+  }
   if(d===today()){
     const t = todayMuscleLoad();
     if(Object.keys(t).length) return t;
@@ -2095,11 +2108,12 @@ function weekMuscleLoad(){
   return total;
 }
 // Most recent session per muscle -> hours needed (36-72h, more for bigger sessions) and how far along.
-function muscleRecovery(){
-  const now = Date.now(), t = today(), out = {};
-  for(let i=0;i<=14;i++){
+function muscleRecovery(opts){
+  opts = opts || {};
+  const now = opts.ref || Date.now(), t = today(), out = {};
+  for(let i=(opts.skipToday?1:0);i<=14;i++){
     const d = shiftDay(t,-i), L = loadForDate(d);
-    const log = i===0 ? null : (S.muscleLog && S.muscleLog[d]);
+    const log = i===0 ? null : ((S.exerciseLog && S.exerciseLog[d]) || (S.muscleLog && S.muscleLog[d]));
     for(const k in L){
       if(out[k] || !(L[k]>0)) continue;
       const needed = (MUSCLE_RECOVERY_BASE[k]||36) + Math.min(36, L[k]*3.5);
@@ -2231,6 +2245,197 @@ function musclesCard(){
     </section>`;
 }
 
+/* ---------- Exercise log, deload, hand-aware Grip Gate and the upcoming-sessions plan.
+   Everything here counts sessions and measured recovery rather than calendar dates, so days you skip
+   never shift the rotation, the deload or the Grip Gate size. ---------- */
+const DELOAD_EVERY = 24, DELOAD_LEN = 6, GRIP_FULL_AT = 0.7;
+const HAND_MUSCLES = ['fingflex','fingext','thumb','flexors','extensors'];
+function deloadActive(){ return !!(S && S.deload && S.deload.active); }
+// "4x8-12" -> "2x8-12" when the sets are halved, so the row shows what you actually have to do.
+function shownTarget(t, halved){
+  if(!halved) return t;
+  const m = /^(\d+)(\s*x.*)$/i.exec(t||'');
+  return m ? Math.max(1, Math.ceil(parseInt(m[1],10)/2)) + m[2] : t;
+}
+// One row per exercise per day (S.exerciseLog[date] = {t:lastSetTime, x:[{n,t,s,r,g}]}): s sets done of
+// r required, g = push/pull/legs/custom/grip. Updated on every tick, so Gate switches never lose sets.
+function logExerciseSet(g, ex, count, req){
+  if(!S.exerciseLog) S.exerciseLog = {};
+  const d = S.day;
+  let e = S.exerciseLog[d];
+  if(!e) e = S.exerciseLog[d] = {t:null, x:[]};
+  const i = e.x.findIndex(x=>x.g===g && x.n===ex.n);
+  if(count>0){
+    const row = {n:ex.n, t:ex.t, s:count, r:req, g};
+    if(i>=0) e.x[i] = row; else e.x.push(row);
+  } else if(i>=0) e.x.splice(i,1);
+  e.t = S.lastSetAt || Date.now();
+  if(!e.x.length) delete S.exerciseLog[d];
+  const keys = Object.keys(S.exerciseLog).sort();
+  while(keys.length>200) delete S.exerciseLog[keys.shift()];
+}
+// One-time catch-up for sets ticked before the log existed.
+function syncLogFromLive(){
+  if(!S || viewOnly) return;
+  const lvl = levelFromXp(S.xp).lvl, g = todaysGate();
+  if(g!=='rest') (effectiveGateExercises(S.day, g, lvl)||[]).forEach((e,i)=>{
+    const n = (S.exSets||{})[i]||0;
+    if(n>0) logExerciseSet(g, e, n, requiredSetsFor(g, e.t, S.day, lvl));
+  });
+  if(isTxetxeAccount()) gripGateExercises(lvl).forEach((e,i)=>{
+    const n = (S.gripExSets||{})[i]||0;
+    if(n>0) logExerciseSet('grip', e, n, gripRequiredSetsFor(e.t));
+  });
+}
+const logOpen = new Set();
+function toggleLogDay(d, open){ if(open) logOpen.add(d); else logOpen.delete(d); }
+function exerciseLogHtml(d){
+  const e = S.exerciseLog && S.exerciseLog[d];
+  if(!e || !e.x || !e.x.length) return '';
+  const names = {push:'Push', pull:'Pull', legs:'Legs', custom:'Custom day', grip:'Grip Gate'};
+  const groups = {};
+  e.x.forEach(x=>{ (groups[x.g]=groups[x.g]||[]).push(x); });
+  const rows = Object.keys(groups).map(g=>
+    `<div style="margin-top:6px;font-size:11px;letter-spacing:.08em;color:var(--cyan-soft)">${esc(names[g]||g).toUpperCase()}</div>` +
+    groups[g].map(x=>`<div style="display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted)"><span>${esc(x.n)}</span><span style="white-space:nowrap">${x.s}/${x.r} sets</span></div>`).join('')
+  ).join('');
+  const total = e.x.reduce((a,x)=>a+x.s, 0);
+  return `<details ${logOpen.has(d)?'open':''} ontoggle="toggleLogDay('${d}',this.open)" style="margin:0 0 10px 0"><summary style="font-size:12px;color:var(--muted);cursor:pointer">${e.x.length} exercise${e.x.length===1?'':'s'}, ${total} sets</summary>${rows}</details>`;
+}
+
+// ---- Deload ----
+// Counted once per day a Gate is cleared or half-cleared. While one is running it counts down instead.
+function noteSession(){
+  if(S.sessionCountedDay===S.day) return;
+  S.sessionCountedDay = S.day;
+  if(deloadActive()) S.deload.left = Math.max(0, (S.deload.left||0)-1);
+  else S.sessionsSinceDeload = (S.sessionsSinceDeload||0) + 1;
+}
+// Starting one mid-day lowers today's targets, so ticked sets above the new target are trimmed to it.
+function clampTickedSets(){
+  const lvl = levelFromXp(S.xp).lvl, g = todaysGate();
+  if(g!=='rest') (effectiveGateExercises(S.day, g, lvl)||[]).forEach((e,i)=>{
+    const mx = requiredSetsFor(g, e.t, S.day, lvl);
+    if((S.exSets[i]||0) > mx){ S.exSets[i] = mx; logExerciseSet(g, e, mx, mx); }
+  });
+  if(isTxetxeAccount()) gripGateExercises(lvl).forEach((e,i)=>{
+    const mx = gripRequiredSetsFor(e.t);
+    if((S.gripExSets[i]||0) > mx){ S.gripExSets[i] = mx; logExerciseSet('grip', e, mx, mx); }
+  });
+}
+function startDeload(auto){
+  S.deload = {active:true, left:DELOAD_LEN, start:S.day, auto:!!auto};
+  clampTickedSets();
+}
+function startDeloadManual(){
+  if(viewOnly || deloadActive()) return;
+  if(!confirm('Start a deload now? For the next '+DELOAD_LEN+' cleared Gates every exercise has about half the sets, with the same XP. Sets you already ticked today are trimmed to the new targets.')) return;
+  startDeload(false); save(); render();
+  toast('Deload started', DELOAD_LEN+' Gates at half sets. Tap End deload on the Home tab if you want out early.');
+}
+function endDeloadManual(){
+  if(viewOnly || !deloadActive()) return;
+  if(!confirm('End the deload now and go back to normal sets? The count toward the next one starts again from zero.')) return;
+  S.deload = {active:false, left:0, start:null, auto:false};
+  S.sessionsSinceDeload = 0;
+  save(); render();
+  toast('Deload ended', 'Normal sets are back.');
+}
+// At the first open of a new day, after the old day's sets were cleared.
+function rolloverDeload(){
+  if(deloadActive() && (S.deload.left||0)<=0){
+    S.deload = {active:false, left:0, start:null, auto:false};
+    S.sessionsSinceDeload = 0;
+    S.deloadEvent = 'ended';
+  } else if(!deloadActive() && (S.sessionsSinceDeload||0) >= DELOAD_EVERY){
+    startDeload(true);
+    S.deloadEvent = 'started';
+  }
+}
+function deloadBanner(){
+  if(!deloadActive()) return '';
+  const left = S.deload.left||0;
+  return `<section class="win" style="border-color:var(--gold)">
+      <div class="eyebrow" style="color:var(--gold)">Deload</div>
+      <p style="margin:0 0 10px;font-size:13px;line-height:1.5">Half the sets on every exercise while your body catches up, with the same XP. ${left>0 ? left+' Gate'+(left===1?'':'s')+' to go.' : 'This stretch is done, normal sets return tomorrow.'}${S.deload.auto ? ' It started on its own after '+DELOAD_EVERY+' cleared Gates.' : ''}</p>
+      ${viewOnly ? '' : `<button class="btn ghost sm" onclick="endDeloadManual()">End deload early</button>`}
+    </section>`;
+}
+
+// ---- Grip Gate size from real hand recovery ----
+// Frozen once per day from sessions before today, measured at 18:00, so ticking sets (or opening the app
+// at a different hour) never changes the day's target halfway through.
+function ensureGripMode(){
+  if(S.gripMode && S.gripMode.day===S.day) return;
+  const rec = muscleRecovery({skipToday:true, ref:new Date(S.day+'T18:00:00').getTime()});
+  const fr = HAND_MUSCLES.map(k=>rec[k] ? rec[k].frac : 1);
+  S.gripMode = {day:S.day, rec:Math.min(...fr), override:null};
+  save();
+}
+function gripModeInfo(){
+  ensureGripMode();
+  const m = S.gripMode, pct = Math.round(Math.min(1, m.rec)*100);
+  if(deloadActive()) return {light:true, text:'Deload, so the Grip Gate has half the sets like everything else.'};
+  if(m.override==='full') return {light:false, text:'Full Grip Gate, as you chose.'};
+  if(m.override==='light') return {light:true, text:'Light Grip Gate (half the sets), as you chose.'};
+  if(todaysGate()==='pull') return {light:true, text:'Pull day, so the Grip Gate is light (half the sets) to spare your forearms.'};
+  if(m.rec < GRIP_FULL_AT) return {light:true, text:`Your hands are about ${pct}% recovered from your last grip work, so today's Grip Gate is light (half the sets).`};
+  return {light:false, text: pct>=100 ? 'Your hands are fully recovered, so today is the full Grip Gate.' : `Your hands are about ${pct}% recovered, enough for the full Grip Gate today.`};
+}
+function setGripOverride(v){
+  if(viewOnly) return;
+  ensureGripMode();
+  S.gripMode.override = v;
+  save(); render();
+}
+function gripModeHtml(){
+  const info = gripModeInfo();
+  const btn = (viewOnly || deloadActive()) ? '' :
+    `<div><button class="reset" style="color:var(--muted);margin:0 0 10px" onclick="setGripOverride('${info.light?'full':'light'}')">${info.light ? 'Do the full Grip Gate instead' : 'Make it a light one today'}</button></div>`;
+  return `<div style="font-size:12px;line-height:1.5;color:${info.light?'var(--gold)':'var(--green)'};margin:0 0 ${btn?'4':'10'}px">${info.light?'&#9680;':'&#9679;'} ${info.text}</div>${btn}`;
+}
+
+// ---- Plan: the next sessions in order (never dates) ----
+function upcomingSessions(){
+  const out = [], r = activeRoutine();
+  if(r){
+    const cyc = r.restCycle||6, days = r.days||[];
+    let s = S.customTrainingSlot||0, p = S.customDayPointer||0;
+    for(let k=0;k<7;k++){
+      if(s>=cyc){ out.push({label:'Rest', icon:'\u{1F634}'}); s = 0; }
+      else { const d = days.length ? days[p%days.length] : null; out.push({label:d?d.name:'Training', icon:d?d.icon:''}); s++; p = (p+1)%Math.max(1,days.length); }
+    }
+  } else {
+    for(let k=0;k<7;k++){
+      const id = CYCLE[(S.cycleIndex+k)%CYCLE.length];
+      out.push(id==='rest' ? {label:'Rest', icon:'\u{1F634}'} : {label:GATES[id].name, icon:GATES[id].icon});
+    }
+  }
+  return out;
+}
+function planCard(){
+  const seq = upcomingSessions();
+  const chips = seq.map((s,i)=>`<div style="flex:1 1 52px;min-width:52px;text-align:center;padding:8px 4px;border:1px solid ${i===0?'var(--cyan)':'rgba(77,163,255,.3)'};border-radius:4px;${i===0?'background:rgba(77,163,255,.1)':''}">
+      <div style="font-size:16px">${s.icon||''}</div>
+      <div style="font-size:9px;letter-spacing:.06em;margin-top:2px">${esc(String(s.label)).toUpperCase().slice(0,9)}</div>
+      <div style="font-size:9px;color:var(--muted);margin-top:2px">${i===0 ? (S.gateDoneToday ? 'DONE' : 'TODAY') : (i===1 ? 'NEXT' : 'THEN')}</div></div>`).join('');
+  const left = S.deload ? (S.deload.left||0) : 0, n = S.sessionsSinceDeload||0;
+  const deload = deloadActive()
+    ? `<p style="margin:12px 0 8px;font-size:13px"><b style="color:var(--gold)">Deload in progress</b>, ${left>0 ? left+' Gate'+(left===1?'':'s')+' to go' : 'finishing up'}, with about half the sets.</p>${viewOnly ? '' : `<button class="btn ghost sm" onclick="endDeloadManual()">End deload early</button>`}`
+    : `<p style="margin:12px 0 6px;font-size:13px">${n} of ${DELOAD_EVERY} cleared Gates until your next deload.</p>
+       <div class="bar"><i style="width:${Math.min(100,Math.round(100*n/DELOAD_EVERY))}%;background:linear-gradient(90deg,var(--gold),var(--green))"></i></div>
+       ${viewOnly ? '' : `<button class="btn ghost sm" style="margin-top:10px" onclick="startDeloadManual()">Start a deload now</button>`}`;
+  const grip = isTxetxeAccount() ? `<p style="margin:12px 0 0;font-size:12px;line-height:1.5;color:var(--muted)"><b style="color:var(--cyan-soft)">Grip Gate today.</b> ${gripModeInfo().text}</p>` : '';
+  return `<section class="win" data-tour="plan">
+      <div class="eyebrow">Plan</div>
+      <p style="font-size:12px;color:var(--muted);margin:0 0 10px">Your next sessions, in order. Today is first.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">${chips}</div>
+      ${deload}
+      ${grip}
+      <p style="margin:12px 0 0;font-size:12px;line-height:1.5;color:var(--muted)">If you skip a day nothing moves. The order above only advances when you clear a Gate (full or half), your weekly rest still comes after the same number of Gates, the deload counts cleared Gates and not dates, and the Grip Gate size is worked out from how recovered your hands really are.</p>
+    </section>`;
+}
+
 /* ---------- Interactive tutorial: dims the page, spotlights one element at a time (found by its
    data-tour attribute, switching tabs when a step needs another one) and explains it. Starts by
    itself once per account (S.tourSeen), always skippable, replayable from the ? button and the
@@ -2246,7 +2451,8 @@ const TOUR_STEPS = [
   {tab:'home', sel:'daily', t:'Daily Quest', p:'Small tasks worth +15 XP each. Claiming them keeps your streak alive on days you skip the Gate, up to 3 days in a row. After that only clearing a Gate saves it.'},
   {tab:'home', sel:'flex', t:'Flexibility', p:'A daily stretch for +20 XP. It never affects your streak.'},
   {tab:'routine', sel:'tab-routine', t:'Routine tab', p:'Build your own routines with custom days and exercises, and switch between them whenever you like.'},
-  {tab:'progress', sel:'tab-progress', t:'Progress tab', p:'Your weight trend, the full Ascension Log (log past workouts and delete mistakes) and the muscle map.'},
+  {tab:'routine', sel:'plan', t:'Plan and deload', p:'Your next sessions in order. Skipping a day never shifts them. After about 24 cleared Gates a deload starts on its own, a stretch at half the sets, and you can start one yourself any time.'},
+  {tab:'progress', sel:'tab-progress', t:'Progress tab', p:'Your weight trend, the full Ascension Log with every exercise you did each day (log past workouts and delete mistakes) and the muscle map.'},
   {tab:'avatar', sel:'tab-avatar', t:'Avatar tab', p:'Streak milestones drop mystery boxes with gear for your Hunter. Tap an item to equip it.'},
   {tab:'social', sel:'tab-social', t:'Social tab', p:'Add friends, chat, send messages and see how you rank against other Hunters.'},
   {tab:'account', sel:'btn-account', t:'Account', p:'Back up your progress, change your password or email, and manage alerts.'},
@@ -2656,6 +2862,15 @@ function render(){
       save();
     }
   }
+  if(!S.deload) S.deload = {active:false, left:0, start:null, auto:false};
+  if(S.sessionsSinceDeload===undefined) S.sessionsSinceDeload = 0;
+  if(!S.exerciseLog) S.exerciseLog = {};
+  if(!S.exLogSynced){ S.exLogSynced = true; syncLogFromLive(); save(); }
+  if(S.deloadEvent && !viewOnly){
+    const ev = S.deloadEvent; S.deloadEvent = null; save();
+    setTimeout(()=>toast(ev==='started' ? 'Deload started' : 'Deload finished',
+      ev==='started' ? 'After '+DELOAD_EVERY+' cleared Gates a lighter stretch begins - half the sets for '+DELOAD_LEN+' Gates, same XP.' : 'Normal sets are back.'), 600);
+  }
   if(!S.dailyDone) S.dailyDone = {grip:false,mystery:false};
   if(S.dailyDone.mystery===undefined) S.dailyDone.mystery = false;
   if(S.dailyDone.grip===undefined) S.dailyDone.grip = false;
@@ -2728,7 +2943,6 @@ function render(){
     S.cycleIndex = seedIdx>=0 ? seedIdx : 0;
   }
   if(S.day !== today() && !viewOnly){
-    snapshotMuscleDay();
     // How many real calendar days passed since we last saw you, not just "before vs after" -
     // otherwise clearing the Gate once and then never reopening the app again would freeze your
     // streak forever, since only the single last-tracked day's completion was ever checked.
@@ -2794,6 +3008,7 @@ function render(){
     S.day = today();
     S.exSets = {};
     S.gripExSets = {};
+    rolloverDeload();
     S.dailyDone = {grip:false,mystery:false};
     S.dailyClaimed = false;
     S.gripClaimed = false; S.mysteryClaimed = false;
@@ -2963,6 +3178,8 @@ function render(){
         : `<div class="penalty">⚠ Weight not logged - come back once today's weigh-in is in</div>`}
     </section>
 
+    ${deloadBanner()}
+
     <section class="win rank-${rk.r.toLowerCase()}" data-tour="gate">
       <div class="eyebrow">Quest - Today's Gate</div>
       ${monsterThreat?`<div class="penalty" style="margin-bottom:10px">👹 A monster has appeared - clear today's Gate or your streak breaks, daily quest alone won't save it now</div>`:''}
@@ -3006,7 +3223,7 @@ function render(){
           <li class="${done?'done':''}" onclick="toggleEx(${i})">
             <span class="chk">${done?'✓':(cnt>0?cnt:'')}</span>
             <span class="ex-nm">${esc(e.n)}${e.d?`<small>${esc(e.d)}</small>`:''}</span>
-            <span class="ex-tg">${cnt}/${max} sets - ${esc(e.t)}</span>
+            <span class="ex-tg">${cnt}/${max} sets - ${esc(shownTarget(e.t, deloadActive()))}</span>
           </li>`;}).join('')}
         </ul>
         ${!gateExercisesDone
@@ -3038,9 +3255,10 @@ function render(){
         <li class="${done?'done':''}" onclick="toggleGripEx(${i})">
           <span class="chk">${done?'✓':(cnt>0?cnt:'')}</span>
           <span class="ex-nm">${esc(e.n)}${e.d?`<small>${esc(e.d)}</small>`:''}</span>
-          <span class="ex-tg">${cnt}/${max} sets - ${esc(e.t)}</span>
+          <span class="ex-tg">${cnt}/${max} sets - ${esc(shownTarget(e.t, gripModeInfo().light))}</span>
         </li>`;}).join('')}
       </ul>
+      ${gripModeHtml()}
       ${!gripGateCleared
         ? `<div class="penalty">⚠ Not all grip exercises are complete yet.</div>`
         : `<div style="font-size:12px;color:var(--green);letter-spacing:.08em;margin-top:10px;text-transform:uppercase">✓ All grip exercises completed</div>`}
@@ -3107,6 +3325,8 @@ function render(){
     ` : ''}
 
     ${currentTab==='routine' ? `
+    ${planCard()}
+
     <section class="win">
       <div class="eyebrow">Routine</div>
       <p style="font-size:12px;color:var(--muted);margin:0 0 12px">Choose the default Push/Pull/Legs split, or build and switch between several personalized routines. Daily Quest and Flexibility are unaffected either way.</p>
@@ -3525,6 +3745,7 @@ function toggleEx(i){
   const cur=S.exSets[i]||0;
   S.exSets[i] = (cur+1)>max ? 0 : cur+1;
   S.lastSetAt = Date.now();
+  logExerciseSet(gateId, ex[i], S.exSets[i], max);
   save(); render();
 }
 function toggleDaily(k){ S.dailyDone[k]=!S.dailyDone[k]; save(); render(); }
@@ -3536,6 +3757,7 @@ function toggleGripEx(i){
   const cur = S.gripExSets[i]||0;
   S.gripExSets[i] = (cur+1)>max ? 0 : cur+1;
   S.lastSetAt = Date.now();
+  logExerciseSet('grip', ex[i], S.gripExSets[i], max);
   // Derived, not manually clicked, like the rest of the grip pseudo-Gate - it only flips to true
   // once every exercise in today's tier is at its required set count.
   S.dailyDone.grip = gripGateAllDone(level);
@@ -3927,6 +4149,7 @@ function completeGate(){
   const xpGain = wasHalf ? Math.max(0, fullXp-(S.gateHalfXpGiven||0)) : fullXp;
   S.xp += xpGain;
   bumpStreak();
+  noteSession();
   S.gateDoneToday=true;
   S.gateHalfToday=false;
   S.gateHalfXpGiven=null; S.gateHalfFullShape=null; S.gateHalfGivenShape=null;
@@ -3983,6 +4206,7 @@ function completeGateHalf(){
 
   S.xp += halfXp;
   bumpStreak();
+  noteSession();
   S.gateDoneToday = true;
   S.gateHalfToday = true;
   S.gateHalfXpGiven = halfXp;
@@ -4021,7 +4245,7 @@ function historyDrill(level,year,month){
   render();
 }
 function buildHistory(){
-  const dates = Object.keys(S.history||{}).sort().reverse();
+  const dates = [...new Set([...Object.keys(S.history||{}), ...Object.keys(S.exerciseLog||{})])].sort().reverse();
   if(!dates.length) return '<p class="note">No entries yet - clear a Gate to begin your Ascension Log.</p>';
 
   if(historyNav.level==='years'){
@@ -4052,7 +4276,7 @@ function buildHistory(){
     const dayList=dates.filter(d=>d.slice(0,7)===m);
     return `<div class="hist-back" onclick="historyDrill('months','${historyNav.year}')">&larr; ${MONTH_NAMES[mi]} ${historyNav.year}</div>` +
       dayList.map(d=>{
-        const h=S.history[d];
+        const h=S.history[d]||{partial:true};
         const w=S.weightLog?S.weightLog[d]:null;
         let line;
         if(!h.manual){
@@ -4064,7 +4288,7 @@ function buildHistory(){
             parts.push(`${dayLabel} ${h.half?'half-cleared':'cleared'} (+${h.xp||0} XP)`);
           }
           if(h.dailyDone) parts.push('Daily Quest');
-          line = parts.length ? parts.join(' + ') : 'Logged';
+          line = parts.length ? parts.join(' + ') : (h.partial ? 'Partial session, Gate not cleared' : 'Logged');
         } else {
           const parts = [];
           if(h.gate==='custom') parts.push(esc(h.customName||'Custom Day')+(h.gateHalf?' half-cleared':' cleared'));
@@ -4076,7 +4300,7 @@ function buildHistory(){
         }
         if(w!=null) line+=` &middot; Weight ${fmt(w)} kg`;
         const del = (!viewOnly && historyEntryDeletable(d)) ? ` <button type="button" onclick="deleteHistoryEntry('${d}')" style="background:none;border:1px solid rgba(255,107,107,.45);color:#ff8080;font-size:11px;padding:1px 7px;border-radius:2px;cursor:pointer;margin-left:4px">Delete</button>` : '';
-        return `<p style="margin:0 0 8px;font-size:13px"><b style="color:var(--cyan-soft)">${d}</b> - ${line}${del}</p>`;
+        return `<p style="margin:0 0 8px;font-size:13px"><b style="color:var(--cyan-soft)">${d}</b> - ${line}${del}</p>` + exerciseLogHtml(d);
       }).join('');
   }
 }

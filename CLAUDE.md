@@ -85,6 +85,12 @@ A body figure (front and back) on Home and Progress with three views, Today, 7 d
 ### Tutorial
 `TOUR_STEPS` drives an interactive tour: a dimmed overlay spotlights the element carrying the matching `data-tour` attribute, switching tabs when a step needs one. It starts once per account (`S.tourSeen`), is skippable, and replays from the ? button in the header or from the Account tab. New UI worth explaining needs a `data-tour` attribute and a step.
 
+### Exercise log
+Every tick on a Gate or Grip Gate exercise is saved in `S.exerciseLog[date] = {t, x:[{n,t,s,r,g}]}` (name, target text, sets done, sets required, source `push`/`pull`/`legs`/`custom`/`grip`) by `logExerciseSet()`, so the day keeps every exercise and set count even if the Gate is switched or only half-cleared. It is shown per day in the Ascension Log (`exerciseLogHtml`) and is the first source for the muscle map (`loadForDate`), which means improving a muscle rule also corrects past days. Sets only, no reps or weights.
+
+### Plan, deload and Grip Gate size
+These count cleared Gates and measured recovery, never calendar dates, so skipping days can't shift anything. The rotation (`S.cycleIndex`, or the custom day pointer and rest slot) only advances when a Gate is cleared, as before. `upcomingSessions()` renders the next 7 in order in `planCard()` (top of the Routine tab). **Deload**: `noteSession()` counts one session per day a Gate is cleared or half-cleared into `S.sessionsSinceDeload`. At `DELOAD_EVERY` (24) the next day's rollover (`rolloverDeload()`) starts a `DELOAD_LEN` (6) Gate deload, or the user starts one from the Plan card. While `deloadActive()`, `requiredSetsFor()` and `gripRequiredSetsFor()` halve every target (rounded up, minimum 1), trial Gates are off and `shownTarget()` shows the halved text; it ends on the rollover after its last Gate. **Grip Gate size** (owner account): `ensureGripMode()` freezes, once per day, how recovered the hand muscles were at 18:00 using only earlier days (`muscleRecovery({skipToday:true, ref})`). `gripModeInfo()` makes the day light (half sets) if that is under `GRIP_FULL_AT` (0.7), if today is a Pull day, or during a deload, unless the user overrides it for the day.
+
 ### Social
 Friends (requests), DMs, global chat and a leaderboard.
 
