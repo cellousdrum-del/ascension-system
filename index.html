@@ -646,7 +646,7 @@ const GATES = {
         {n:'Pull-ups', t:'4x5-8', d:'Back and biceps. Negatives if you cannot yet do a full rep.'},
         {n:'Inverted rows', t:'4x8-12', d:'Low bar or two sturdy chairs. Adjust body angle for difficulty.'},
         {n:'Chin-ups', t:'3x5-8', d:'Underhand grip. Biceps and back.'},
-        {n:'Prone Y-raises', t:'3x10-12', d:'Lying face down, arms in a Y, squeeze the shoulder blades together. Rear delts and traps.'},
+        {n:'Wide-grip rear-delt rows', t:'3x10-12', d:'Low bar, hands wide and elbows flared, pull to the upper chest. Rear delts and upper back.'},
         {n:'Dead hang', t:'3x20-30s', d:'Grip and shoulder health.'}
       ],
       [ // D
@@ -655,7 +655,7 @@ const GATES = {
         {n:'Pull-ups', t:'4x6-10', d:'Back and biceps. Full dead hang each rep.'},
         {n:'Inverted rows (feet elevated slightly)', t:'4x10-12', d:'A step or low ledge under the heels.'},
         {n:'Chin-ups', t:'4x6-8', d:'Underhand grip. Biceps and back.'},
-        {n:'Prone Y-raises (slower tempo)', t:'3x12-15', d:'2s hold at the top. Rear delts and traps.'},
+        {n:'Wide-grip rear-delt rows (slower tempo)', t:'3x12-15', d:'2s pause at the top. Rear delts and upper back.'},
         {n:'Dead hang', t:'3x25-35s', d:'Grip and shoulder health.'}
       ],
       [ // C
@@ -665,7 +665,7 @@ const GATES = {
         {n:'Archer pull-ups (assisted)', t:'3x4-6 /side', d:'Shift weight to one arm each rep.'},
         {n:'Inverted rows (feet elevated)', t:'4x10-15', d:'Feet up on a bench or ledge for a harder angle.'},
         {n:'Chin-ups (slow negative)', t:'4x6-10', d:'3-4s controlled descent.'},
-        {n:'Prone Y/T-raises (alternating)', t:'4x10-12', d:'Alternate Y and T positions each rep. Rear delts and traps.'}
+        {n:'Wide-grip rear-delt rows (feet elevated)', t:'4x10-12', d:'Feet up on a bench for a harder angle. Rear delts and upper back.'}
       ],
       [ // B
         {n:'Muscle-up attempt', t:'1x attempt', d:'Warm-up, just one try. Explosive pull-up, then work to get over the bar (jumping or a band is fine). Rest well before the working sets.'},
@@ -674,7 +674,7 @@ const GATES = {
         {n:'Archer pull-ups (assisted)', t:'4x5-7 /side', d:'Shift weight to one arm each rep.'},
         {n:'Inverted rows (feet elevated, slow)', t:'5x12-15', d:'3s controlled tempo each way.'},
         {n:'Chin-ups (slow negative)', t:'4x8-10', d:'4-5s controlled descent.'},
-        {n:'Prone Y/T-raises (paused)', t:'4x12-15', d:'2s pause at the top of each rep. Rear delts and traps.'}
+        {n:'Wide-grip rear-delt rows (feet elevated, paused)', t:'4x12-15', d:'2s pause at the top of each rep. Rear delts and upper back.'}
       ],
       [ // A
         {n:'Muscle-up attempt', t:'1x attempt', d:'Warm-up, just one clean try before the working sets.'},
@@ -1989,7 +1989,7 @@ const MUSCLE_RULES = [
   [/thumb/i, {thumb:1}],
   [/finger extension|rope/i, {fingext:1,extensors:.8}],
   [/finger/i, {fingflex:1,flexors:.6}],
-  [/grip/i, {fingflex:1,flexors:1,thumb:.4}],
+  [/^grip|gripper|hand ?grip|grip strength/i, {fingflex:1,flexors:1,thumb:.4}],
   [/dead hang/i, {flexors:1,lats:.3,delts_r:.2}],
   [/wrist|forearm/i, {flexors:1,extensors:.5}],
   [/romanian|deadlift|good morning|back extension|hyperext/i, {hams:1,glutes:.8,lowback:.6,trapsup:.2,flexors:.3}],
