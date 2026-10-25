@@ -94,7 +94,7 @@ Admin is set by `isAdmin: true` on the user doc. Admins can ban users and open a
 ## 4. Rules to keep in mind when editing
 
 - **No `Math.random()` for content or rewards.** Anything that must look the same on every device (mystery quest order, stat splits, trial days) is hashed from the date and the user. Random is only used for ids.
-- **Exercise checkmarks are index-based** (`S.exSets[i]`). If an action changes today's exercise list (toggles, switching gates, editing a custom day), reset `S.exSets = {}`, or the checkmarks land on the wrong exercises.
+- **Exercise checkmarks are index-based** (`S.exSets[i]`). If an action changes today's exercise list (toggles, switching gates, editing a custom day), reset `S.exSets = {}`, or the checkmarks land on the wrong exercises. Adding or reordering exercises in a built-in tier shifts every later checkmark too, so bump a content version and shift today's `S.exSets` once (see `S.gateContentVer` in the migrations at the top of `render()`).
 - **Merge history, don't overwrite it.** Several actions on the same day write to `S.history[S.day]`, so always merge: `Object.assign({}, S.history[S.day], {...})`.
 - **Split rewards via the stored total.** Anything claimed in parts (half-gate, the two daily-quest halves) freezes the full amount on the first claim. The second claim pays the exact remainder, so rounding never gives 29 or 31.
 - **Streak checks must agree.** `bumpStreak()` (the live counter) and the rollover's "was the day active" check must use the same rule. If they disagree, the counter goes up today and the streak silently breaks tomorrow.
