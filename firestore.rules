@@ -16,14 +16,29 @@ service cloud.firestore {
         && request.resource.data.get('emailGateExempt', false) == resource.data.get('emailGateExempt', false);
     }
 
+    // Same format the client enforces at sign-up. Names end up inside inline onclick attributes,
+    // so the rules must not rely on the client check alone.
+    function validName(n) {
+      return n is string && n.matches('^[a-z0-9_]{3,20}$');
+    }
+
+    // On the whole-doc saves the client does constantly, an unchanged username always passes, so an
+    // older account whose name predates the client check is not locked out. A new or changed one must be valid.
+    function usernameOk() {
+      return !('username' in request.resource.data)
+        || validName(request.resource.data.username)
+        || (resource != null && request.resource.data.username == resource.data.get('username', null));
+    }
+
     match /users/{uid} {
       allow read: if true;
       allow create: if request.auth != null && request.auth.uid == uid
         && request.resource.data.get('isAdmin', false) == false
         && request.resource.data.get('banned', false) == false
-        && request.resource.data.get('emailGateExempt', false) == false;
+        && request.resource.data.get('emailGateExempt', false) == false
+        && usernameOk();
       allow update: if request.auth != null &&
-        ((request.auth.uid == uid && keepsPrivilegedFlags()) || isAdmin());
+        ((request.auth.uid == uid && keepsPrivilegedFlags() && usernameOk()) || isAdmin());
       allow delete: if request.auth != null && request.auth.uid == uid;
     }
 
@@ -31,7 +46,7 @@ service cloud.firestore {
       allow read: if request.auth != null;
       allow create: if request.auth != null
         && request.resource.data.uid == request.auth.uid
-        && request.resource.data.username is string
+        && validName(request.resource.data.username)
         && request.resource.data.text is string
         && request.resource.data.text.size() > 0
         && request.resource.data.text.size() <= 500
@@ -48,8 +63,8 @@ service cloud.firestore {
         request.resource.data.fromUid != request.resource.data.toUid &&
         reqId == (request.resource.data.fromUid + '_' + request.resource.data.toUid) &&
         request.resource.data.status == 'pending' &&
-        request.resource.data.fromUsername is string &&
-        request.resource.data.toUsername is string;
+        validName(request.resource.data.fromUsername) &&
+        validName(request.resource.data.toUsername);
       allow update: if request.auth != null &&
         request.auth.uid == resource.data.toUid &&
         resource.data.status == 'pending' &&
@@ -67,7 +82,7 @@ service cloud.firestore {
         request.auth.uid == request.resource.data.uid &&
         request.auth.uid in request.resource.data.participants &&
         request.resource.data.participants.size() == 2 &&
-        request.resource.data.username is string &&
+        validName(request.resource.data.username) &&
         request.resource.data.text is string &&
         request.resource.data.text.size() > 0 &&
         request.resource.data.text.size() <= 500;

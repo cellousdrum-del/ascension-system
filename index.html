@@ -1824,11 +1824,11 @@ async function loadAdminList(){
     rows.sort((a,b)=>a.username.localeCompare(b.username));
     el.innerHTML = rows.map(r=>`
       <div class="hist-row" style="cursor:default">
-        <span onclick="viewProfile('${esc(r.username)}')" style="cursor:pointer;display:flex;flex:1;justify-content:space-between;align-items:center;gap:8px">
+        <span onclick="viewProfile(${jsq(r.username)})" style="cursor:pointer;display:flex;flex:1;justify-content:space-between;align-items:center;gap:8px">
           <span class="hr-n">${esc(r.username)}${r.banned?' <span style="color:var(--red);font-size:10px">(BANNED)</span>':''}</span>
           <span class="hr-c">Lvl ${r.lvl} - ${r.streak}d streak</span>
         </span>
-        <button class="btn ghost sm" style="margin:0 0 0 10px;padding:6px 10px;flex:0 0 auto" onclick="toggleBan('${r.uid}','${esc(r.username)}',${r.banned})">${r.banned?'Unban':'Ban'}</button>
+        <button class="btn ghost sm" style="margin:0 0 0 10px;padding:6px 10px;flex:0 0 auto" onclick="toggleBan(${jsq(r.uid)},${jsq(r.username)},${r.banned})">${r.banned?'Unban':'Ban'}</button>
       </div>`).join('') || '<p class="note">No hunters yet.</p>';
   }catch(e){
     el.innerHTML = '<p class="note">Could not load roster.</p>';
@@ -1932,8 +1932,8 @@ function buildFriendsSectionsHtml(){
         <div class="hist-row" style="cursor:default">
           <span class="hr-n">${esc(r.username)}</span>
           <span style="display:flex;gap:8px;flex:0 0 auto">
-            <button class="btn ghost sm" style="margin:0;padding:6px 10px" onclick="acceptFriendRequest('${r.reqId}')">Accept</button>
-            <button class="btn ghost sm" style="margin:0;padding:6px 10px" onclick="declineFriendRequest('${r.reqId}')">Decline</button>
+            <button class="btn ghost sm" style="margin:0;padding:6px 10px" onclick="acceptFriendRequest(${jsq(r.reqId)})">Accept</button>
+            <button class="btn ghost sm" style="margin:0;padding:6px 10px" onclick="declineFriendRequest(${jsq(r.reqId)})">Decline</button>
           </span>
         </div>`).join('')}
     </section>`;
@@ -1945,7 +1945,7 @@ function buildFriendsSectionsHtml(){
         const rc = RANK_COLORS[f.rank] || RANK_COLORS.E;
         return `
         <div class="hist-row" style="cursor:default">
-          <span onclick="openDm('${f.uid}','${esc(f.username)}')" style="cursor:pointer;display:flex;flex-direction:column;flex:1;gap:2px;min-width:0">
+          <span onclick="openDm(${jsq(f.uid)},${jsq(f.username)})" style="cursor:pointer;display:flex;flex-direction:column;flex:1;gap:2px;min-width:0">
             <span style="display:flex;justify-content:space-between;align-items:center;gap:8px">
               <span class="hr-n">${esc(f.username)}${isDmThreadUnread(dmThreadId(currentUid,f.uid))?'<span class="tab-dot" style="position:static;display:inline-block;margin-left:6px;vertical-align:middle"></span>':''}</span>
               <span style="font-family:'Orbitron';font-size:12px;font-weight:700;color:${rc};text-shadow:0 0 8px ${rc}66;flex:0 0 auto">${f.rank}</span>
@@ -1953,8 +1953,8 @@ function buildFriendsSectionsHtml(){
             <span class="hr-c">Lv ${f.level} &middot; ${f.trainedDays}d trained &middot; ${f.streak}d streak</span>
           </span>
           <span style="display:flex;gap:8px;flex:0 0 auto;margin-left:10px">
-            <button class="btn ghost sm" style="margin:0;padding:6px 10px" onclick="openDm('${f.uid}','${esc(f.username)}')">Message</button>
-            <button class="btn ghost sm" style="margin:0;padding:6px 10px" onclick="removeFriend('${f.reqId}','${f.uid}','${esc(f.username)}')">Remove</button>
+            <button class="btn ghost sm" style="margin:0;padding:6px 10px" onclick="openDm(${jsq(f.uid)},${jsq(f.username)})">Message</button>
+            <button class="btn ghost sm" style="margin:0;padding:6px 10px" onclick="removeFriend(${jsq(f.reqId)},${jsq(f.uid)},${jsq(f.username)})">Remove</button>
           </span>
         </div>`;
       }).join('') : '<p class="note">No friends yet - add someone from the chat below.</p>'}
@@ -2300,7 +2300,7 @@ function exerciseLogHtml(d){
     groups[g].map(x=>`<div style="display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted)"><span>${esc(x.n)}</span><span style="white-space:nowrap">${x.s}/${x.r} sets</span></div>`).join('')
   ).join('');
   const total = e.x.reduce((a,x)=>a+x.s, 0);
-  return `<details ${logOpen.has(d)?'open':''} ontoggle="toggleLogDay('${d}',this.open)" style="margin:0 0 10px 0"><summary style="font-size:12px;color:var(--muted);cursor:pointer">${e.x.length} exercise${e.x.length===1?'':'s'}, ${total} sets</summary>${rows}</details>`;
+  return `<details ${logOpen.has(d)?'open':''} ontoggle="toggleLogDay(${jsq(d)},this.open)" style="margin:0 0 10px 0"><summary style="font-size:12px;color:var(--muted);cursor:pointer">${e.x.length} exercise${e.x.length===1?'':'s'}, ${total} sets</summary>${rows}</details>`;
 }
 
 // ---- Deload ----
@@ -2623,7 +2623,7 @@ function renderChatMessages(){
       </div>
       <span style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:0 0 auto">
         ${friendActionHtml(m)}
-        ${myIsAdmin?`<span onclick="deleteMessage('${m.id}')" style="cursor:pointer;color:var(--red);font-size:11px;letter-spacing:.05em">DELETE</span>`:''}
+        ${myIsAdmin?`<span onclick="deleteMessage(${jsq(m.id)})" style="cursor:pointer;color:var(--red);font-size:11px;letter-spacing:.05em">DELETE</span>`:''}
       </span>
     </div>
   `).join('');
@@ -2634,7 +2634,7 @@ function friendActionHtml(m){
   if(friendUids.has(m.uid)) return '';
   if(outgoingPendingUids.has(m.uid)) return '<span class="note" style="font-size:10px">Requested</span>';
   if(incomingPendingUids.has(m.uid)) return '<span class="note" style="font-size:10px">Respond above</span>';
-  return `<span onclick="sendFriendRequest('${m.uid}','${esc(m.username)}')" style="cursor:pointer;color:var(--cyan-soft);font-size:11px;letter-spacing:.05em">+ FRIEND</span>`;
+  return `<span onclick="sendFriendRequest(${jsq(m.uid)},${jsq(m.username)})" style="cursor:pointer;color:var(--cyan-soft);font-size:11px;letter-spacing:.05em">+ FRIEND</span>`;
 }
 async function deleteMessage(id){
   if(!confirm('Delete this message?')) return;
@@ -3529,7 +3529,7 @@ function render(){
           const rc = RANK_COLORS[it.rank] || RANK_COLORS.E;
           const equippable = EQUIP_KINDS.includes(it.kind);
           const isEquipped = equippable && S.equipped && S.equipped[it.kind]===id;
-          return `<div class="stat" style="justify-content:flex-start;gap:10px;border-left:2px solid ${rc};${equippable&&!viewOnly?'cursor:pointer;':''}${isEquipped?`background:rgba(${RANK_RGB[it.rank]||RANK_RGB.E},0.1);`:''}" ${equippable&&!viewOnly?`onclick="equipItem('${id}')"`:''}>
+          return `<div class="stat" style="justify-content:flex-start;gap:10px;border-left:2px solid ${rc};${equippable&&!viewOnly?'cursor:pointer;':''}${isEquipped?`background:rgba(${RANK_RGB[it.rank]||RANK_RGB.E},0.1);`:''}" ${equippable&&!viewOnly?`onclick="equipItem(${jsq(id)})"`:''}>
             <span style="font-size:20px;filter:drop-shadow(0 0 6px ${rc})">${it.icon}</span>
             <span style="display:flex;flex-direction:column">
               <span style="color:${rc};font-size:12px;letter-spacing:.02em;text-shadow:0 0 8px ${rc}66">${esc(it.name)}${isEquipped?' <small style="color:var(--green)">● EQUIPPED</small>':''}</span>
@@ -3687,7 +3687,7 @@ function gateBtn(id,activeId){
   const sub = (id==='pull'||id==='push')
     ? ((S.dumbbellsToday && g.dumbbellSub) ? g.dumbbellSub : g.sub)
     : ((S.wandererMode && g.wandererSub) ? g.wandererSub : g.sub);
-  return `<div class="gate" data-color="${g.color}" data-active="${activeId===id?1:0}" onclick="switchGate('${id}')" style="cursor:${S.gateDoneToday?'default':'pointer'}">
+  return `<div class="gate" data-color="${g.color}" data-active="${activeId===id?1:0}" onclick="switchGate(${jsq(id)})" style="cursor:${S.gateDoneToday?'default':'pointer'}">
     <div class="g-ic">${g.icon}</div><div class="g-nm">${g.name}</div><div class="g-sub">${sub.split(' - ')[0]}</div></div>`;
 }
 function confirmGateSwitch(){
@@ -3832,12 +3832,12 @@ function renderRoutineList(){
         const active = S.activeRoutineId===r.id;
         return `
       <div style="display:flex;align-items:center;gap:8px;padding:12px;border:1px solid ${active?'var(--cyan)':'rgba(255,255,255,.1)'};border-radius:8px;margin-top:10px;${active?'background:rgba(77,163,255,.08);box-shadow:0 0 14px rgba(77,163,255,.2)':''}">
-        <div style="flex:1;min-width:0;cursor:pointer" onclick="openRoutineEditor('${r.id}')">
+        <div style="flex:1;min-width:0;cursor:pointer" onclick="openRoutineEditor(${jsq(r.id)})">
           <div style="font-weight:700;${active?'color:var(--cyan-soft)':''}">${esc(r.name)}${active?' <small style="color:var(--green)">● ACTIVE</small>':''}</div>
           <div class="note" style="margin:2px 0 0">${(r.days||[]).length} day${(r.days||[]).length===1?'':'s'} · rest every ${r.restCycle||6}</div>
         </div>
-        ${!active ? `<button class="btn ghost sm" style="flex:0 0 auto" onclick="activateRoutine('${r.id}')">Activate</button>` : ''}
-        <button class="btn ghost sm" style="flex:0 0 auto" onclick="openRoutineEditor('${r.id}')">Edit</button>
+        ${!active ? `<button class="btn ghost sm" style="flex:0 0 auto" onclick="activateRoutine(${jsq(r.id)})">Activate</button>` : ''}
+        <button class="btn ghost sm" style="flex:0 0 auto" onclick="openRoutineEditor(${jsq(r.id)})">Edit</button>
       </div>`;
       }).join('') : `<p class="note" style="margin-top:10px">No personalized routines yet - create one below.</p>`}
       ${routines.length < MAX_ROUTINES
@@ -3859,8 +3859,8 @@ function renderRoutineEditor(routineId){
         ${[1,2,3,4,5,6].map(n=>`<option value="${n}" ${((r.restCycle||6)===n)?'selected':''}>Train ${n} day${n===1?'':'s'}, then 1 rest day</option>`).join('')}
       </select>
       <div style="display:flex;gap:8px;margin-top:12px">
-        <button class="btn sm" style="flex:1" onclick="saveRoutineMeta('${r.id}')" ${viewOnly?'disabled':''}>Save Settings</button>
-        <button class="btn ghost sm" style="flex:0 0 auto;color:var(--red)" onclick="deleteRoutine('${r.id}')" ${viewOnly?'disabled':''}>Delete Routine</button>
+        <button class="btn sm" style="flex:1" onclick="saveRoutineMeta(${jsq(r.id)})" ${viewOnly?'disabled':''}>Save Settings</button>
+        <button class="btn ghost sm" style="flex:0 0 auto;color:var(--red)" onclick="deleteRoutine(${jsq(r.id)})" ${viewOnly?'disabled':''}>Delete Routine</button>
       </div>
     </section>
     <section class="win">
@@ -3868,14 +3868,14 @@ function renderRoutineEditor(routineId){
       <p class="note" style="margin-bottom:10px">Every day needs at least one exercise before this routine can be activated.</p>
       ${(r.days&&r.days.length) ? r.days.map((d,i)=>customDayEditorHtml(r.id,d,i,r.days.length)).join('') : `<p class="note">No days yet - add one below.</p>`}
       ${(r.days||[]).length < MAX_CUSTOM_DAYS
-        ? `<button class="btn ghost" style="margin-top:10px" onclick="addCustomDay('${r.id}')" ${viewOnly?'disabled':''}>+ Add Day</button>`
+        ? `<button class="btn ghost" style="margin-top:10px" onclick="addCustomDay(${jsq(r.id)})" ${viewOnly?'disabled':''}>+ Add Day</button>`
         : `<p class="note" style="margin-top:10px">Maximum of ${MAX_CUSTOM_DAYS} days reached.</p>`}
     </section>`;
 }
 function customDayEditorHtml(routineId,d,i,total){
   const c = DAY_COLORS[d.color] || DAY_COLORS.cyan;
   return `
-    <details class="guide" style="margin-top:${i===0?'0':'10px'}" ${openCustomDayId===d.id?'open':''} ontoggle="onCustomDayToggle('${d.id}',this.open)">
+    <details class="guide" style="margin-top:${i===0?'0':'10px'}" ${openCustomDayId===d.id?'open':''} ontoggle="onCustomDayToggle(${jsq(d.id)},this.open)">
       <summary>${d.icon} ${esc(d.name)} <small style="color:${c.hex}">${statLabel(d.stat)}</small> - ${d.exercises.length} exercise${d.exercises.length===1?'':'s'}</summary>
       <div class="guide-body">
         <label>Day name</label>
@@ -3898,14 +3898,14 @@ function customDayEditorHtml(routineId,d,i,total){
         <div class="inline-w" style="margin-bottom:8px">
           <input id="cdexn_${d.id}_${ei}" placeholder="Exercise name" value="${esc(ex.n)}">
           <input id="cdext_${d.id}_${ei}" placeholder="e.g. 4x8-12" value="${esc(ex.t)}" style="max-width:110px">
-          <button class="btn ghost sm" style="flex:0 0 auto;padding:6px 10px" onclick="removeCustomExercise('${routineId}','${d.id}',${ei})">✕</button>
+          <button class="btn ghost sm" style="flex:0 0 auto;padding:6px 10px" onclick="removeCustomExercise(${jsq(routineId)},${jsq(d.id)},${ei})">✕</button>
         </div>`).join('')}
-        <button class="btn ghost sm" onclick="addCustomExercise('${routineId}','${d.id}')">+ Add Exercise</button>
+        <button class="btn ghost sm" onclick="addCustomExercise(${jsq(routineId)},${jsq(d.id)})">+ Add Exercise</button>
         <div style="display:flex;gap:8px;margin-top:16px">
-          <button class="btn sm" style="flex:1" onclick="saveCustomDay('${routineId}','${d.id}')">Save Day</button>
-          <button class="btn ghost sm" style="flex:0 0 auto;padding:6px 12px" onclick="moveCustomDay('${routineId}','${d.id}',-1)" ${i===0?'disabled':''}>↑</button>
-          <button class="btn ghost sm" style="flex:0 0 auto;padding:6px 12px" onclick="moveCustomDay('${routineId}','${d.id}',1)" ${i===total-1?'disabled':''}>↓</button>
-          <button class="btn ghost sm" style="flex:0 0 auto;color:var(--red)" onclick="deleteCustomDay('${routineId}','${d.id}')">Delete</button>
+          <button class="btn sm" style="flex:1" onclick="saveCustomDay(${jsq(routineId)},${jsq(d.id)})">Save Day</button>
+          <button class="btn ghost sm" style="flex:0 0 auto;padding:6px 12px" onclick="moveCustomDay(${jsq(routineId)},${jsq(d.id)},-1)" ${i===0?'disabled':''}>↑</button>
+          <button class="btn ghost sm" style="flex:0 0 auto;padding:6px 12px" onclick="moveCustomDay(${jsq(routineId)},${jsq(d.id)},1)" ${i===total-1?'disabled':''}>↓</button>
+          <button class="btn ghost sm" style="flex:0 0 auto;color:var(--red)" onclick="deleteCustomDay(${jsq(routineId)},${jsq(d.id)})">Delete</button>
         </div>
       </div>
     </details>`;
@@ -4252,7 +4252,7 @@ function buildHistory(){
     const years={};
     dates.forEach(d=>{ const y=d.slice(0,4); years[y]=(years[y]||0)+1; });
     return Object.keys(years).sort().reverse().map(y=>`
-      <div class="hist-row" onclick="historyDrill('months','${y}')">
+      <div class="hist-row" onclick="historyDrill('months',${jsq(y)})">
         <span class="hr-n">${y}</span><span class="hr-c">${years[y]} day${years[y]===1?'':'s'} trained</span>
       </div>`).join('');
   }
@@ -4264,7 +4264,7 @@ function buildHistory(){
     return `<div class="hist-back" onclick="historyDrill('years')">&larr; All years</div>` +
       Object.keys(months).sort().reverse().map(m=>{
         const mi=parseInt(m.slice(5,7),10)-1;
-        return `<div class="hist-row" onclick="historyDrill('days','${y}','${m}')">
+        return `<div class="hist-row" onclick="historyDrill('days',${jsq(y)},${jsq(m)})">
           <span class="hr-n">${MONTH_NAMES[mi]}</span><span class="hr-c">${months[m]} day${months[m]===1?'':'s'} trained</span>
         </div>`;
       }).join('');
@@ -4274,7 +4274,7 @@ function buildHistory(){
     const m=historyNav.month;
     const mi=parseInt(m.slice(5,7),10)-1;
     const dayList=dates.filter(d=>d.slice(0,7)===m);
-    return `<div class="hist-back" onclick="historyDrill('months','${historyNav.year}')">&larr; ${MONTH_NAMES[mi]} ${historyNav.year}</div>` +
+    return `<div class="hist-back" onclick="historyDrill('months',${jsq(historyNav.year)})">&larr; ${MONTH_NAMES[mi]} ${historyNav.year}</div>` +
       dayList.map(d=>{
         const h=S.history[d]||{partial:true};
         const w=S.weightLog?S.weightLog[d]:null;
@@ -4299,7 +4299,7 @@ function buildHistory(){
           line += h.xp ? `, +${h.xp} XP total)` : ')';
         }
         if(w!=null) line+=` &middot; Weight ${fmt(w)} kg`;
-        const del = (!viewOnly && historyEntryDeletable(d)) ? ` <button type="button" onclick="deleteHistoryEntry('${d}')" style="background:none;border:1px solid rgba(255,107,107,.45);color:#ff8080;font-size:11px;padding:1px 7px;border-radius:2px;cursor:pointer;margin-left:4px">Delete</button>` : '';
+        const del = (!viewOnly && historyEntryDeletable(d)) ? ` <button type="button" onclick="deleteHistoryEntry(${jsq(d)})" style="background:none;border:1px solid rgba(255,107,107,.45);color:#ff8080;font-size:11px;padding:1px 7px;border-radius:2px;cursor:pointer;margin-left:4px">Delete</button>` : '';
         return `<p style="margin:0 0 8px;font-size:13px"><b style="color:var(--cyan-soft)">${d}</b> - ${line}${del}</p>` + exerciseLogHtml(d);
       }).join('');
   }
@@ -4657,7 +4657,7 @@ function buildWeightChart(){
   const x = i => padX + (n===1?0:(i/(n-1))*(W-2*padX));
   const y = w => padY + (1-(w-minW)/(maxW-minW))*(H-2*padY);
   const points = entries.map((e,i)=>`${x(i).toFixed(1)},${y(e[1]).toFixed(1)}`).join(' ');
-  const dots = entries.map((e,i)=>`<circle cx="${x(i).toFixed(1)}" cy="${y(e[1]).toFixed(1)}" r="3" fill="#4da3ff" stroke="#05070f" stroke-width="1" style="cursor:pointer" onclick="toast('${e[0]}','${fmt(e[1])} kg')"><title>${e[0]}: ${fmt(e[1])} kg</title></circle>`).join('');
+  const dots = entries.map((e,i)=>`<circle cx="${x(i).toFixed(1)}" cy="${y(e[1]).toFixed(1)}" r="3" fill="#4da3ff" stroke="#05070f" stroke-width="1" style="cursor:pointer" onclick="toast(${jsq(e[0])},${jsq(fmt(e[1])+' kg')})"><title>${e[0]}: ${fmt(e[1])} kg</title></circle>`).join('');
   const first=entries[0][1], last=entries[n-1][1], delta=last-first;
   const goingUp = S.goalW>=S.startW;
   const good = goingUp ? delta>=0 : delta<=0;
@@ -5186,6 +5186,8 @@ function handleImportFile(input){
 }
 
 function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+// For values placed inside an inline onclick attribute: JSON string literal, then HTML-escaped. esc() alone is not enough there because the browser decodes &#39; back to ' before the JS runs.
+function jsq(s){ return esc(JSON.stringify(String(s))); }
 function fmt(n){ return (Math.round(n*10)/10).toString(); }
 
 function startAuthListener(){
