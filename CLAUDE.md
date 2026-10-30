@@ -66,7 +66,7 @@ Users can replace PPL with up to 5 routines of up to 6 custom days. Each routine
 - One account (`isTxetxeAccount()`, username `txetxe`) gets a rank-tiered **Grip Gate** (`GRIP_GATE_TIERS`) in its own section instead of the flat grip checkbox (with its own half-complete: `claimDailyPart('grip', true)` pays half of grip's share and parks the rest in `S.gripHalfOwed*`), and a generic "do your own stretching routine" Flexibility task instead of the rotating stretch.
 
 ### Other daily items
-- **Flexibility:** `FLEXIBILITY_TIERS`, +20 XP, no stat attached.
+- **Flexibility:** `FLEXIBILITY_TIERS`, +20 XP, no stat attached. The owner account also sees one fixed rank-tiered toe-touch stretch (`TOE_TOUCH_TIERS`) under its own-stretching line. It is display text only, with no state of its own.
 - **Weight log:** +10 XP.
 
 ### Stats

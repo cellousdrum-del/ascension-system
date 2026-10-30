@@ -583,7 +583,8 @@ const GATES = {
         {n:'Pike push-ups (incline, hands elevated)', t:'3x8-10', d:'Hands on a bench or step, feet on the ground. Shoulders.'},
         {n:'Wall walk-ins', t:'3x3-5', d:'From a push-up position, walk your feet up a low wall a few steps, then back down. Balance.'},
         {n:'Push-ups (variations)', t:'4x10-15', d:'Alternate standard, diamond and wide grip.'},
-        {n:'Pseudo-planche push-ups', t:'3x8', d:'Hands by hips, torso leaning. Shoulders.'}
+        {n:'Pseudo-planche push-ups', t:'3x8', d:'Hands by hips, torso leaning. Shoulders.'},
+        {n:'Hanging oblique knee raises', t:'3x8-10 /side', d:'Knees up towards one elbow, then the other. Obliques and core.'}
       ],
       [ // D
         {n:'Muscle-up attempt', t:'1x attempt', d:'Warm-up, just one try. Explosive pull-up, then work to get over the bar (jumping or a band is fine). Rest well before the working sets.'},
@@ -592,7 +593,8 @@ const GATES = {
         {n:'Pike push-ups', t:'4x10-12', d:'Full range, feet on the ground, hips piked high. Shoulders.'},
         {n:'Wall handstand hold (chest-to-wall)', t:'3x15-20s', d:'Kick up to the wall, hips against it, hold steady. Balance.'},
         {n:'Push-ups (variations)', t:'4x12-15', d:'Alternate standard, diamond and wide grip.'},
-        {n:'Pseudo-planche push-ups', t:'3x9', d:'Hands by hips, torso leaning a bit further. Shoulders.'}
+        {n:'Pseudo-planche push-ups', t:'3x9', d:'Hands by hips, torso leaning a bit further. Shoulders.'},
+        {n:'Hanging oblique knee raises (paused)', t:'3x10-12 /side', d:'Brief pause at the top, no swinging. Obliques and core.'}
       ],
       [ // C
         {n:'Muscle-up attempt', t:'1x attempt', d:'Warm-up, just one try. Explosive pull-up, then work to get over the bar (jumping or a band is fine). Rest well before the working sets.'},
@@ -601,7 +603,8 @@ const GATES = {
         {n:'Pike push-ups (feet elevated)', t:'4x8-12', d:'Feet on a low box. Shoulders.'},
         {n:'Wall handstand hold (chest-to-wall, extended)', t:'3x25-35s', d:'Longer hold, keep a tight hollow body. Balance.'},
         {n:'Push-ups (variations)', t:'4x15-20', d:'Alternate standard, diamond and wide grip.'},
-        {n:'Pseudo-planche push-ups (deep lean)', t:'3x10', d:'2s pause at the bottom. Shoulders.'}
+        {n:'Pseudo-planche push-ups (deep lean)', t:'3x10', d:'2s pause at the bottom. Shoulders.'},
+        {n:'Hanging oblique leg raises', t:'3x8-10 /side', d:'Straight legs lifted diagonally to one side of the bar, then the other. Obliques and core.'}
       ],
       [ // B
         {n:'Muscle-up attempt', t:'1x attempt', d:'Warm-up, just one try. Explosive pull-up, then work to get over the bar (jumping or a band is fine). Rest well before the working sets.'},
@@ -610,7 +613,8 @@ const GATES = {
         {n:'Floating pike push-ups', t:'3x5-8', d:'Feet unsupported in the air, no wall or box. Shoulders and balance.'},
         {n:'Wall handstand hold (back-to-wall)', t:'3x20-30s', d:'Face away from the wall for a freer, more realistic balance challenge. Balance.'},
         {n:'Push-ups (variations)', t:'5x15-18', d:'Alternate standard, diamond and wide grip.'},
-        {n:'Pseudo-planche push-ups (deeper lean)', t:'4x10', d:'3s pause at the bottom. Shoulders.'}
+        {n:'Pseudo-planche push-ups (deeper lean)', t:'4x10', d:'3s pause at the bottom. Shoulders.'},
+        {n:'Hanging windshield wipers (knees bent)', t:'3x6-8', d:'Knees and hips together, sweep side to side, one rep each way. Obliques and core.'}
       ],
       [ // A
         {n:'Muscle-up attempt', t:'1x attempt', d:'Warm-up, just one clean try before the working sets.'},
@@ -620,7 +624,8 @@ const GATES = {
         {n:'Wall handstand push-ups', t:'3x5-8', d:'Feet against a wall or tree, as vertical as you can control. Shoulders.'},
         {n:'Freestanding handstand practice', t:'5x10-15s', d:'Kick up away from the wall, aim for short unsupported holds. Balance.'},
         {n:'Push-ups (variations)', t:'5x15-20', d:'Alternate standard, diamond and wide grip.'},
-        {n:'Pseudo-planche push-ups (max lean)', t:'4x10', d:'Slow tempo, hold the lean. Shoulders.'}
+        {n:'Pseudo-planche push-ups (max lean)', t:'4x10', d:'Slow tempo, hold the lean. Shoulders.'},
+        {n:'Hanging windshield wipers (straight legs)', t:'4x6-10', d:'Legs together and straight, sweep side to side, one rep each way. Obliques and core.'}
       ],
       [ // S
         {n:'Muscle-up attempt', t:'1x attempt', d:'Warm-up, just one clean try before the working sets.'},
@@ -630,7 +635,8 @@ const GATES = {
         {n:'Wall handstand push-ups (deficit)', t:'4x6-10', d:'Hands elevated on blocks for extra range. Shoulders.'},
         {n:'Freestanding handstand push-up negatives', t:'3x2-4', d:'Kick up freestanding, lower slowly under control, catch yourself before the bottom. Balance.'},
         {n:'Push-ups (variations, weighted)', t:'5x18-22', d:'Add weight in the backpack.'},
-        {n:'Pseudo-planche push-ups (full lean, weighted)', t:'4x12', d:'Hold the deepest lean you can control.'}
+        {n:'Pseudo-planche push-ups (full lean, weighted)', t:'4x12', d:'Hold the deepest lean you can control.'},
+        {n:'Hanging windshield wipers (straight legs, slow)', t:'4x8-12', d:'2s each way, touch the bar side to side with your feet. Obliques and core.'}
       ]
     ]},
   // Calisthenics is Pull's default now (a pull-up bar is assumed) - see toggleDumbbellsToday() and
@@ -1145,6 +1151,17 @@ const FLEXIBILITY_TIERS = [
     'Deep lat and side-body stretch, weighted side bend, 90s/side',
     'Deep lower back and posterior chain stretch (lying double knee-to-chest, extended hold) 90s'
   ]
+];
+
+/* Owner-only (shown next to "Do your own stretching routine"): one fixed hamstring stretch per rank,
+   aimed at a straight-knee standing toe touch and then palms flat on the floor. */
+const TOE_TOUCH_TIERS = [
+  {n:'Standing forward fold, hands on shins', t:'3x30s', d:'Knees straight, hinge from the hips, let the head hang.'},
+  {n:'Standing toe touch', t:'3x40s', d:'Knees straight, fingertips to the toes or as close as you can get.'},
+  {n:'Standing toe touch (contract-relax)', t:'3x45s', d:'Push the heels into the floor for 5s, relax, then fold a little deeper.'},
+  {n:'Forward fold from a low step', t:'3x45s', d:'Stand on a step edge, knees straight, let the hands hang below the toes.'},
+  {n:'Standing forward fold, hands to the floor', t:'3x45s', d:'Knees straight, fingertips then palms on the floor, ease down on each exhale.'},
+  {n:'Standing forward fold, palms flat', t:'3x60s', d:'Knees straight, palms flat beside the feet, chest towards the shins.'}
 ];
 
 /* ---------- Avatar mystery-box item pool ---------- */
@@ -2002,6 +2019,7 @@ const MUSCLE_RULES = [
   [/hamstring|leg curl/i, {hams:1}],
   [/split squat|lunge|step-?up|pistol|shrimp/i, {quads:1,glutes:.8,glutemed:.5,adductors:.4,hams:.3}],
   [/squat|leg press|leg extension/i, {quads:1,glutes:.7,adductors:.4,hams:.2}],
+  [/oblique|windshield/i, {obliques:1,abs_low:.6,abs_up:.4,hipflex:.5,flexors:.3}],
   [/knee raise|leg raise|toes-to-bar/i, {abs_low:1,hipflex:.8,abs_up:.4,flexors:.3,obliques:.2}],
   [/dragon/i, {abs_low:1,abs_up:.8,hipflex:.5,lats:.3}],
   [/crunch|sit-?up/i, {abs_up:1,abs_low:.4,hipflex:.3}],
@@ -3101,6 +3119,7 @@ function render(){
   const gateExercisesDone = gateExercises!=null && gateExercises.every((e,i)=>(S.exSets[i]||0)>=requiredSetsFor(gateId, e.t, S.day, info.lvl));
   const mysteryTask = MYSTERY_QUESTS[S.mysteryCycle.order[S.mysteryCycle.pos]];
   const mobilityRoutine = FLEXIBILITY_TIERS[S.flexCycle.tier][S.flexCycle.order[S.flexCycle.pos]];
+  const toeTouch = TOE_TOUCH_TIERS[gateTierIndex(info.lvl)];
   const monsterThreat = (S.questOnlyStreak||0) >= 3 && !S.gateDoneToday;
   // Each task claims independently for half the reward, but the two halves are tracked against one
   // frozen-per-day shape/total (S.dailyQuest*) so claim order never matters - whichever is claimed
@@ -3310,7 +3329,7 @@ function render(){
         <div class="dq ${S.mobilityDone?'done':''}" onclick="toggleMobility()">
           <span class="chk" style="${S.mobilityDone?'background:rgba(77,163,255,.18);color:var(--cyan);box-shadow:0 0 12px rgba(77,163,255,.5)':''}">${S.mobilityDone?'✓':''}</span>
           ${isTxetxeAccount()
-            ? `<span class="t">Do your own stretching routine<small>Flexibility work - every day, no stat attached</small></span>`
+            ? `<span class="t">Do your own stretching routine<small>Flexibility work - every day, no stat attached</small><small>Plus: ${toeTouch.n} ${toeTouch.t} - ${toeTouch.d}</small></span>`
             : `<span class="t">${mobilityRoutine}<small>Flexibility work - changes daily, no stat attached</small></span>`}
         </div>
       </div>
