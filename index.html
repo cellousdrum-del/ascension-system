@@ -2142,8 +2142,9 @@ function muscleRecovery(opts){
   }
   return out;
 }
-let MMODE = 'day';
+let MMODE = 'day', MLIST = false;
 function setMMode(m){ MMODE = m; render(); }
+function toggleMList(){ MLIST = !MLIST; render(); }
 const BODY_FRONT = [
   ['serratus','M73 71 L81 67 L85 72 L83 81 L73 82 Z'],
   ['obliques','M73 83 L83 82 L85 94 L81 108 L73 108 Z'],
@@ -2248,8 +2249,9 @@ function musclesCard(){
     body = `<p class="note" style="text-align:center;margin:8px 0 0">${mode==='day' ? 'Check off sets in a Gate and the muscles you train light up here.' : (mode==='week' ? 'No training in the last 7 days yet.' : 'Nothing trained recently - every muscle is fresh.')}</p>`;
   } else if(mode==='rec'){
     body = `<div style="display:flex;align-items:center;gap:6px;justify-content:center;font-size:10px;color:var(--muted);margin:2px 0 10px;letter-spacing:.06em">JUST TRAINED<span style="display:inline-block;width:110px;height:8px;border-radius:99px;background:linear-gradient(90deg,hsl(0,78%,52%),hsl(60,78%,52%),hsl(120,78%,52%))"></span>RECOVERED</div>` +
-      keys.sort((a,b)=>rec[a].frac-rec[b].frac).map(k=>{ const r = rec[k]; const c = `hsl(${Math.round(r.frac*120)},78%,52%)`;
-        return `<div style="display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:5px 0;border-bottom:1px dashed rgba(77,163,255,.14)"><span><b style="color:${c}">&#9679;</b> ${MUSCLES[k]}</span><span style="color:var(--muted);text-align:right">${r.frac>=1 ? 'recovered' : Math.round(r.frac*100)+'% - ready in '+fmtH(r.needed-r.hours)}</span></div>`; }).join('');
+      `<button class="btn ghost sm" style="width:100%;margin:0 0 6px" onclick="toggleMList()">${MLIST?'Hide':'Show'} muscle list</button>` +
+      (!MLIST ? '' : keys.sort((a,b)=>rec[a].frac-rec[b].frac).map(k=>{ const r = rec[k]; const c = `hsl(${Math.round(r.frac*120)},78%,52%)`;
+        return `<div style="display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:5px 0;border-bottom:1px dashed rgba(77,163,255,.14)"><span><b style="color:${c}">&#9679;</b> ${MUSCLES[k]}</span><span style="color:var(--muted);text-align:right">${r.frac>=1 ? 'recovered' : Math.round(r.frac*100)+'% - ready in '+fmtH(r.needed-r.hours)}</span></div>`; }).join(''));
   } else {
     body = `<div style="display:flex;align-items:center;gap:6px;justify-content:center;font-size:10px;color:var(--muted);margin:2px 0 10px;letter-spacing:.06em">LESS<span style="display:inline-block;width:110px;height:8px;border-radius:99px;background:linear-gradient(90deg,rgba(${rgb},.22),rgba(${rgb},.95))"></span>MORE</div>` +
       keys.sort((a,b)=>load[b]-load[a]).map(k=>
