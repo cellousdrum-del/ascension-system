@@ -837,7 +837,7 @@ const GATES = {
     ]}
 };
 // Rank-tiered content for the grip/finger pseudo-Gate, scoped to a single account (see
-// GRIP_GATE_USERNAME below) that owns a finger-extension rope and an independent 4-spring hand
+// GRIP_GATE_USERNAME below) that owns an independent 4-spring hand
 // gripper alongside the standard gripper everyone else gets as a flat Daily Quest checkbox. The
 // 4-spring device trains index/middle/ring/pinky together and the thumb separately afterward (to
 // avoid decompensating), so that split is kept as two exercises rather than one. Reps stay lower
@@ -846,37 +846,31 @@ const GATES = {
 const GRIP_GATE_TIERS = [
   [ // E
     {n:'Grip strengthener', t:'3x10-12', d:'Standard gripper. Full close each rep, controlled release.'},
-    {n:'Finger extension (rope)', t:'2x12-15', d:'Expand against the band - the opposite motion from the gripper, keeps flexors and extensors balanced.'},
     {n:'4-spring finger press (index, middle, ring, pinky)', t:'2x6-8 /finger', d:'One spring at a time, each finger pressed independently.'},
     {n:'Thumb press (solo)', t:'2x6-8', d:'Thumb spring on its own, after the other four - keeps it from decompensating alongside them.'}
   ],
   [ // D
     {n:'Grip strengthener', t:'3x12-15', d:'Standard gripper. Full close each rep, controlled release.'},
-    {n:'Finger extension (rope)', t:'3x12-15', d:'Expand against the band, controlled tempo both ways.'},
     {n:'4-spring finger press (index, middle, ring, pinky)', t:'2x8-10 /finger', d:'One spring at a time, each finger pressed independently.'},
     {n:'Thumb press (solo)', t:'2x8-10', d:'Thumb spring on its own, after the other four.'}
   ],
   [ // C
     {n:'Grip strengthener', t:'4x10-12', d:'Standard gripper. Full close each rep, controlled release.'},
-    {n:'Finger extension (rope)', t:'3x15', d:'Expand against the band, controlled tempo both ways.'},
     {n:'4-spring finger press (index, middle, ring, pinky)', t:'3x8-10 /finger', d:'One spring at a time, each finger pressed independently.'},
     {n:'Thumb press (solo)', t:'3x8-10', d:'Thumb spring on its own, after the other four.'}
   ],
   [ // B
     {n:'Grip strengthener', t:'4x12-15', d:'Standard gripper. Full close each rep, controlled release.'},
-    {n:'Finger extension (rope)', t:'3x15-18', d:'Expand against the band, slower tempo both ways.'},
     {n:'4-spring finger press (index, middle, ring, pinky)', t:'3x10-12 /finger', d:'One spring at a time, each finger pressed independently.'},
     {n:'Thumb press (solo)', t:'3x10-12', d:'Thumb spring on its own, after the other four.'}
   ],
   [ // A
     {n:'Grip strengthener', t:'4x15-18', d:'Standard gripper. Full close each rep, controlled release.'},
-    {n:'Finger extension (rope)', t:'4x15-18', d:'Expand against the band, slow and controlled both ways.'},
     {n:'4-spring finger press (index, middle, ring, pinky)', t:'4x10-12 /finger', d:'One spring at a time, each finger pressed independently.'},
     {n:'Thumb press (solo)', t:'4x10-12', d:'Thumb spring on its own, after the other four.'}
   ],
   [ // S
     {n:'Grip strengthener', t:'5x15-18', d:'Standard gripper. Full close each rep, controlled release.'},
-    {n:'Finger extension (rope)', t:'4x18-20', d:'Expand against the band, slow and controlled both ways.'},
     {n:'4-spring finger press (index, middle, ring, pinky)', t:'4x12-15 /finger', d:'One spring at a time, each finger pressed independently.'},
     {n:'Thumb press (solo)', t:'4x12-15', d:'Thumb spring on its own, after the other four.'}
   ]
@@ -2875,6 +2869,17 @@ function render(){
   if(!S.weightLog) S.weightLog = {};
   if(!S.exSets) S.exSets = {};
   if(!S.gripExSets) S.gripExSets = {};
+  // Grip Gate content v1 dropped the finger extension rope (position 1 in every tier). Checkmarks are
+  // stored by position, so anyone mid-workout that day has the later ones moved up one slot.
+  if(S.gripContentVer!==1){
+    S.gripContentVer = 1;
+    if(!viewOnly && isTxetxeAccount() && Object.keys(S.gripExSets).length){
+      const shifted = {};
+      Object.keys(S.gripExSets).forEach(k=>{ const i = Number(k); if(i===1) return; shifted[i>1 ? i-1 : i] = S.gripExSets[k]; });
+      S.gripExSets = shifted;
+    }
+    if(!viewOnly) save();
+  }
   // Gate content v2 put a Muscle-up attempt first in Push/Pull calisthenics. Checkmarks are stored
   // by position, so anyone mid-workout on the day this shipped has theirs moved down one slot to
   // stay on the same exercises. New accounts have nothing ticked, so this just stamps the version.
