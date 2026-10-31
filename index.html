@@ -1278,10 +1278,15 @@ function pickBoxItem(streak, dateStr, playerRank){
   const bumpUp = idx>=0 && idx<RANK_ORDER.length-1 && (h%100)<10;
   const targetRank = bumpUp ? RANK_ORDER[idx+1] : (playerRank||'E');
 
-  const rankPool = AVATAR_ITEMS.filter(it=>it.rank===targetRank);
-  const unowned = rankPool.filter(it=>!owned.has(it.id));
-  const anyUnowned = AVATAR_ITEMS.filter(it=>!owned.has(it.id));
-  const list = unowned.length ? unowned : (rankPool.length ? rankPool : (anyUnowned.length ? anyUnowned : AVATAR_ITEMS));
+  // Never a repeat while anything is left to win: when the target rank is fully owned, take the
+  // nearest rank that still has an unowned item (lower first on a tie). Only a complete collection
+  // can get a duplicate.
+  const tIdx = RANK_ORDER.indexOf(targetRank);
+  const unownedByDist = AVATAR_ITEMS.filter(it=>!owned.has(it.id))
+    .sort((a,b)=>Math.abs(RANK_ORDER.indexOf(a.rank)-tIdx) - Math.abs(RANK_ORDER.indexOf(b.rank)-tIdx) || RANK_ORDER.indexOf(a.rank)-RANK_ORDER.indexOf(b.rank));
+  const list = unownedByDist.length
+    ? unownedByDist.filter(it=>it.rank===unownedByDist[0].rank)
+    : AVATAR_ITEMS.filter(it=>it.rank===targetRank);
 
   let h2=0;
   const key2 = key+'_pick';
@@ -2906,6 +2911,8 @@ function render(){
   if(S.mobilityClaimed===undefined) S.mobilityClaimed = false;
   if(S.questOnlyStreak===undefined) S.questOnlyStreak = 0;
   if(!S.avatarItems) S.avatarItems = [];
+  // Older boxes could hand out an item already owned; keep one copy of each.
+  if(!viewOnly && new Set(S.avatarItems).size !== S.avatarItems.length){ S.avatarItems = Array.from(new Set(S.avatarItems)); save(); }
   if(!S.equipped) S.equipped = {};
   if(S.equipFeatureSeen===undefined) S.equipFeatureSeen = false;
   if(S.lastBoxStreak===undefined) S.lastBoxStreak = 0;
