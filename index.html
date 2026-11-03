@@ -159,6 +159,7 @@
     box-shadow:0 0 16px rgba(77,163,255,0.2)}
   .gate[data-active="1"] .g-nm{color:var(--cyan-soft)}
   .gate[data-color="red"][data-active="1"]{border-color:#ff6b6b;box-shadow:0 0 16px rgba(255,107,107,.2)}
+  .gate[data-color="gold"][data-active="1"]{border-color:var(--gold);box-shadow:0 0 16px rgba(251,191,36,.2)}
   .gate[data-color="violet"][data-active="1"]{border-color:var(--violet);box-shadow:0 0 16px rgba(139,92,246,.2)}
 
   ul.ex{list-style:none;margin:6px 0 0;padding:0}
@@ -583,8 +584,7 @@ const GATES = {
         {n:'Pike push-ups (incline, hands elevated)', t:'3x8-10', d:'Hands on a bench or step, feet on the ground. Shoulders.'},
         {n:'Wall walk-ins', t:'3x3-5', d:'From a push-up position, walk your feet up a low wall a few steps, then back down. Balance.'},
         {n:'Push-ups (variations)', t:'4x10-15', d:'Alternate standard, diamond and wide grip.'},
-        {n:'Pseudo-planche push-ups', t:'3x8', d:'Hands by hips, torso leaning. Shoulders.'},
-        {n:'Hanging oblique knee raises', t:'3x8-10 /side', d:'Knees up towards one elbow, then the other. Obliques and core.'}
+        {n:'Pseudo-planche push-ups', t:'3x8', d:'Hands by hips, torso leaning. Shoulders.'}
       ],
       [ // D
         {n:'Muscle-up attempt', t:'1x attempt', d:'Warm-up, just one try. Explosive pull-up, then work to get over the bar (jumping or a band is fine). Rest well before the working sets.'},
@@ -593,8 +593,7 @@ const GATES = {
         {n:'Pike push-ups', t:'4x10-12', d:'Full range, feet on the ground, hips piked high. Shoulders.'},
         {n:'Wall handstand hold (chest-to-wall)', t:'3x15-20s', d:'Kick up to the wall, hips against it, hold steady. Balance.'},
         {n:'Push-ups (variations)', t:'4x12-15', d:'Alternate standard, diamond and wide grip.'},
-        {n:'Pseudo-planche push-ups', t:'3x9', d:'Hands by hips, torso leaning a bit further. Shoulders.'},
-        {n:'Hanging oblique knee raises (paused)', t:'3x10-12 /side', d:'Brief pause at the top, no swinging. Obliques and core.'}
+        {n:'Pseudo-planche push-ups', t:'3x9', d:'Hands by hips, torso leaning a bit further. Shoulders.'}
       ],
       [ // C
         {n:'Muscle-up attempt', t:'1x attempt', d:'Warm-up, just one try. Explosive pull-up, then work to get over the bar (jumping or a band is fine). Rest well before the working sets.'},
@@ -603,8 +602,7 @@ const GATES = {
         {n:'Pike push-ups (feet elevated)', t:'4x8-12', d:'Feet on a low box. Shoulders.'},
         {n:'Wall handstand hold (chest-to-wall, extended)', t:'3x25-35s', d:'Longer hold, keep a tight hollow body. Balance.'},
         {n:'Push-ups (variations)', t:'4x15-20', d:'Alternate standard, diamond and wide grip.'},
-        {n:'Pseudo-planche push-ups (deep lean)', t:'3x10', d:'2s pause at the bottom. Shoulders.'},
-        {n:'Hanging oblique leg raises', t:'3x8-10 /side', d:'Straight legs lifted diagonally to one side of the bar, then the other. Obliques and core.'}
+        {n:'Pseudo-planche push-ups (deep lean)', t:'3x10', d:'2s pause at the bottom. Shoulders.'}
       ],
       [ // B
         {n:'Muscle-up attempt', t:'1x attempt', d:'Warm-up, just one try. Explosive pull-up, then work to get over the bar (jumping or a band is fine). Rest well before the working sets.'},
@@ -613,8 +611,7 @@ const GATES = {
         {n:'Floating pike push-ups', t:'3x5-8', d:'Feet unsupported in the air, no wall or box. Shoulders and balance.'},
         {n:'Wall handstand hold (back-to-wall)', t:'3x20-30s', d:'Face away from the wall for a freer, more realistic balance challenge. Balance.'},
         {n:'Push-ups (variations)', t:'5x15-18', d:'Alternate standard, diamond and wide grip.'},
-        {n:'Pseudo-planche push-ups (deeper lean)', t:'4x10', d:'3s pause at the bottom. Shoulders.'},
-        {n:'Hanging windshield wipers (knees bent)', t:'3x6-8', d:'Knees and hips together, sweep side to side, one rep each way. Obliques and core.'}
+        {n:'Pseudo-planche push-ups (deeper lean)', t:'4x10', d:'3s pause at the bottom. Shoulders.'}
       ],
       [ // A
         {n:'Muscle-up attempt', t:'1x attempt', d:'Warm-up, just one clean try before the working sets.'},
@@ -624,8 +621,7 @@ const GATES = {
         {n:'Wall handstand push-ups', t:'3x5-8', d:'Feet against a wall or tree, as vertical as you can control. Shoulders.'},
         {n:'Freestanding handstand practice', t:'5x10-15s', d:'Kick up away from the wall, aim for short unsupported holds. Balance.'},
         {n:'Push-ups (variations)', t:'5x15-20', d:'Alternate standard, diamond and wide grip.'},
-        {n:'Pseudo-planche push-ups (max lean)', t:'4x10', d:'Slow tempo, hold the lean. Shoulders.'},
-        {n:'Hanging windshield wipers (straight legs)', t:'4x6-10', d:'Legs together and straight, sweep side to side, one rep each way. Obliques and core.'}
+        {n:'Pseudo-planche push-ups (max lean)', t:'4x10', d:'Slow tempo, hold the lean. Shoulders.'}
       ],
       [ // S
         {n:'Muscle-up attempt', t:'1x attempt', d:'Warm-up, just one clean try before the working sets.'},
@@ -635,8 +631,7 @@ const GATES = {
         {n:'Wall handstand push-ups (deficit)', t:'4x6-10', d:'Hands elevated on blocks for extra range. Shoulders.'},
         {n:'Freestanding handstand push-up negatives', t:'3x2-4', d:'Kick up freestanding, lower slowly under control, catch yourself before the bottom. Balance.'},
         {n:'Push-ups (variations, weighted)', t:'5x18-22', d:'Add weight in the backpack.'},
-        {n:'Pseudo-planche push-ups (full lean, weighted)', t:'4x12', d:'Hold the deepest lean you can control.'},
-        {n:'Hanging windshield wipers (straight legs, slow)', t:'4x8-12', d:'2s each way, touch the bar side to side with your feet. Obliques and core.'}
+        {n:'Pseudo-planche push-ups (full lean, weighted)', t:'4x12', d:'Hold the deepest lean you can control.'}
       ]
     ]},
   // Calisthenics is Pull's default now (a pull-up bar is assumed) - see toggleDumbbellsToday() and
@@ -834,6 +829,54 @@ const GATES = {
         {n:'Weighted walking lunges', t:'5x14 /leg', d:'Heaviest backpack, long stride.'},
         {n:'Single-leg calf raises (weighted, slow)', t:'5x20 /leg', d:'Added backpack weight, 2s pause at the top.'}
       ]
+    ]},
+  // Home abs day (owner account only, see activeCycle()): floor and dumbbells, obliques in every rank
+  // and an L-sit ladder from the tuck hold up to the V-sit.
+  abs:{ name:'ABS', sub:'Home - Floor', icon:'\ud83d\udfe1', color:'gold',
+    gain:'vit',
+    tiers:[
+      [ // E
+        {n:'Crunches', t:'3x15-20', d:'Slow, exhale at the top. Upper abs.'},
+        {n:'Lying leg raises', t:'3x10-12', d:'Lower back flat on the floor, legs straight. Lower abs.'},
+        {n:'Russian twists', t:'3x16-20', d:'Feet on the floor, touch the floor each side. Obliques.'},
+        {n:'Side plank', t:'3x20-30s /side', d:'Hips high, body in a straight line. Obliques.'},
+        {n:'Tuck hold (L-sit prep)', t:'3x10-15s', d:'Hands on the floor beside the hips, lift the hips with the knees tucked. Core.'}
+      ],
+      [ // D
+        {n:'Reverse crunches', t:'3x12-15', d:'Curl the hips off the floor, no swinging. Lower abs.'},
+        {n:'Bicycle crunches', t:'3x20-24', d:'Slow, elbow to the opposite knee. Obliques.'},
+        {n:'Side plank with hip dip', t:'3x10-12 /side', d:'Lower the hip to the floor and lift it back up. Obliques.'},
+        {n:'Hollow body hold', t:'3x20-30s', d:'Lower back pressed down, arms overhead. Core.'},
+        {n:'Tuck L-sit', t:'3x15-20s', d:'Hands by the hips, knees tucked, hips and feet off the floor. Core.'}
+      ],
+      [ // C
+        {n:'V-ups', t:'3x10-12', d:'Reach for the toes at the top. Core.'},
+        {n:'Dumbbell Russian twists', t:'3x16-20', d:'Feet off the floor, one dumbbell. Obliques.'},
+        {n:'Side plank with top-leg raise', t:'3x10-12 /side', d:'Lift the top leg, keep the hips high. Obliques.'},
+        {n:'Hollow body rocks', t:'3x12-15', d:'Rock with the hollow shape held. Core.'},
+        {n:'One-leg L-sit', t:'4x8-12s /leg', d:'One leg straight out, the other tucked. Core.'}
+      ],
+      [ // B
+        {n:'Long-lever hollow hold', t:'3x25-35s', d:'Arms overhead and legs low. Core.'},
+        {n:'Dumbbell woodchops', t:'3x10-12 /side', d:'Low to high across the body, controlled. Obliques.'},
+        {n:'Lying windshield wipers (knees bent)', t:'3x8-10', d:'Shoulders flat, sweep the knees side to side. Obliques.'},
+        {n:'Dragon flag (tucked)', t:'3x6-8', d:'Hold a sturdy bench or sofa behind your head, lift with the knees tucked. Core.'},
+        {n:'L-sit (bent knees)', t:'4x10-15s', d:'Hands by the hips, legs only slightly bent. Core.'}
+      ],
+      [ // A
+        {n:'V-ups (slow)', t:'4x10-12', d:'Pause at the top. Core.'},
+        {n:'Lying windshield wipers (straight legs)', t:'4x8-10', d:'Legs together and straight, sweep side to side. Obliques.'},
+        {n:'Weighted side plank', t:'3x20-30s /side', d:'Dumbbell resting on the top hip. Obliques.'},
+        {n:'Dragon flag negatives', t:'3x4-6', d:'4s lowering, body straight. Core.'},
+        {n:'L-sit', t:'4x15-20s', d:'Legs straight, hips and feet off the floor. Core.'}
+      ],
+      [ // S
+        {n:'Dragon flag', t:'4x6-8', d:'Body straight, only the shoulders on the bench or floor. Core.'},
+        {n:'Hollow body rocks (weighted)', t:'4x12-15', d:'Dumbbell held overhead. Core.'},
+        {n:'Lying windshield wipers (straight legs, slow)', t:'4x8-12', d:'2s each way. Obliques.'},
+        {n:'Dumbbell woodchops (heavy)', t:'4x10-12 /side', d:'Heavier, slower tempo. Obliques.'},
+        {n:'L-sit to V-sit', t:'5x10-15s', d:'Hold the L-sit, then lift the legs higher into a V-sit. Core.'}
+      ]
     ]}
 };
 // Rank-tiered content for the grip/finger pseudo-Gate, scoped to a single account (see
@@ -898,6 +941,12 @@ function gripGateAllDone(level){
    rank (it's prepping the same joints/patterns regardless of tier), skipped for custom routine
    days since their content is user-defined and there's no way to know what to warm up for. ---------- */
 const WARMUPS = {
+  abs:[
+    {n:'Cat-cow', t:'1x10', d:'Spine.'},
+    {n:'Dead bug', t:'1x8 /side', d:'Slow, lower back flat on the floor.'},
+    {n:'Plank', t:'1x30s', d:'Core activation, easy.'},
+    {n:'Wrist circles', t:'20s each way', d:'Wrists for the L-sit work.'}
+  ],
   push:[
     {n:'Arm circles', t:'30s each way', d:'Shoulders.'},
     {n:'Wrist circles', t:'20s each way', d:'Wrists.'},
@@ -1296,6 +1345,9 @@ function pickBoxItem(streak, dateStr, playerRank){
 
 /* ---------- Fixed schedule: 6-on-1-off. The gate only advances when cleared (or on a Rest day) - it waits for you otherwise. ---------- */
 const CYCLE = ['push','pull','legs','push','pull','legs','rest'];
+// Owner account only (S.absDay): a home abs day before the weekly rest, 7 training days in 8.
+const CYCLE_ABS = ['push','pull','legs','push','pull','legs','abs','rest'];
+function activeCycle(){ return (S && S.absDay) ? CYCLE_ABS : CYCLE; }
 function parseSets(t){ const m=/^(\d+)\s*x/i.exec(t); return m? parseInt(m[1],10) : 1; }
 function daysBetween(a,b){ return Math.round((new Date(b+'T00:00:00Z') - new Date(a+'T00:00:00Z'))/86400000); }
 function legacyScheduleFor(dateStr){
@@ -1309,7 +1361,7 @@ function activeRoutine(){
 function todaysGate(){
   const r = activeRoutine();
   if(r) return (S.customTrainingSlot||0)>=(r.restCycle||6) ? 'rest' : 'custom';
-  return CYCLE[S.cycleIndex];
+  return activeCycle()[S.cycleIndex];
 }
 
 /* ---------- Custom routines: up to 5 personalized routines, each with up to 6 user-defined
@@ -2025,6 +2077,11 @@ const MUSCLE_RULES = [
   [/split squat|lunge|step-?up|pistol|shrimp/i, {quads:1,glutes:.8,glutemed:.5,adductors:.4,hams:.3}],
   [/squat|leg press|leg extension/i, {quads:1,glutes:.7,adductors:.4,hams:.2}],
   [/oblique|windshield/i, {obliques:1,abs_low:.6,abs_up:.4,hipflex:.5,flexors:.3}],
+  [/side plank/i, {obliques:1,abs_up:.4,abs_low:.3,serratus:.3}],
+  [/bicycle/i, {obliques:.7,abs_up:.7,abs_low:.4}],
+  [/reverse crunch/i, {abs_low:1,abs_up:.4,hipflex:.4}],
+  [/v-up/i, {abs_up:.8,abs_low:.8,hipflex:.5}],
+  [/l-sit|tuck hold/i, {hipflex:1,abs_low:.8,abs_up:.6,tri_lat:.5,tri_long:.3,flexors:.4}],
   [/knee raise|leg raise|toes-to-bar/i, {abs_low:1,hipflex:.8,abs_up:.4,flexors:.3,obliques:.2}],
   [/dragon/i, {abs_low:1,abs_up:.8,hipflex:.5,lats:.3}],
   [/crunch|sit-?up/i, {abs_up:1,abs_low:.4,hipflex:.3}],
@@ -2318,7 +2375,7 @@ function toggleLogDay(d, open){ if(open) logOpen.add(d); else logOpen.delete(d);
 function exerciseLogHtml(d){
   const e = S.exerciseLog && S.exerciseLog[d];
   if(!e || !e.x || !e.x.length) return '';
-  const names = {push:'Push', pull:'Pull', legs:'Legs', custom:'Custom day', grip:'Grip Gate'};
+  const names = {push:'Push', pull:'Pull', legs:'Legs', abs:'Abs', custom:'Custom day', grip:'Grip Gate'};
   const groups = {};
   e.x.forEach(x=>{ (groups[x.g]=groups[x.g]||[]).push(x); });
   const rows = Object.keys(groups).map(g=>
@@ -2433,7 +2490,7 @@ function upcomingSessions(){
     }
   } else {
     for(let k=0;k<7;k++){
-      const id = CYCLE[(S.cycleIndex+k)%CYCLE.length];
+      const id = activeCycle()[(S.cycleIndex+k)%activeCycle().length];
       out.push(id==='rest' ? {label:'Rest', icon:'\u{1F634}'} : {label:GATES[id].name, icon:GATES[id].icon});
     }
   }
@@ -2983,6 +3040,13 @@ function render(){
     const seedIdx = CYCLE.indexOf(legacyScheduleFor(S.day||today()));
     S.cycleIndex = seedIdx>=0 ? seedIdx : 0;
   }
+  // The owner account gets the 8-day cycle with a home abs day. Rest moves from slot 6 to 7, so a
+  // saved rest day stays a rest day. Everyone else stays on the 7-day cycle.
+  if(S.absDay===undefined && !viewOnly){
+    S.absDay = isTxetxeAccount();
+    if(S.absDay && S.cycleIndex===6) S.cycleIndex = 7;
+    save();
+  }
   if(S.day !== today() && !viewOnly){
     // How many real calendar days passed since we last saw you, not just "before vs after" -
     // otherwise clearing the Gate once and then never reopening the app again would freeze your
@@ -3005,7 +3069,7 @@ function render(){
           S.customDayPointer = ((S.customDayPointer||0) + 1) % Math.max(1, (rollRoutine.days||[]).length);
         }
       } else {
-        S.cycleIndex = (S.cycleIndex + 1) % CYCLE.length;
+        S.cycleIndex = (S.cycleIndex + 1) % activeCycle().length;
       }
     }
     // else: stays frozen exactly where it is - Rest included, nothing advances it automatically
@@ -3229,7 +3293,7 @@ function render(){
       <div class="gates" data-tour="gatechips">
         ${ar
           ? (ar.days||[]).map((d,i)=>customDayChip(d, gateId==='custom' && curCustomDay && curCustomDay.id===d.id, i)).join('')
-          : `${gateBtn('push',gateId)}${gateBtn('pull',gateId)}${gateBtn('legs',gateId)}`}
+          : `${gateBtn('push',gateId)}${gateBtn('pull',gateId)}${gateBtn('legs',gateId)}${S.absDay?gateBtn('abs',gateId):''}`}
       </div>
       ${(!viewOnly && !S.gateDoneToday && !(ar && gateId==='rest')) ? `<div style="font-size:11px;color:var(--muted);text-align:center;margin:-4px 0 10px">Tap another day to switch today's Gate - locks once cleared</div>` : ''}
       ${(ar && !gate) ? `
@@ -3750,9 +3814,12 @@ function confirmGateSwitch(){
 function switchGate(id){
   if(activeRoutine() || todaysGate()===id) return;
   if(!confirmGateSwitch()) return;
-  const offset = CYCLE.indexOf(id);
-  const half = S.cycleIndex>=3 ? 3 : 0;
-  S.cycleIndex = half + offset;
+  if(id==='abs'){
+    S.cycleIndex = activeCycle().indexOf('abs');
+  } else {
+    const half = S.cycleIndex>=3 ? 3 : 0;
+    S.cycleIndex = half + CYCLE.indexOf(id);
+  }
   S.exSets = {};
   save(); render();
 }

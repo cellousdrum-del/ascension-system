@@ -51,7 +51,7 @@ Collections: `users` (publicly readable, which powers the leaderboard and friend
 - The rank drives colors (`RANK_COLORS` / `RANK_RGB`, `.rank-x` CSS classes) and the content tier, via `gateTierIndex(level)`.
 
 ### Gates (the workout)
-- The day comes from `CYCLE = push,pull,legs,push,pull,legs,rest` and `S.cycleIndex`.
+- The day comes from `CYCLE = push,pull,legs,push,pull,legs,rest` and `S.cycleIndex`. The owner account (`S.absDay`, set once by a migration) uses `CYCLE_ABS` through `activeCycle()`: push,pull,legs,push,pull,legs,**abs**,rest (8 days). `abs` is a home floor gate (`GATES.abs`, 5 exercises per rank: crunch/leg-raise, obliques, side planks, hollow, L-sit ladder). Always use `activeCycle()`, never `CYCLE` directly, except in `legacyScheduleFor`.
 - Each gate in `GATES` has six `tiers`, one per rank, each a list of exercises `{n: name, t: '4x8-12', d: description}`. The leading `Nx` is the number of sets you check off.
 - Variants: `dumbbellTiers` (the "Dumbbells Today" toggle) and `wandererTiers` (the "Wanderer Mode" toggle). `WARMUPS` holds the warm-ups.
 - Close to a rank boundary, a deterministic hash sometimes serves the next tier as a **Trial Gate** (`isTrialToday`), worth +20 XP.
